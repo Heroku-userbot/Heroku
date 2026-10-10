@@ -116,22 +116,16 @@ class HerokuWebMod(loader.Module):
             self.strings["donate"],
             reply_markup=[
                 [
-                    {"text": "CryptoBot", "url": "http://t.me/send?start=IVzbov2MTsEt"}
+                    {"text": "CryptoBot", "url": "http://t.me/send?start=IVJdKAOn8ihG"}
                 ],
                 [
-                    {"text": "TON", "copy": "motherdie.t.me"}
+                    {"text": "TON", "url": "ton://transfer/UQD_vekSRxbCmgBnYLhPFaeN5ilviOh8onpOXa8VDFmhZBLO?text=%D0%9C%D1%8F%D0%B2"}
                 ],
                 [
-                    {"text": "TBank / Tinkoff", "url": "https://www.tbank.ru/rm/r_PNKEhVmfYI.PFaAZELlol/GzTqT12970"}
+                    {"text": "DALink", "url": "https://dalink.to/zetgo"}
                 ],
                 [
-                    {"text": "VTB Bank", "url": "https://vtb.paymo.ru/collect-money/qr/?transaction=1531ffd8-8d8e-4d37-abd9-71e59d1399fc"}
-                ],
-                [
-                    {"text": "SBP / Rub", "url": "https://pay.cloudtips.ru/p/607c1e2b"}
-                ],
-                [
-                    {"text": self.strings["feedback_me"], "url": "https://t.me/CodragoF_bot"}
+                    {"text": self.strings["feedback_me"], "url": "https://t.me/ZetGo"}
                 ],
             ],
         )
