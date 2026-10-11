@@ -13,7 +13,7 @@
  - add the alias `kill` for the `terminate` command
  - rework sudo password input in terminal
  - fix grep usage in terminal and with rich messages, including premium emojis
- - fix premium emojis written as `<emoji document_id=...>` not displaying in rich messages
+ - fix premium emojis in the document_id syntax (emoji tag with document_id) not displaying in rich messages
  - fix `e` aliases
 
  - fix error on `.info` when Telegram rejects an external banner(EXTERNAL_MEDIA_NOT_SUPPORTED)
