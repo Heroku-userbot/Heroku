@@ -1153,9 +1153,18 @@ class Heroku:
 
         await modules.register_all(None)
         modules.send_config()
-        await modules.inline.register_manager()
+        try:
+            await modules.inline.register_manager()
+        except Exception:
+            logging.critical(
+                "Inline manager initialization failed, continuing without the inline bot",
+                exc_info=True,
+            )
+            modules.inline.init_complete = False
+
         await db.ensure_content_channel()
         await modules.send_ready()
+        await modules.send_inline_ready()
 
         if first:
             await self._badge(client)

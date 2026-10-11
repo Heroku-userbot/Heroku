@@ -160,6 +160,7 @@ class Quickstart(loader.Module):
             3,
         )
 
+    async def inline_ready(self):
         if self.get("no_msg"):
             return
 

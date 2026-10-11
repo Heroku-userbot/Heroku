@@ -8,6 +8,7 @@
  - add check if the owner is already added in owneradd
  - add guest bot update
  - add reply_to parameter to Form class and inline message replies
+ - add `inline_ready` module hook: called after `client_ready`, when the inline bot is ready (and again, if the bot is recreated)
  - add the alias `kill` for the `terminate` command
  - rework sudo password input in terminal
  - fix grep usage in terminal and with rich messages, including premium emojis
@@ -16,6 +17,8 @@
  - fix LoaderRestrictor check and inline bot initialization, including the unlock prompt on a fresh install
  - fix error logging in inline query and event polling
  - fix several unauthorized sessions asking for the phone number at the same time on start
+ - fix backup, updater, quickstart and LoaderRestrictor being unloaded on the first start if the inline bot is unavailable
+ - fix startup of the whole client failing if the inline manager initialization raises
  - fix inline bot recreation when the bot is deactivated (frozen): warn and create a new one
  - fix process hanging on unload, add task tracking for asyncio tasks
  - improve WebpageMediaEmpty error

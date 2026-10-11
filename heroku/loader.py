@@ -585,6 +585,7 @@ class Modules:
         self.db = db
         self.translator = translator
         self.secure_boot = False
+        self._ready_sent = False
         asyncio.ensure_future(self._junk_collector())
         self.inline = InlineManager(self.client, self._db, self)
         self.client.heroku_inline = self.inline
@@ -979,7 +980,8 @@ class Modules:
         for unit in getattr(self.inline, "_units", {}).values():
             unit["buttons"] = [
                 [
-                    button for button in row
+                    button
+                    for button in row
                     if not owned(button.get("callback"))
                     and not owned(button.get("handler"))
                 ]
@@ -1024,9 +1026,9 @@ class Modules:
         """Get command prefix"""
         from . import main
 
-        return utils.user_prefixes(
-            self._db, main.__name__, ent_id, self.client.tg_id
-        )[0]
+        return utils.user_prefixes(self._db, main.__name__, ent_id, self.client.tg_id)[
+            0
+        ]
 
     def get_prefixes(self) -> set[str]:
         """Get all command prefixes"""
@@ -1185,6 +1187,22 @@ class Modules:
         await asyncio.gather(
             *[self.send_ready_one_wrapper(mod) for mod in self.modules]
         )
+        self._ready_sent = True
+
+    @tag_client_id("client.tg_id")
+    async def send_inline_ready_one(self, mod: Module):
+        try:
+            await mod.inline_ready()
+        except Exception:
+            logger.exception("Failed to call `inline_ready` of %s", mod)
+
+    async def send_inline_ready(self):
+        if not (self._ready_sent and self.inline.init_complete):
+            return
+
+        await asyncio.gather(
+            *[self.send_inline_ready_one(mod) for mod in self.modules.copy()]
+        )
 
     @tag_client_id("client.tg_id")
     async def send_ready_one(
@@ -1277,6 +1295,7 @@ class Modules:
         self.register_bot_update_handlers(mod)
 
         if pack_url and not from_dlmod:
+
             async def refresh_translations():
                 translations = await self.translator.load_module_translations(
                     pack_url,
@@ -1287,6 +1306,9 @@ class Modules:
                     mod.strings.external_strings = translations
 
             mod.create_task(refresh_translations())
+
+        if self._ready_sent and self.inline.init_complete:
+            await self.send_inline_ready_one(mod)
 
     def get_classname(self, name: str) -> str:
         return next(
@@ -1338,7 +1360,9 @@ class Modules:
         if existing is None:
             module._unloading = True
             caller = asyncio.current_task()
-            existing = asyncio.create_task(self._finish_shutdown(module, purpose, caller))
+            existing = asyncio.create_task(
+                self._finish_shutdown(module, purpose, caller)
+            )
             module._shutdown_task = existing
         await asyncio.shield(existing)
 
@@ -1351,14 +1375,18 @@ class Modules:
                 error = task.exception()
                 if error is not None:
                     logger.error(
-                        "Module %s failed during %s", module, phase,
+                        "Module %s failed during %s",
+                        module,
+                        phase,
                         exc_info=(type(error), error, error.__traceback__),
                     )
         for task in pending:
             task.cancel()
             task.add_done_callback(self._consume_shutdown_result)
         if pending:
-            logger.warning("Module %s: %s timed out (%s tasks)", module, phase, len(pending))
+            logger.warning(
+                "Module %s: %s timed out (%s tasks)", module, phase, len(pending)
+            )
 
     @staticmethod
     def _consume_shutdown_result(task):
@@ -1376,7 +1404,9 @@ class Modules:
             try:
                 unregister(module, purpose)
             except Exception:
-                logger.exception("Unable to unregister %s for %s", unregister.__name__, module)
+                logger.exception(
+                    "Unable to unregister %s for %s", unregister.__name__, module
+                )
         tasks = set(getattr(module, "_managed_tasks", ()))
         for _, method in utils.iter_attrs(module):
             if isinstance(method, InfiniteLoop):
@@ -1393,7 +1423,9 @@ class Modules:
         async def unload():
             await module.on_unload()
 
-        await self._wait_module_tasks({asyncio.create_task(unload())}, module, "on_unload")
+        await self._wait_module_tasks(
+            {asyncio.create_task(unload())}, module, "on_unload"
+        )
 
     def unregister_loops(self, instance: Module, purpose: str):
         for name, method in utils.iter_attrs(instance):
@@ -1409,7 +1441,8 @@ class Modules:
     def unregister_commands(self, instance: Module, purpose: str):
         for name, handlers in list(self._command_handlers.items()):
             remaining = [
-                handler for handler in handlers
+                handler
+                for handler in handlers
                 if handler.__self__.__class__.__name__ != instance.__class__.__name__
             ]
             if remaining:

@@ -69,7 +69,8 @@ class LoaderRestrictor(loader.Module):
     async def client_ready(self):
         self.poll: PollStatus | None = None
 
-        if self.get("passed", False) or not self.inline.init_complete:
+    async def inline_ready(self):
+        if self.get("passed", False):
             return
 
         try:

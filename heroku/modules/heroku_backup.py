@@ -44,6 +44,9 @@ class HerokuBackupMod(loader.Module):
             raise PermissionError("Refusing to send backup to an unsafe content channel")
 
     async def client_ready(self):
+        self._content_channel_id = await utils.wait_for_content_channel(self._db)
+
+    async def inline_ready(self):
         if not self.get("period"):
             await self.inline.bot.send_photo(
                 self.tg_id,
@@ -72,8 +75,6 @@ class HerokuBackupMod(loader.Module):
                     ]
                 ),
             )
-
-        self._content_channel_id = await utils.wait_for_content_channel(self._db)
 
     async def _set_backup_period(self, call: BotInlineCall, value: int):
         if not value:

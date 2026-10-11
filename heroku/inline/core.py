@@ -265,7 +265,7 @@ class InlineManager(
                 self.init_complete = False
                 return
 
-        self.init_complete = True
+        self.init_complete = False
 
         if self._bot_client:
             try:
@@ -332,39 +332,45 @@ class InlineManager(
         if result is not True:
             return result
 
-        _folders = await self._client(GetDialogFiltersRequest())
-        for folder in _folders.filters:
-            if getattr(folder, "title", None) == "Heroku":
-                if any(
-                    [
-                        isinstance(peer, InputPeerUser) and peer.user_id == self.bot_id
-                        for peer in folder.include_peer
-                    ]
-                ):
-                    break
+        self.init_complete = True
 
-                pinned = [await self._client.get_input_entity(self.bot_id)]
-                include = folder.include_peers
-                exclude = folder.exclude_peers
-                emoticon = folder.emoticon
-                color = folder.color
+        try:
+            _folders = await self._client(GetDialogFiltersRequest())
+            for folder in _folders.filters:
+                if getattr(folder, "title", None) == "Heroku":
+                    if any(
+                        [
+                            isinstance(peer, InputPeerUser) and peer.user_id == self.bot_id
+                            for peer in folder.include_peer
+                        ]
+                    ):
+                        break
 
-                await self._client(
-                    UpdateDialogFilterRequest(
-                        folder.id,
-                        DialogFilter(
+                    pinned = [await self._client.get_input_entity(self.bot_id)]
+                    include = folder.include_peers
+                    exclude = folder.exclude_peers
+                    emoticon = folder.emoticon
+                    color = folder.color
+
+                    await self._client(
+                        UpdateDialogFilterRequest(
                             folder.id,
-                            pinned_peers=pinned,
-                            include_peers=include,
-                            exclude_peers=exclude,
-                            emoticon=emoticon,
-                            color=color,
-                        ),
+                            DialogFilter(
+                                folder.id,
+                                pinned_peers=pinned,
+                                include_peers=include,
+                                exclude_peers=exclude,
+                                emoticon=emoticon,
+                                color=color,
+                            ),
+                        )
                     )
-                )
-                break
+                    break
+        except Exception:
+            logger.exception("Failed to add the bot to the Heroku folder")
 
         self._cleaner_task = asyncio.ensure_future(self._cleaner())
+        asyncio.ensure_future(self._allmodules.send_inline_ready())
 
     async def _ping_bot(
         self,

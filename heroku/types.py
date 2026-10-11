@@ -122,6 +122,14 @@ class Module:
     async def client_ready(self):
         """Called after client is ready (after config_loaded)"""
 
+    async def inline_ready(self):
+        """
+        Called after `client_ready`, when the inline bot is ready to use. Never called
+        if the inline bot failed to initialize. May be called again, if the bot is
+        registered anew (e.g. recreated), so it must be safe to call repeatedly.
+        Use it instead of `client_ready` for everything, that needs `self.inline.bot`
+        """
+
     def internal_init(self):
         """Called after the class is initialized in order to pass the client and db. Do not call it yourself"""
         self.allmodules: "Modules"

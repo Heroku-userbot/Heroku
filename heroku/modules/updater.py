@@ -672,6 +672,7 @@ class UpdaterMod(loader.Module):
 
             self.set("do_not_create", True)
 
+    async def inline_ready(self):
         if not self.config["autoupdate"] and not self.get("autoupdate_answered", False):
             await self.inline.bot.send_photo(
                 self.tg_id,
