@@ -121,6 +121,18 @@ def private_write(path, data):
 register_secrets(dict(os.environ))
 
 
+_EMOJI_OPEN = re.compile(
+    r"<emoji\s+document_id\s*=\s*[\"']?(\d+)[\"']?\s*>", re.IGNORECASE
+)
+
+
+def normalize_rich_html(html_text):
+    if not isinstance(html_text, str):
+        return html_text
+    html_text = _EMOJI_OPEN.sub(r'<tg-emoji emoji-id="\1">', html_text)
+    return re.sub(r"</emoji\s*>", "</tg-emoji>", html_text, flags=re.IGNORECASE)
+
+
 def validate_url(url):
     parsed = urlsplit(url)
     if (

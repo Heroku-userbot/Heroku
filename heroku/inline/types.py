@@ -4,6 +4,8 @@ import typing
 
 from herokutl.tl import types
 
+from .._internal import normalize_rich_html
+
 HerokuReplyMarkup = typing.Union[list[list[dict]], list[dict], dict]
 
 logger = logging.getLogger(__name__)
@@ -366,7 +368,9 @@ class InlineQuery:
     ):
         if rich_message is None:
             if html is not None:
-                rich_message = types.InputRichMessageHTML(html=html)
+                rich_message = types.InputRichMessageHTML(
+                    html=normalize_rich_html(html)
+                )
             elif markdown is not None:
                 rich_message = types.InputRichMessageMarkdown(markdown=markdown)
             else:

@@ -19,6 +19,8 @@ from herokutl.tl.types import (
 )
 from herokutl.tl import TLObject
 
+from .._internal import normalize_rich_html
+
 
 class TelethonBot:
     def __init__(self, client):
@@ -198,7 +200,7 @@ class TelethonBot:
         if rich_message is not None:
             return rich_message
         if html is not None:
-            return InputRichMessageHTML(html=html)
+            return InputRichMessageHTML(html=normalize_rich_html(html))
         if markdown is not None:
             return InputRichMessageMarkdown(markdown=markdown)
         raise ValueError("One of html, markdown or rich_message is required")

@@ -49,7 +49,7 @@ from herokutl.tl.types import (
 )
 from herokutl.utils import is_list_like
 
-from ._internal import tag_client_id
+from ._internal import normalize_rich_html, tag_client_id
 from .types import (
     CacheRecordEntity,
     CacheRecordFullChannel,
@@ -246,7 +246,9 @@ class CustomTelegramClient(TelegramClient):
         if rich_message is not None:
             return CustomTelegramClient._rich_output_to_input(rich_message)
         if html is not None:
-            return InputRichMessageHTML(html=html, rtl=rtl, noautolink=noautolink)
+            return InputRichMessageHTML(
+                html=normalize_rich_html(html), rtl=rtl, noautolink=noautolink
+            )
         if markdown is not None:
             return InputRichMessageMarkdown(
                 markdown=markdown,
