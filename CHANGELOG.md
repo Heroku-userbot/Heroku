@@ -14,6 +14,8 @@
  - rework sudo password input in terminal
  - fix grep usage in terminal and with rich messages, including premium emojis
  - fix `e` aliases
+
+ - fix error on `.info` when Telegram rejects an external banner(EXTERNAL_MEDIA_NOT_SUPPORTED)
  - fix proper removal of bot update handlers and references
  - fix LoaderRestrictor check and inline bot initialization, including the unlock prompt on a fresh install
  - fix error logging in inline query and event polling

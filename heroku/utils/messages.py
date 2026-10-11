@@ -351,7 +351,7 @@ async def answer_with_media_fallback(message, *args, **kwargs):
     except RPCError as error:
         if not isinstance(error, WebpageMediaEmptyError) and getattr(
             error, "message", None
-        ) != "RICH_MESSAGE_PHOTO_NO_MEDIA_FOUND":
+        ) not in {"RICH_MESSAGE_PHOTO_NO_MEDIA_FOUND", "EXTERNAL_MEDIA_NOT_SUPPORTED"}:
             raise
         rich_message = kwargs.get("rich_message")
         if rich_message:
