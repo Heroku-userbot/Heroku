@@ -105,10 +105,14 @@ def _media(name: str, value) -> str:
     return marker + caption
 
 
+def _blocks(items) -> str:
+    return "\n".join(rendered for rendered in (_block(item) for item in items) if rendered)
+
+
 def _list_item(value) -> str:
     name = type(value).__name__
     if name in {"PageListItemBlocks", "PageListOrderedItemBlocks"}:
-        text = "".join(_block(item) for item in getattr(value, "blocks", []))
+        text = _blocks(getattr(value, "blocks", []))
     else:
         text = _text(getattr(value, "text", None))
     if getattr(value, "checkbox", False):
@@ -203,7 +207,7 @@ def _block(value) -> str:
         caption = _caption(getattr(value, "caption", None))
         return f"<blockquote>{text}{f'<cite>{caption}</cite>' if caption else ''}</blockquote>"
     if name == "PageBlockBlockquoteBlocks":
-        blocks = "".join(_block(item) for item in getattr(value, "blocks", []))
+        blocks = _blocks(getattr(value, "blocks", []))
         return f"<blockquote>{blocks}{_caption(getattr(value, 'caption', None))}</blockquote>"
     if name in {"PageBlockPhoto", "PageBlockVideo", "PageBlockAudio", "PageBlockDocument"}:
         return _media(name.removeprefix("PageBlock").lower(), value)
@@ -235,7 +239,7 @@ def _block(value) -> str:
         return f"<{tag}{attributes}>{items}</{tag}>"
     if name == "PageBlockDetails":
         title = _text(getattr(value, "title", None))
-        blocks = "".join(_block(item) for item in getattr(value, "blocks", []))
+        blocks = _blocks(getattr(value, "blocks", []))
         return f"<details><summary>{title}</summary>{blocks}</details>"
     if name == "PageBlockMath":
         return f"<tg-math-block>{_escape(getattr(value, 'source', ''))}</tg-math-block>"
@@ -245,7 +249,7 @@ def _block(value) -> str:
         url = getattr(value, "url", None)
         return f'<a href="{_attribute(url)}">{_escape(getattr(value, "html", "") or url or "[embed]")}</a>' if url else _escape(getattr(value, "html", "[embed]"))
     if name == "PageBlockEmbedPost":
-        return "".join(_block(item) for item in getattr(value, "blocks", [])) + _caption(getattr(value, "caption", None))
+        return _blocks(getattr(value, "blocks", [])) + _caption(getattr(value, "caption", None))
     if name == "PageBlockRelatedArticles":
         return _text(getattr(value, "title", None))
     if name == "PageBlockAuthorDate":
@@ -254,7 +258,7 @@ def _block(value) -> str:
         return f"<i>[{_escape(name)}]</i>"
     nested = getattr(value, "blocks", None)
     if nested is not None:
-        return "".join(_block(item) for item in nested)
+        return _blocks(nested)
     return text if text else f"<i>[{_escape(name)}]</i>"
 
 

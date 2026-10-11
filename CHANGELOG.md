@@ -12,11 +12,8 @@
  - add `loader.InlineDownError`, raised on access to `self.inline.bot` when the inline bot isn't running
  - add the alias `kill` for the `terminate` command
  - rework sudo password input in terminal
- - fix grep usage in terminal and with rich messages, including premium emojis
- - fix premium emojis in the document_id syntax (emoji tag with document_id) not displaying in rich messages
+ - fix grep usage in terminal, including premium emojis
  - fix `e` aliases
-
- - fix error on `.info` when Telegram rejects an external banner(EXTERNAL_MEDIA_NOT_SUPPORTED)
  - fix proper removal of bot update handlers and references
  - fix LoaderRestrictor check and inline bot initialization, including the unlock prompt on a fresh install
  - fix error logging in inline query and event polling
