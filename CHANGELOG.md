@@ -9,6 +9,7 @@
  - add guest bot update
  - add reply_to parameter to Form class and inline message replies
  - add `inline_ready` module hook: called after `client_ready`, when the inline bot is ready (and again, if the bot is recreated)
+ - add `loader.InlineDownError`, raised on access to `self.inline.bot` when the inline bot isn't running
  - add the alias `kill` for the `terminate` command
  - rework sudo password input in terminal
  - fix grep usage in terminal and with rich messages, including premium emojis

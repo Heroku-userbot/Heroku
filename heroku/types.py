@@ -780,6 +780,19 @@ class SelfSuspend(Exception):
         return self._error
 
 
+class InlineDownError(AttributeError):
+    """
+    Is being raised on access to `self.inline.bot`, when the inline bot isn't running
+    Subclasses `AttributeError`, so `getattr(self.inline, "bot", None)` still works
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Inline bot isn't running: it failed to initialize or hasn't started"
+            " yet. Check the logs for the reason"
+        )
+
+
 class StopLoop(Exception):
     """Stops the loop, in which is raised"""
 
