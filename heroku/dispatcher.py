@@ -335,7 +335,7 @@ class CommandDispatcher:
         )
 
         reaction_update = selected is None and self._is_reaction_update(event)
-        if not watcher:
+        if reaction_update and not watcher:
             self._remember_state(event.message)
 
         if (
@@ -448,6 +448,8 @@ class CommandDispatcher:
             available.append(handler)
         if not available:
             return False
+        if not watcher:
+            self._remember_state(event.message)
         if len(available) > 1 and not watcher:
             await self._choose_command(event, txt, available)
             return False
