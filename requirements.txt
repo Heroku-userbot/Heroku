@@ -1,4 +1,4 @@
-herokutl==2.2.0.dev2
+herokutl==2.2.0.dev4
 pyaes
 gitpython==3.1.50
 deep-translator
