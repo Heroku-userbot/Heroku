@@ -281,46 +281,21 @@ def install_rich_message_support():
     original_text = Message.text
     original_raw_text = Message.raw_text
 
-    def get_message(self):
-        native = getattr(self, "_heroku_rich_message_native", None)
-        if native is not None:
-            return rich_message_to_html(native)
-        return getattr(self, "_heroku_message_text", None)
-
-    def set_message(self, value):
-        self._heroku_message_text = value
-
-    def get_rich_message(self):
-        native = getattr(self, "_heroku_rich_message_native", None)
+    def get_rich(self):
+        native = getattr(self, "rich_message", None)
         return rich_message_to_html(native) if native is not None else None
 
-    def set_rich_message(self, value):
-        self._heroku_rich_message_native = value
-
     def get_text(self):
-        if getattr(self, "_heroku_rich_message_native", None) is not None:
-            return get_rich_message(self)
-        return original_text.fget(self)
-
-    def set_text(self, value):
-        original_text.fset(self, value)
+        rich = get_rich(self)
+        return rich if rich is not None else original_text.fget(self)
 
     def get_raw_text(self):
-        if getattr(self, "_heroku_rich_message_native", None) is not None:
-            return get_rich_message(self)
-        return original_raw_text.fget(self)
+        rich = get_rich(self)
+        return rich if rich is not None else original_raw_text.fget(self)
 
-    def set_raw_text(self, value):
-        original_raw_text.fset(self, value)
-
-    def get_rich_message_entity(self):
-        return getattr(self, "_heroku_rich_message_native", None)
-
-    Message.message = property(get_message, set_message)
-    Message.rich_message = property(get_rich_message, set_rich_message)
-    Message.text = property(get_text, set_text)
-    Message.raw_text = property(get_raw_text, set_raw_text)
-    Message.rich_message_entity = property(get_rich_message_entity)
+    Message.rich = property(get_rich)
+    Message.text = property(get_text, original_text.fset)
+    Message.raw_text = property(get_raw_text, original_raw_text.fset)
     Message._heroku_rich_message_support = True
 
 
