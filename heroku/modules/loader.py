@@ -2145,7 +2145,7 @@ class LoaderMod(loader.Module):
                     updates[name] = url
                 elapsed = time.perf_counter() - module_started
                 if elapsed >= 1:
-                    logger.info("Module %s initialization took %.2fs", name, elapsed)
+                    logger.debug("Module %s initialization took %.2fs", name, elapsed)
 
             self.update_modules_in_db()
 
@@ -2158,7 +2158,7 @@ class LoaderMod(loader.Module):
             self.lookup("settings").set("aliases", aliases)
 
         self.fully_loaded = True
-        logger.info(
+        logger.debug(
             "External module startup completed in %.2fs",
             time.perf_counter() - started,
         )
