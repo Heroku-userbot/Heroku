@@ -64,13 +64,13 @@ class HerokuInfoMod(loader.Module):
             loader.ConfigValue(
                 "quote_media",
                 False,
-                "Switch preview media to quote",
+                lambda: self.strings["_cfg_quote_media"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
                 "invert_media",
                 False,
-                "Switch preview invert media",
+                lambda: self.strings["_cfg_invert_media"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(

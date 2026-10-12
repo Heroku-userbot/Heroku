@@ -99,6 +99,8 @@ heroku_security:
   cancel_btn: 🚫 Abbrechen
   confirm_btn: 👑 Bestätigen
   li: <tg-emoji emoji-id=4974307891025543730>▫️</tg-emoji> <b><a href="{}">{}</a></b>
+  everyone: "🌍 Alle (Inline)"
+
 heroku_settings:
   watchers: "<tg-emoji emoji-id=5424885441100782420>👀</tg-emoji> <b>Wächter:</b>\n\n<blockquote expandable><b>{}</b></blockquote>"
   mod404: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Wächter {} nicht gefunden</b>"
@@ -158,6 +160,13 @@ heroku_settings:
   core_protection_enabled: "🔓 <b>Kernschutz erfolgreich installiert</b>"
 
   name: HerokuSettings
+  no_args: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Keine Argumente angegeben</b>"
+  invoke404: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Interne Debug-Methode</b> <code>{}</code> <b>nicht gefunden, daher kann sie nicht aufgerufen werden</b>"
+  module404: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Modul</b> <code>{}</code> <b>nicht gefunden</b>"
+  invoke: "<tg-emoji emoji-id=5215519585150706301>👍</tg-emoji> <b>Interne Debug-Methode aufgerufen:</b> <code>{}</code>\n\n<tg-emoji emoji-id=5784891605601225888>🔵</tg-emoji> <b>Ergebnis:\n{}</b>"
+  invoking: "<tg-emoji emoji-id=5213452215527677338>⏳</tg-emoji> <b>Aufruf der internen Debug-Methode</b> <code>{}</code> <b>von</b> <code>{}</code><b>...</b>"
+  _cmd_doc_invoke: "<Modul oder `core` für integrierte Methoden> <Methode> - Nur zu Debugging-Zwecken. NICHT VERWENDEN, WENN SIE KEIN ENTWICKLER SIND"
+
 terminal:
   fw_protect: "Verzögerung zwischen Bearbeitungen"
   command_protect: "Eindeutig destruktive Terminalbefehle vor der Ausführung blockieren"
@@ -265,44 +274,6 @@ heroku_backup:
   _cmd_doc_restoreall: "Stellt ein gemeinsames Backup wieder her (Basis + Module)"
 
   name: HerokuBackup
-presets:
-  _fun_title: "🪩 Unterhaltsame Module"
-  _fun_desc: "Lustige Module – Animationen, Spam, Spiele und mehr."
-  _chat_title: "👥 Chat-Administrationsmodule"
-  _chat_desc: "Sammlung von Modulen, die Ihnen bei der Chat-Administration helfen – Filter, Notizen, Spracherkennung und mehr."
-  _service_title: "⚙️ Nützliche Module"
-  _service_desc: "Tatsächlich nützliche Module – Kontoverwaltung, Linkverkürzer, Suchmaschine und mehr."
-  _downloaders_title: "📥 Downloader"
-  _downloaders_desc: "Sammlung von Modulen, die Ihnen helfen, Dateien aus verschiedenen Quellen hoch-/herunterzuladen – YouTube, TikTok, Instagram, Spotify, VK Musik und mehr."
-  welcome: "👋 <b>Hallo! Müde vom Durchblättern endloser Modullisten in Kanälen? Ich kann Ihnen einige vorgefertigte Sets anbieten. Wenn Sie dieses Menü erneut aufrufen müssen, senden Sie mir den Befehl /presets</b>"
-  preset: "<b>{}:</b>\nℹ️ <i>{}</i>\n\n⚒ <b>Module in diesem Set:</b>\n\n{}"
-  back: "🔙 Zurück"
-  install: "📦 Installieren"
-  installing: "<tg-emoji emoji-id=5451732530048802485>⏳</tg-emoji> <b>Installation des Sets </b><code>{}</code><b>...</b>"
-  installing_module: "<tg-emoji emoji-id=5451732530048802485>⏳</tg-emoji> <b>Installation des Sets</b> <code>{}</code> <b>({}/{} Module)...</b>\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <i>Installation des Moduls {}...</i>"
-  installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Set</b> <code>{}</code> <b>wurde installiert!</b>"
-  already_installed: "✅ [Installiert]"
-  add_to_folder_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Geben Sie einen Ordner an, um ein Modul hinzuzufügen. </b> <code>{prefix}addtofolder <ordner> <modul></code>"
-  already_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Modul befindet sich bereits im Ordner</b> <code>{}</code>"
-  added_to_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Modul {} zum Ordner hinzugefügt</b> <code>{}</code>"
-  module_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Modul {} nicht gefunden</b>"
-  folder_load_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Geben Sie einen Ordner an, um Module zu laden. </b> <code>{prefix}fl <ordner></code>"
-  folder_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Ordner {} nicht gefunden</b>"
-  no_modules_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Keine Module im Ordner {}</b>"
-  folder: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Ordner</b> {}\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}lp zur Antwort auf diese Nachricht zum Installieren</b>"
-  remove_from_folder_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Geben Sie Ordner und Modul zum Entfernen an. </b> <code>{prefix}removefromfolder <ordner> <modul></code>"
-  removed_from_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Modul {} aus Ordner entfernt</b> <code>{}</code>"
-  module_not_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Modul {} ist nicht im Ordner {}</b>"
-  _cmd_doc_presets: "| Modulpakete zum Laden"
-  _cmd_doc_loadpreset: "Benutzerdefinierten Preset laden. Sende eine Datei mit dem Befehl oder antworte mit dem Befehl auf eine Datei."
-  _cmd_doc_addtofolder: "<Ordner> <Modul> - Modul zu einem benutzerdefinierten Ordner hinzufügen"
-  _cmd_doc_folderload: "<Ordner> - Benutzerdefinierten Ordner als Preset-Datei senden"
-  _cmd_doc_removefromfolder: "<Ordner> <Modul> - Modul aus einem benutzerdefinierten Ordner entfernen"
-  _cmd_doc_loadaliases: "Aliase aus Datei laden. Sende eine Datei mit dem Befehl oder antworte mit dem Befehl auf eine Datei."
-  _cmd_doc_aliasload: "Aliase als Datei senden"
-  _cls_doc: "Schlägt neuen Heroku-Benutzern Modulsätze zum Laden vor"
-
-  name: Presets
 settings:
   choose_installation: "<tg-emoji emoji-id=5363805650327450240>🪐</tg-emoji> <b>Wählen Sie Ihre Heroku-Installationsoption:</b>"
   vds_install: "<tg-emoji emoji-id=5471952986970267163>💎</tg-emoji> Der Installationsprozess auf einem VDS wird mit einem einzigen Befehl durchgeführt:\n<pre><code class=\"language-shell\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install git python3-pip &amp;&amp; git clone https://github.com/Heroku-userbot/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n<i>Hinweis: Wenn Sie keine sudo-Rechte haben, lassen Sie den entsprechenden Teil des Befehls aus.</i>"
@@ -373,6 +344,13 @@ settings:
   name: Settings
   cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>Befehl nicht gefunden</b>
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Wächter {} nicht gefunden</b>
+  vds: "💎 VDS"
+  wsl: "💻 WSL"
+  userland: "🐧 UserLand"
+  hikkahost: "🌼 HikkaHost"
+  _cfg_nonstandart_prefixes: "Nicht standardmäßige Präfixe wie Premium-Emojis oder mehrstellige Präfixe erlauben"
+  _cfg_alias_emoji: "nur Emoji in .aliases"
+
 heroku_config:
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Wähle eine Kategorie</b>"
   configure: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Wähle ein Modul zur Konfiguration</b>"
@@ -417,6 +395,8 @@ heroku_config:
   _cmd_doc_fconfig: "<Modul> <Einstellung> <Wert> - Setzt den Konfigurationswert für ein Modul"
 
   name: HerokuConfig
+  _cfg_emoji: "Emoji beim Öffnen der Konfiguration ändern"
+
 inline_stuff:
   bot_username_invalid: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Ungültiger Bot-Benutzername. Er muss auf</b> <code>bot</code> <b>enden und mindestens 5 Zeichen lang sein</b>"
   token_invalid: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Das angegebene Bot-Token ist ungültig. Es muss 8-10 Zahlen, </b><code>:</code> <b>und 34-36 Symbole enthalten</b>"
@@ -463,6 +443,14 @@ test:
   _cmd_doc_clearlogs: "Löscht die Logs"
 
   name: Test
+  _cmd_doc_debugmod: "[Modul] - Für Entwickler: Modul zum Debuggen öffnen\nSie können Änderungen in Echtzeit verfolgen"
+  _cfg_force_send_all: "⚠️ Nicht anfassen, wenn Sie nicht wissen, was es bewirkt!\nStandardmäßig versucht Heroku zu ermitteln, welcher Client die Logs verursacht hat. Beispiel: Auf Client1 ist das Modul TestModule installiert und auf Client2 TestModule2. Standardmäßig erhält Client2 die Logs von TestModule2 und Client1 die Logs von TestModule. Wenn diese Option aktiviert ist, erhält dieser Client auch Logs, die von anderen Clients verursacht wurden. Sie betrifft nur diesen Client."
+  _cfg_tglog_level: "⚠️ Nicht anfassen, wenn Sie nicht wissen, was es bewirkt!\nMinimaler Loglevel für Einträge, die in Telegram gesendet werden."
+  _cfg_ignore_common: "Häufige Fehler ignorieren (z. B. 'TypeError' in telethon)"
+  _cfg_disable_internet_warn: "Alle Internetfehler ignorieren"
+  _cfg_quote_media: "Vorschau-Medien in ping als Zitat darstellen"
+  _cfg_invert_media: "Vorschau-Medien in ping invertieren"
+
 updater:
   source: "<tg-emoji emoji-id=5208634061085492935>📖</tg-emoji> <b>Den Quellcode kannst du <a href='{}'>hier</a> einsehen</b>"
   restarting_caption: "<tg-emoji emoji-id=5208622108191506906>🕗</tg-emoji> <b>Dein {} wird neu gestartet...</b>"
@@ -584,6 +572,10 @@ heroku_info:
 
   name: HerokuInfo
   _cls_doc: Userbot-Informationen anzeigen
+  show_preview_in_help: "Banner-Vorschau im Stil von # meta in der Hilfe [Modul] anzeigen?"
+  _cfg_quote_media: "Vorschau-Medien als Zitat darstellen"
+  _cfg_invert_media: "Vorschau-Medien invertieren"
+
 loader:
   loaded_placeholders: "Platzhalter"
   module_update_prompt: "<tg-emoji emoji-id=5765071340847501478>🔗</tg-emoji> <b>Das Modul {} wurde aktualisiert. Installieren?</b>"
@@ -743,6 +735,9 @@ translate:
   _cmd_doc_tr: "[Sprache] [Text] - Übersetzt den Text"
 
   name: Translator
+  _cfg_only_text: "nur übersetzter Text in .tr"
+  _cfg_provider: "Zu verwendender Übersetzungsdienst"
+
 quickstart:
   base: "<tg-emoji emoji-id=5463379725441341739>🪐</tg-emoji> <b>Hallo.</b> Dein <b>{}</b> Userbot ist jetzt installiert.\n\n<tg-emoji emoji-id=5134202243486057363>💫</tg-emoji> <b>Brauchst du Hilfe?</b> Tritt <a href=\"https://t.me/heroku_talks\">unserem Support-Chat</a> bei. Wir helfen <b>jedem</b>.\n\n<tg-emoji emoji-id=4940480187436369099>💁‍♀️</tg-emoji> <b>Kurzanleitung:</b>\n\n<tg-emoji emoji-id=5456197350416486261>1️⃣</tg-emoji> <b>Schreibe</b> <code>.help</code><b>, um die Liste der Module zu sehen</b>\n<tg-emoji emoji-id=5456261689026581678>2️⃣</tg-emoji> <b>Schreibe</b> <code>.help &lt;Modulname/Befehl&gt;</code><b>, um die Beschreibung des Moduls zu sehen</b>\n<tg-emoji emoji-id=5458366235886522404>3️⃣</tg-emoji> <b>Schreibe</b> <code>.dlmod &lt;Link&gt;</code><b>, um ein Modul von einem Link zu laden</b>\n<tg-emoji emoji-id=5456207331920483861>4️⃣</tg-emoji> <b>Schreibe</b> <code>.loadmod</code> <b>als Antwort auf eine Datei, um ein Modul daraus zu laden</b>\n<tg-emoji emoji-id=5456185418997340146>5️⃣</tg-emoji> <b>Schreibe</b> <code>.unloadmod &lt;Modulname&gt;</code><b>, um ein Modul zu entladen</b>\n\n<tg-emoji emoji-id=5456178297941561360>💡</tg-emoji> <b>Heroku unterstützt Module von Hikka, Friendly-Telegram und GeekTG, sowie seine eigenen.</b>\n"
   language_saved: "🇩🇪 Sprache gespeichert!"
@@ -813,6 +808,32 @@ heroku_plugin_security:
   no_hash: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Du musst einen Modulnamen angeben</b>
   hash_not_found: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Modul mit diesem Namen nicht gefunden</b>
   hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Keine Treffer. Nächstes:</b> <code>{}</code>
+  hash_list: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Modul-Hashes:</b>\n\n<blockquote expandable>{}</blockquote>"
+  no_hashes: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Keine Modul-Hashes gefunden</b>"
+  external_removed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>is_external entfernt für</b> <code>{}</code>"
+  external_restored: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>is_external wiederhergestellt für</b> <code>{}</code>"
+  already_internal: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Das Modul</b> <code>{}</code> <b>ist bereits intern</b>"
+  already_external: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Das Modul</b> <code>{}</code> <b>ist bereits extern</b>"
+  session_allowed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.session-Zugriff erlaubt für</b> <code>{}</code>"
+  session_denied: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.session-Zugriff verweigert für</b> <code>{}</code>"
+  already_allowed: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session-Zugriff bereits erlaubt für</b> <code>{}</code>"
+  already_denied: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session-Zugriff bereits verweigert für</b> <code>{}</code>"
+  no_permissions: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>Keine Berechtigungen</b>"
+  permissions_list: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>Berechtigungen:</b>\n{}\n"
+  sgroup_li: "<tg-emoji emoji-id=4974264756668990388>▫️</tg-emoji> <code>{}</code> · <b>{} Benutzer</b> · <b>{} Regel(n)</b>"
+  sgroups_list: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Sicherheitsgruppen:</b>\n\n{}"
+  deleted_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Sicherheitsgruppe</b> <code>{}</code> <b>gelöscht</b>"
+  user_already_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Benutzer</b> <code>{}</code> <b>ist bereits in der Sicherheitsgruppe</b> <code>{}</code>"
+  user_added_to_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Benutzer</b> <code>{}</code> <b>wurde zur Sicherheitsgruppe</b> <code>{}</code> hinzugefügt"
+  user_not_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Benutzer</b> <code>{}</code> <b>ist nicht in der Sicherheitsgruppe</b> <code>{}</code>"
+  user_removed_from_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Benutzer</b> <code>{}</code> <b>wurde aus der Sicherheitsgruppe</b> <code>{}</code> entfernt"
+  _cmd_doc_delsgroup: "<Name> - Sicherheitsgruppe löschen"
+  _cmd_doc_sgroup: "<Name> - Informationen zur Sicherheitsgruppe anzeigen"
+  _cmd_doc_sgroups: "Sicherheitsgruppen auflisten"
+  _cmd_doc_newsgroup: "<Name> - Neue Sicherheitsgruppe erstellen"
+  _cmd_doc_sgroupadd: "<Name> [Benutzer oder Antwort] - Benutzer zur Sicherheitsgruppe hinzufügen"
+  _cmd_doc_sgroupdel: "<Name> [Benutzer oder Antwort] - Benutzer aus der Sicherheitsgruppe entfernen"
+
 loader_restrictor:
   q1: "Was kann jedes von Ihnen installierte Modul tatsächlich tun?"
   q1_ans1: "Genau das, was in der Beschreibung steht – mehr nicht"

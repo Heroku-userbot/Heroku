@@ -71,7 +71,7 @@ class HerokuConfigMod(loader.Module):
             loader.ConfigValue(
                 "cfg_emoji",
                 "🪐",
-                "Change emoji when opening config",
+                lambda: self.strings["_cfg_emoji"],
                 validator=loader.validators.String(),
             ),
         )

@@ -51,13 +51,7 @@ class TestMod(loader.Module):
                 "force_send_all",
                 False,
                 (
-                    "⚠️ Do not touch, if you don't know what it does!\nBy default, "
-                    " Heroku will try to determine, which client caused logs. E.g. there"
-                    " is a module TestModule installed on Client1 and TestModule2 on"
-                    " Client2. By default, Client2 will get logs from TestModule2, and"
-                    " Client1 will get logs from TestModule. If this option is enabled,"
-                    " this client will also receive logs, caused by other clients. It"
-                    " affects this client only."
+                    lambda: self.strings["_cfg_force_send_all"]
                 ),
                 validator=loader.validators.Boolean(),
                 on_change=self._pass_config_to_logger,
@@ -66,8 +60,7 @@ class TestMod(loader.Module):
                 "tglog_level",
                 "ERROR",
                 (
-                    "⚠️ Do not touch, if you don't know what it does!\n"
-                    "Minimal loglevel for records to be sent in Telegram."
+                    lambda: self.strings["_cfg_tglog_level"]
                 ),
                 validator=loader.validators.Choice(
                     ["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "DISABLE"]
@@ -77,14 +70,14 @@ class TestMod(loader.Module):
             loader.ConfigValue(
                 "ignore_common",
                 True,
-                "Ignore common errors (e.g. 'TypeError' in telethon)",
+                lambda: self.strings["_cfg_ignore_common"],
                 validator=loader.validators.Boolean(),
                 on_change=self._pass_config_to_logger,
             ),
             loader.ConfigValue(
                 "disable_internet_warn",
                 False,
-                "Ignore all internet errors",
+                lambda: self.strings["_cfg_disable_internet_warn"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
@@ -124,7 +117,7 @@ class TestMod(loader.Module):
             loader.ConfigValue(
                 "quote_media",
                 False,
-                "Switch preview media to quote in ping",
+                lambda: self.strings["_cfg_quote_media"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
@@ -136,7 +129,7 @@ class TestMod(loader.Module):
             loader.ConfigValue(
                 "invert_media",
                 False,
-                "Switch preview invert media in ping",
+                lambda: self.strings["_cfg_invert_media"],
                 validator=loader.validators.Boolean(),
             ),
         )

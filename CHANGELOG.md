@@ -25,6 +25,7 @@
  - fix process hanging on unload, add task tracking for asyncio tasks
  - improve WebpageMediaEmpty error
  - improve look of .dlm with multiple modules
+ - add missing strings to language packs, translate config descriptions
  - remove presets module
  - update herokutl to 2.2.0 and clean up requirements
  - improve install.sh and add a workflow for testing it

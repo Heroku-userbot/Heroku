@@ -30,13 +30,13 @@ class CoreMod(loader.Module):
             loader.ConfigValue(
                 "allow_nonstandart_prefixes",
                 False,
-                "Allow non-standard prefixes like premium emojis or multi-symbol prefixes",
+                lambda: self.strings["_cfg_nonstandart_prefixes"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
                 "alias_emoji",
                 "<tg-emoji emoji-id=4974259868996207180>▪️</tg-emoji>",
-                "just emoji in .aliases",
+                lambda: self.strings["_cfg_alias_emoji"],
             ),
             loader.ConfigValue(
                 "rich_mode",

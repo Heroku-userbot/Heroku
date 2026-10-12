@@ -272,50 +272,11 @@ heroku_backup:
   _cmd_doc_restoreall: "R3570r35 4 c0mm0n b4ckup (b453 + m0d5)"
 
   name: HerokuBackup
-presets:
-  name: "Pr35375"
-  _fun_title: "🪩 3n73r741nm3n7 m0d5"
-  _fun_desc: "Fun m0d5 — 4n1m4710n5, sp4m, 3n73r741nm3n7, 37c."
-  _chat_title: "👥 Gr0up 4dm1n H3lp3rz"
-  _chat_desc: "7h3 c0ll3c710n 0f 700l5 wh1ch w1ll h3lp 2 m0d3r473 ur gr0up ch47 — f1l73r5, n0735, v01c3 r3c0gn1710n, 37c."
-  _service_title: "⚙️ U53ful m0d5"
-  _service_desc: "R34lly u53ful m0d5 — 4cc m4n4g3m3n7, l1nk sh0r73n3r, s34rch 3ng1n3, 37c."
-  _downloaders_title: "📥 D0wnl04d3rz"
-  _downloaders_desc: "7h3 c0ll3c710n 0f 700l5 wh1ch w1ll h3lp u d0wnl04d/upl04d f1l35 fr0m/2 d1ff3r3n7 s0urc35 — Y0u7ub3, 71k70k, 1n574gr4m, Sp071fy, VK Mu51c, 37c."
-  welcome: "👋 <b>H1 7h3r3! 71r3d 0f 5cr0ll1ng 7hr0ugh 3ndl355 m0d5 1n ch4nn3l5? L37 m3 sugg357 u 50m3 pr3-m4d3 c0ll3c710n5. 1f u n33d 2 c4ll 7h15 m3nu 4g41n, 51mply s3nd /presets 2 7h15 b07!</b>"
-  preset: "<b>{}:</b>\nℹ️ <i>{}</i>\n\n⚒ <b>M0d5 1n 7h15 c0ll3c710n:</b>\n\n{}"
-  back: "🔙 B4ck"
-  install: "📦 1n574ll"
-  installing: "<tg-emoji emoji-id=5451732530048802485>⏳</tg-emoji> <b>1n574ll1ng pr3537</b> <code>{}</code><b>...</b>"
-  installing_module: "<tg-emoji emoji-id=5451732530048802485>⏳</tg-emoji> <b>1n574ll1ng pr3537</b> <code>{}</code> <b>({}/{} m0d5)...</b>\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <i>1n574ll1ng m0dul3 {}...</i>"
-  installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Pr3537</b> <code>{}</code> <b>1n574ll3d!</b>"
-  already_installed: "✅ [1n574ll3d]"
-  add_to_folder_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>5p3c1fy 4 f0ld3r t0 4dd 4 m0dul3. </b> <code>{prefix}addtofolder <f0ld3r> <m0dul3></code>"
-  already_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>M0dul3 1z 41r34dy 1n th3 f0ld3r</b> <code>{}</code>"
-  added_to_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>M0dul3 {} 4dd3d t0 f0ld3r</b> <code>{}</code>"
-  module_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>M0dul3 {} n0t f0und</b>"
-  folder_load_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>5p3c1fy 4 f0ld3r t0 l04d m0dul3z. </b> <code>{prefix}fl <f0ld3r></code>"
-  folder_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>F0ld3r {} n0t f0und</b>"
-  no_modules_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>N0 m0dul3z 1n f0ld3r {}</b>"
-  folder: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>F0ld3r</b> {}\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}lp 1n r3ply t0 7h1z m3zz4g3 t0 1nzt4ll</b>"
-  remove_from_folder_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>5p3c1fy f0ld3r 4nd m0dul3 t0 r3m0v3. </b> <code>{prefix}removefromfolder <f0ld3r> <m0dul3></code>"
-  removed_from_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Modul3 {} r3m0v3d fr0m f0ld3r</b> <code>{}</code>"
-  module_not_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Modul3 {} 15 n07 1n f0ld3r {}</b>"
-  _cmd_doc_presets: "| P4ck5 0f m0d5 2 l04d"
-  _cmd_doc_loadpreset: "Cu570m pr3537 l04d3r. R3ply 2 f1l3 0r 53nd f1l3 w17h cmd."
-  _cmd_doc_addtofolder: "<f0ld3r> <m0dul3> - 4dd m0dul3 2 cu570m f0ld3r"
-  _cmd_doc_folderload: "<f0ld3r> - 53nd cu570m f0ld3r 45 pr3537 f1l3"
-  _cmd_doc_removefromfolder: "<f0ld3r> <m0dul3> - R3m0v3 m0dul3 fr0m cu570m f0ld3r"
-  _cmd_doc_loadaliases: "L04d 4l14535 fr0m f1l3. 53nd f1l3 w17h cmd 0r r3ply 2 f1l3."
-  _cmd_doc_aliasload: "53nd 4l14535 45 f1l3"
-  _cls_doc: "Sugg3575 n3w H3r0ku u53rz 4 p4ck5 0f m0d5 2 l04d"
-
 settings:
   name: "S3771ng5"
   vds: "💎 VDS"
   wsl: "💻 WSL"
   userland: "🐧 Us3rL4nd"
-  jamhost: "🧃 J4mH057"
   hikkahost: "🌼 H1kk4H057"
   choose_installation: "<tg-emoji emoji-id=5363805650327450240>🪐</tg-emoji> <b>Ch0053 ur H3r0ku 1n574ll4710n 0p710n:</b>"
   vds_install: "<tg-emoji emoji-id=5471952986970267163>💎</tg-emoji> 7h3 1n574ll pr0c355 0n 4 VDS 15 d0n3 w17h 4 51ngl3 cmd:\n<pre><code class=\"language-shell\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install git python3-pip &amp;&amp; git clone https://github.com/Heroku-userbot/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n<i>N073: 1f u d0 n07 h4v3 sudo pr1v5, 0m17 7h3 c0rr35p0nd1ng p4r7 0f 7h3 cmd.</i>"
@@ -386,6 +347,7 @@ settings:
 
   cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>Cmd n07 f0und</b>
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>W47ch3r {} n07 f0und</b>
+  _cfg_alias_emoji: "ju57 3m0j1 1n .4l14535"
 heroku_config:
   name: "H3r0kuC0nf1g"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Ch0053 4 c473g0ry</b>"
@@ -429,6 +391,7 @@ heroku_config:
   _cmd_doc_config: "C0nf1g m0dul35"
   _cmd_doc_fconfig: "<module_name> <property_name> <config_value> - s37 7h3 c0nf1g v4lu3 4 7h3 m0dul3"
   _cls_doc: "1n73r4c71v3 c0nf1gur470r 4 H3r0ku Us3rb07"
+  _cfg_emoji: "Ch4ng3 3m0j1 wh3n 0p3n1ng c0nf1g"
 
 inline_stuff:
   name: "1nl1n3S7uff"
@@ -476,6 +439,12 @@ test:
   _cmd_doc_ping: "7357 ur u53rb07 p1ng"
   _cmd_doc_suspend: "<time> - Su5p3nd5 7h3 b07 4 N s3c5"
   _cls_doc: "P3rf0rm 0p5 b453d 0n u53rb07 s3lf-73571ng"
+  _cfg_force_send_all: "⚠️ D0 n07 70uch, 1f y0u d0n'7 kn0w wh47 17 d035!\nBy d3f4ul7, H3r0ku w1ll 7ry 70 d373rm1n3, wh1ch cl13n7 c4u53d l0g5. 3.g. 7h3r3 15 4 m0dul3 7357M0dul3 1n574ll3d 0n Cl13n71 4nd 7357M0dul32 0n Cl13n72. By d3f4ul7, Cl13n72 w1ll g37 l0g5 fr0m 7357M0dul32, 4nd Cl13n71 w1ll g37 l0g5 fr0m 7357M0dul3. 1f 7h15 0p710n 15 3n4bl3d, 7h15 cl13n7 w1ll 4l50 r3c31v3 l0g5, c4u53d by 07h3r cl13n75. 17 4ff3c75 7h15 cl13n7 0nly."
+  _cfg_tglog_level: "⚠️ D0 n07 70uch, 1f y0u d0n'7 kn0w wh47 17 d035!\nM1n1m4l l0gl3v3l f0r r3c0rd5 70 b3 53n7 1n 73l3gr4m."
+  _cfg_ignore_common: "1gn0r3 c0mm0n 3rr0r5 (3.g. '7yp33rr0r' 1n 73l37h0n)"
+  _cfg_disable_internet_warn: "1gn0r3 4ll 1n73rn37 3rr0r5"
+  _cfg_quote_media: "5w17ch pr3v13w m3d14 70 qu073 1n p1ng"
+  _cfg_invert_media: "5w17ch pr3v13w 1nv3r7 m3d14 1n p1ng"
 
 updater:
   name: "Upd473r"
@@ -597,6 +566,9 @@ heroku_info:
   _cls_doc: "Sh0w u53rb07 1nf0"
 
   name: HerokuInfo
+  show_preview_in_help: "5h0w # m374 b4nn3r l1k3 pr3v13w 1n h3lp [m0dul3] ?"
+  _cfg_quote_media: "5w17ch pr3v13w m3d14 70 qu073"
+  _cfg_invert_media: "5w17ch pr3v13w 1nv3r7 m3d14"
 loader:
   loaded_placeholders: "Pl4c3h0ld3r5"
   module_update_prompt: "<tg-emoji emoji-id=5765071340847501478>🔗</tg-emoji> <b>M0dul3 {} h45 b33n upd473d. 1n574ll 17?</b>"
@@ -753,6 +725,8 @@ translate:
   translated_text: "<tg-emoji emoji-id=5787344001862471785>🔁</tg-emoji> 7r4n5l473d 73x7:\n<blockquote>{tr_text}</blockquote>"
   _cmd_doc_tr: "[language] [text] - 7r4n5l473 73x7"
   _cls_doc: "7r4n5l4735 73x7 (0bv10u5ly)"
+  _cfg_only_text: "0nly 7r4n5l473d 73x7 1n .7r"
+  _cfg_provider: "7r4n5l4710n pr0v1d3r 70 u53"
 
 quickstart:
   name: "Qu1ck574r7"
@@ -824,6 +798,31 @@ heroku_plugin_security:
   no_hash: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Y0u mu57 5p3c1fy 4 m0dul3 n4m3</b>
   hash_not_found: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>M0dul3 w17h 7h15 n4m3 n07 f0und</b>
   hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>N0 m47ch35. Cl05357:</b> <code>{}</code>
+  hash_list: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>M0dul3 h45h35:</b>\n\n<blockquote expandable>{}</blockquote>"
+  no_hashes: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>N0 m0dul3 h45h35 f0und</b>"
+  external_removed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>15_3x73rn4l r3m0v3d f0r</b> <code>{}</code>"
+  external_restored: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>15_3x73rn4l r3570r3d f0r</b> <code>{}</code>"
+  already_internal: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>M0dul3</b> <code>{}</code> <b>15 4lr34dy 1n73rn4l</b>"
+  already_external: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>M0dul3</b> <code>{}</code> <b>15 4lr34dy 3x73rn4l</b>"
+  session_allowed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.535510n 4cc355 4ll0w3d f0r</b> <code>{}</code>"
+  session_denied: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.535510n 4cc355 d3n13d f0r</b> <code>{}</code>"
+  already_allowed: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.535510n 4cc355 4lr34dy 4ll0w3d f0r</b> <code>{}</code>"
+  already_denied: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.535510n 4cc355 4lr34dy d3n13d f0r</b> <code>{}</code>"
+  no_permissions: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>N0 p3rm15510n5</b>"
+  permissions_list: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>P3rm15510n5:</b>\n{}\n"
+  sgroup_li: "<tg-emoji emoji-id=4974264756668990388>▫️</tg-emoji> <code>{}</code> · <b>{} u53r(-5)</b> · <b>{} rul3(-5)</b>"
+  sgroups_list: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>53cur17y gr0up5:</b>\n\n{}"
+  deleted_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>53cur17y gr0up</b> <code>{}</code> <b>d3l373d</b>"
+  user_already_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>U53r</b> <code>{}</code> <b>4lr34dy 15 1n 53cur17y gr0up</b> <code>{}</code>"
+  user_added_to_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>U53r</b> <code>{}</code> <b>4dd3d 70 53cur17y gr0up</b> <code>{}</code>"
+  user_not_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>U53r</b> <code>{}</code> <b>15 n07 1n 53cur17y gr0up</b> <code>{}</code>"
+  user_removed_from_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>U53r</b> <code>{}</code> <b>r3m0v3d fr0m 53cur17y gr0up</b> <code>{}</code>"
+  _cmd_doc_delsgroup: "<name> - D3l373 53cur17y gr0up"
+  _cmd_doc_sgroup: "<name> - 5h0w 53cur17y gr0up 1nf0"
+  _cmd_doc_sgroups: "L157 53cur17y gr0up5"
+  _cmd_doc_newsgroup: "<name> - Cr3473 n3w 53cur17y gr0up"
+  _cmd_doc_sgroupadd: "<name> [u53r 0r r3ply] - 4dd u53r 70 53cur17y gr0up"
+  _cmd_doc_sgroupdel: "<name> [u53r 0r r3ply] - R3m0v3 u53r fr0m 53cur17y gr0up"
 loader_restrictor:
   q1: "Wh47 c4n 4ny m0dul3 y0u 1n574ll 4c7u4lly d0?"
   q1_ans1: "3x4c7ly wh47 175 d35cr1p710n 54y5 - n07h1ng m0r3"

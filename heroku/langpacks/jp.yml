@@ -272,50 +272,11 @@ heroku_backup:
   _cmd_doc_restoreall: "共通バックアップ（ベース + モジュール）を復元します"
 
   name: HerokuBackup
-presets:
-  name: "Presets"
-  _fun_title: "🪩 エンターテイメントモジュール"
-  _fun_desc: "楽しいモジュール — アニメーション、スパム、エンターテイメントなど"
-  _chat_title: "👥 グループ管理ヘルパー"
-  _chat_desc: "グループチャットのモデレーションを支援するツールのコレクション — フィルター、ノート、音声認識など"
-  _service_title: "⚙️ 便利なモジュール"
-  _service_desc: "本当に便利なモジュール — アカウント管理、リンク短縮、検索エンジンなど"
-  _downloaders_title: "📥 ダウンローダー"
-  _downloaders_desc: "さまざまなソース（YouTube、TikTok、Instagram、Spotify、VK Musicなど）からファイルをダウンロード/アップロードするのに役立つツールのコレクション"
-  welcome: "👋 <b>こんにちは！チャンネルで無限のモジュールをスクロールするのに疲れましたか？いくつかの既製コレクションを提案させてください。このメニューを再度呼び出す必要がある場合は、このボットに /presets を送信するだけです！</b>"
-  preset: "<b>{}:</b>\nℹ️ <i>{}</i>\n\n⚒ <b>このコレクション内のモジュール:</b>\n\n{}"
-  back: "🔙 戻る"
-  install: "📦 インストール"
-  installing: "<tg-emoji emoji-id=5451732530048802485>⏳</tg-emoji> <b>プリセット</b> <code>{}</code> <b>をインストールしています...</b>"
-  installing_module: "<tg-emoji emoji-id=5451732530048802485>⏳</tg-emoji> <b>プリセット</b> <code>{}</code> <b>({}/{}) をインストールしています...</b>\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <i>モジュール {} をインストール中...</i>"
-  installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>プリセット</b> <code>{}</code> <b>がインストールされました！</b>"
-  already_installed: "✅ [インストール済み]"
-  add_to_folder_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>モジュールを追加するフォルダを指定してください。 </b> <code>{prefix}addtofolder <フォルダ> <モジュール></code>"
-  already_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>モジュールは既にフォルダ内にあります</b> <code>{}</code>"
-  added_to_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>モジュール {}がフォルダに追加されました</b> <code>{}</code>"
-  module_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>モジュール {}が見つかりません</b>"
-  folder_load_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>モジュールをロードするフォルダを指定してください。 </b> <code>{prefix}fl <フォルダ></code>"
-  folder_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>フォルダ {}が見つかりません</b>"
-  no_modules_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>フォルダ {}にモジュールはありません</b>"
-  folder: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>フォルダ</b> {}\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}lpをインストールするためにこのメッセージに返信してください</b>"
-  remove_from_folder_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>削除するフォルダとモジュールを指定してください。 </b> <code>{prefix}removefromfolder <フォルダ> <モジュール></code>"
-  removed_from_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>フォルダからモジュール {} を削除しました</b> <code>{}</code>"
-  module_not_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>モジュール {} はフォルダ {}</b> にありません"
-  _cmd_doc_presets: "| 読み込むモジュールパック"
-  _cmd_doc_loadpreset: "カスタムプリセットを読み込みます。コマンドと一緒にファイルを送るか、ファイルに返信してください。"
-  _cmd_doc_addtofolder: "<フォルダ> <モジュール> - カスタムフォルダにモジュールを追加します"
-  _cmd_doc_folderload: "<フォルダ> - カスタムフォルダをプリセットファイルとして送信します"
-  _cmd_doc_removefromfolder: "<フォルダ> <モジュール> - カスタムフォルダからモジュールを削除します"
-  _cmd_doc_loadaliases: "ファイルからエイリアスを読み込みます。コマンドと一緒にファイルを送るか、ファイルに返信してください。"
-  _cmd_doc_aliasload: "エイリアスをファイルとして送信します"
-  _cls_doc: "新しい Heroku ユーザーにロードするモジュールのパックを提案します"
-
 settings:
   name: "Settings"
   vds: "💎 VDS"
   wsl: "💻 WSL"
   userland: "🐧 UserLand"
-  jamhost: "🧃 JamHost"
   hikkahost: "🌼 HikkaHost"
   choose_installation: "<tg-emoji emoji-id=5363805650327450240>🪐</tg-emoji> <b>Heroku インストールオプションを選択してください:</b>"
   vds_install: "<tg-emoji emoji-id=5471952986970267163>💎</tg-emoji> VDS でのインストールプロセスは単一のコマンドで完了します:\n<pre><code class=\"language-shell\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install git python3-pip &amp;&amp; git clone https://github.com/Heroku-userbot/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n<i>注: sudo 権限がない場合は、コマンドの該当部分を省略してください。</i>"
@@ -386,6 +347,8 @@ settings:
 
   cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>コマンドが見つかりません</b>
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>ウォッチャー {} が見つかりません</b>
+  _cfg_alias_emoji: ".aliases では絵文字のみを表示"
+
 heroku_config:
   name: "HerokuConfig"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>カテゴリを選択してください</b>"
@@ -429,6 +392,7 @@ heroku_config:
   _cmd_doc_config: "モジュールを設定します"
   _cmd_doc_fconfig: "<module_name> <property_name> <config_value> - モジュールの設定値を設定します"
   _cls_doc: "Heroku Userbot 用のインタラクティブな設定ツール"
+  _cfg_emoji: "設定を開くときの絵文字を変更"
 
 inline_stuff:
   name: "InlineStuff"
@@ -476,6 +440,13 @@ test:
   _cmd_doc_ping: "ユーザーボットの Ping をテストします"
   _cmd_doc_suspend: "<time> - ボットを N 秒間一時停止します"
   _cls_doc: "ユーザーボットのセルフテストに基づいた操作を実行します"
+  _cfg_force_send_all: "⚠️ 何をするものか分からない場合は触らないでください！\nデフォルトでは、Heroku はログの原因となったクライアントを判別しようとします。例えば、Client1 に TestModule、Client2 に TestModule2 がインストールされている場合、Client2 は TestModule2 のログを、Client1 は TestModule のログを受け取ります。このオプションを有効にすると、このクライアントは他のクライアントが原因のログも受け取ります。このクライアントにのみ影響します。"
+  _cfg_tglog_level: "⚠️ 何をするものか分からない場合は触らないでください！\nTelegram に送信されるレコードの最小ログレベル。"
+  _cfg_ignore_common: "一般的なエラーを無視する (例: telethon の 'TypeError')"
+  _cfg_disable_internet_warn: "すべてのインターネットエラーを無視"
+  _cfg_quote_media: "ping のプレビューメディアを引用に切り替え"
+  _cfg_invert_media: "ping のプレビューメディアの反転を切り替え"
+
 
 updater:
   name: "Updater"
@@ -598,6 +569,9 @@ heroku_info:
   show_preview_in_help: "helpコマンドのプレビューに # meta banner を表示 [module]"
 
   name: HerokuInfo
+  _cfg_quote_media: "プレビューメディアを引用に切り替え"
+  _cfg_invert_media: "プレビューメディアの反転を切り替え"
+
 loader:
   loaded_placeholders: "プレースホルダー"
   module_update_prompt: "<tg-emoji emoji-id=5765071340847501478>🔗</tg-emoji> <b>モジュール {} が更新されました。インストールしますか？</b>"
@@ -754,6 +728,9 @@ translate:
   translated_text: "<tg-emoji emoji-id=5787344001862471785>🔁</tg-emoji> 翻訳されたテキスト:\n<blockquote>{tr_text}</blockquote>"
   _cmd_doc_tr: "[language] [text] - テキストを翻訳します"
   _cls_doc: "テキストを翻訳します（当たり前ですが）"
+  _cfg_only_text: ".tr では翻訳されたテキストのみを表示"
+  _cfg_provider: "使用する翻訳プロバイダー"
+
 
 quickstart:
   name: "Quickstart"

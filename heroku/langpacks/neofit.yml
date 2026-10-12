@@ -272,50 +272,11 @@ heroku_backup:
   _cmd_doc_restoreall: "Restore Snapshot"
 
   name: HerokuBackup
-presets:
-  name: "Presets"
-  _fun_title: "🪩 /usr/games"
-  _fun_desc: "Entertainment packages."
-  _chat_title: "👥 Sysadmin Tools"
-  _chat_desc: "Moderation scripts, filters, logging."
-  _service_title: "⚙️ Utils"
-  _service_desc: "System utilities, grep, management."
-  _downloaders_title: "📥 wget/curl"
-  _downloaders_desc: "Loaders for external APIs."
-  welcome: "👋 <b>Select distro preset. Run /presets to open this menu again.</b>"
-  preset: "<b>{}:</b>\nℹ️ <i>{}</i>\n\n⚒ <b>Packages:</b>\n\n{}"
-  back: "🔙 cd .."
-  install: "📦 apt install"
-  installing: "<tg-emoji emoji-id=5451732530048802485>⏳</tg-emoji> <b>Installing bundle</b> <code>{}</code><b>...</b>"
-  installing_module: "<tg-emoji emoji-id=5451732530048802485>⏳</tg-emoji> <b>Processing</b> <code>{}</code> <b>({}/{})...</b>\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <i>pip install {}...</i>"
-  installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Bundle</b> <code>{}</code> <b>installed!</b>"
-  already_installed: "✅ [Installed]"
-  add_to_folder_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Specify a folder to add a module. </b> <code>{prefix}addtofolder <folder> <module></code>"
-  already_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Module is already in the folder</b> <code>{}</code>"
-  added_to_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Module {} added to folder</b> <code>{}</code>"
-  module_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Module {} not found</b>"
-  folder_load_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Specify a folder to load modules. </b> <code>{prefix}fl <folder></code>"
-  folder_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Folder {} not found</b>"
-  no_modules_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>No modules in folder {}</b>"
-  folder: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Folder</b> {}\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}lp in reply to this message to install</b>"
-  remove_from_folder_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Specify folder and module to remove. </b> <code>{prefix}removefromfolder <folder> <module></code>"
-  removed_from_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Module {} removed from folder</b> <code>{}</code>"
-  module_not_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Module {} is not in folder {}</b>"
-  _cmd_doc_presets: "| Module bundle manager"
-  _cmd_doc_loadpreset: "Import preset JSON. Attach file or reply to file."
-  _cmd_doc_addtofolder: "<dir> <mod> - Append mod to preset dir"
-  _cmd_doc_folderload: "<dir> - Export preset dir as JSON"
-  _cmd_doc_removefromfolder: "<dir> <mod> - Remove mod from preset dir"
-  _cmd_doc_loadaliases: "Import aliases JSON. Attach file or reply to file."
-  _cmd_doc_aliasload: "Export aliases as JSON"
-  _cls_doc: "Package Manager (Presets)"
-
 settings:
   name: "Settings"
   vds: "💎 VDS"
   wsl: "💻 WSL"
   userland: "🐧 UserLand"
-  jamhost: "🧃 JamHost"
   hikkahost: "🌼 HikkaHost"
   choose_installation: "<tg-emoji emoji-id=5363805650327450240>🪐</tg-emoji> <b>Select Host:</b>"
   vds_install: "<tg-emoji emoji-id=5471952986970267163>💎</tg-emoji> VDS Script:\n<pre><code class=\"language-shell\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install git python3-pip &amp;&amp; git clone https://github.com/Heroku-userbot/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n<i>Note: Drop 'sudo' if root.</i>"
@@ -386,6 +347,8 @@ settings:
 
   cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>Command not found in PATH</b>
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Daemon {} 404 Not Found</b>
+  _cfg_alias_emoji: "just emoji in .aliases (no ASCII, only vibes)"
+
 heroku_config:
   name: "HerokuConfig"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Select Category</b>"
@@ -429,6 +392,7 @@ heroku_config:
   _cmd_doc_config: "Open Configurator"
   _cmd_doc_fconfig: "<mod> <key> <val> - Set config key"
   _cls_doc: "Interactive Configurator"
+  _cfg_emoji: "Change emoji when opening config (cosmetic, like a custom PS1)"
 
 inline_stuff:
   name: "InlineStuff"
@@ -477,6 +441,12 @@ test:
   _cmd_doc_ping: "Check latency"
   _cmd_doc_suspend: "<time> - sleep(n)"
   _cls_doc: "Self-Test Utils"
+  _cfg_force_send_all: "⚠️ Do not touch, if you don't know what it does! (it's not rm -rf, but still)\nBy default, Heroku will try to determine, which client caused logs. E.g. there is a module TestModule installed on Client1 and TestModule2 on Client2. By default, Client2 will get logs from TestModule2, and Client1 will get logs from TestModule. If this option is enabled, this client will also receive logs, caused by other clients. It affects this client only."
+  _cfg_tglog_level: "⚠️ Do not touch, if you don't know what it does! (it's not rm -rf, but still)\nMinimal loglevel for records to be sent in Telegram."
+  _cfg_ignore_common: "Ignore common errors (e.g. 'TypeError' in telethon) - 2>/dev/null"
+  _cfg_disable_internet_warn: "Ignore all internet errors (ping: network is unreachable)"
+  _cfg_quote_media: "Switch preview media to quote in ping"
+  _cfg_invert_media: "Switch preview invert media in ping"
 
 updater:
   name: "Updater"
@@ -599,6 +569,8 @@ heroku_info:
   show_preview_in_help: "Show # meta banner in help preview [module] (btw I use Arch)"
 
   name: HerokuInfo
+  _cfg_quote_media: "Switch preview media to quote"
+  _cfg_invert_media: "Switch preview invert media"
 loader:
   loaded_placeholders: "Placeholders"
   module_update_prompt: "<tg-emoji emoji-id=5765071340847501478>🔗</tg-emoji> <b>Module {} has been updated. Install it?</b>"
@@ -757,6 +729,8 @@ translate:
   translated_text: "<tg-emoji emoji-id=5787344001862471785>🔁</tg-emoji> Output:\n<blockquote>{tr_text}</blockquote>"
   _cmd_doc_tr: "[lang] [text] - Translate"
   _cls_doc: "Translation Utils"
+  _cfg_only_text: "only translated text in .tr (stdout only)"
+  _cfg_provider: "Translation provider to use (apt source)"
 
 quickstart:
   name: "Quickstart"
@@ -828,6 +802,31 @@ heroku_plugin_security:
   no_hash: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Module name required</b>
   hash_not_found: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Module lookup returned null</b>
   hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>No exact hit. Closest symbol:</b> <code>{}</code>
+  hash_list: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>sha256sum *.py:</b>\n\n<blockquote expandable>{}</blockquote>"
+  no_hashes: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>sha256sum: no module hashes found</b>"
+  external_removed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>chmod -x: is_external removed for</b> <code>{}</code>"
+  external_restored: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>chmod +x: is_external restored for</b> <code>{}</code>"
+  already_internal: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Module</b> <code>{}</code> <b>is already internal (nothing to do)</b>"
+  already_external: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Module</b> <code>{}</code> <b>is already external (nothing to do)</b>"
+  session_allowed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>chmod +r: .session access allowed for</b> <code>{}</code>"
+  session_denied: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>chmod -r: .session access denied for</b> <code>{}</code>"
+  already_allowed: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session access already allowed for</b> <code>{}</code>"
+  already_denied: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session access already denied for</b> <code>{}</code>"
+  no_permissions: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>ls -l: no permissions</b>"
+  permissions_list: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>ls -l:</b>\n{}\n"
+  sgroup_li: "<tg-emoji emoji-id=4974264756668990388>▫️</tg-emoji> <code>{}</code> · <b>{} uids</b> · <b>{} rules</b>"
+  sgroups_list: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>cat /etc/group:</b>\n\n{}"
+  deleted_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>groupdel</b> <code>{}</code> <b>executed</b>"
+  user_already_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>UID</b> <code>{}</code> <b>already member of</b> <code>{}</code>"
+  user_added_to_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>usermod -aG</b> <code>{}</code> <b>to</b> <code>{}</code>"
+  user_not_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>UID</b> <code>{}</code> <b>grep failed in</b> <code>{}</code>"
+  user_removed_from_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>gpasswd -d</b> <code>{}</code> <b>from</b> <code>{}</code>"
+  _cmd_doc_delsgroup: "<name> - groupdel"
+  _cmd_doc_sgroup: "<name> - stat group"
+  _cmd_doc_sgroups: "cat /etc/group"
+  _cmd_doc_newsgroup: "<name> - groupadd"
+  _cmd_doc_sgroupadd: "<name> [uid] - usermod -aG"
+  _cmd_doc_sgroupdel: "<name> [uid] - gpasswd -d"
 loader_restrictor:
   name: "LoaderRestrictor"
   q1: "What's the actual permission scope of any module you install?"

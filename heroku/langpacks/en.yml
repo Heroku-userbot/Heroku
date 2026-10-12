@@ -306,50 +306,11 @@ heroku_backup:
   _cmd_doc_restoreall: "Restores a common backup (base + modules)"
 
   name: HerokuBackup
-presets:
-  name: "Presets"
-  _fun_title: "🪩 Entertainment modules"
-  _fun_desc: "Fun modules — animations, spam, entertainment, etc."
-  _chat_title: "👥 Group Administration Helpers"
-  _chat_desc: "The collection of tools which will help to moderate your group chat — filters, notes, voice recognition, etc."
-  _service_title: "⚙️ Useful modules"
-  _service_desc: "Really useful modules — account management, link shortener, search engine, etc."
-  _downloaders_title: "📥 Downloaders"
-  _downloaders_desc: "The collection of tools which will help you download/upload files from/to different sources — YouTube, TikTok, Instagram, Spotify, VK Music, etc."
-  welcome: "👋 <b>Hi there! Tired of scrolling through endless modules in channels? Let me suggest you some pre-made collections. If you need to call this menu again, simply send /presets to this bot!</b>"
-  preset: "<b>{}:</b>\nℹ️ <i>{}</i>\n\n⚒ <b>Modules in this collection:</b>\n\n{}"
-  back: "🔙 Back"
-  install: "📦 Install"
-  installing: "<tg-emoji emoji-id=5451732530048802485>⏳</tg-emoji> <b>Installing preset</b> <code>{}</code><b>...</b>"
-  installing_module: "<tg-emoji emoji-id=5451732530048802485>⏳</tg-emoji> <b>Installing preset</b> <code>{}</code> <b>({}/{} modules)...</b>\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <i>Installing module {}...</i>"
-  installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Preset</b> <code>{}</code> <b>installed!</b>"
-  already_installed: "✅ [Installed]"
-  add_to_folder_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Specify a folder to add a module. </b> <code>{prefix}addtofolder <folder> <module></code>"
-  already_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Module is already in the folder</b> <code>{}</code>"
-  added_to_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Module {} added to folder</b> <code>{}</code>"
-  module_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Module {} not found</b>"
-  folder_load_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Specify a folder to load modules. </b> <code>{prefix}fl <folder></code>"
-  folder_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Folder {} not found</b>"
-  no_modules_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>No modules in folder {}</b>"
-  folder: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Folder</b> {}\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}lp in reply to this message to install</b>"
-  remove_from_folder_usage: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Specify folder and module to remove. </b> <code>{prefix}removefromfolder <folder> <module></code>"
-  removed_from_folder: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Module {} removed from folder</b> <code>{}</code>"
-  module_not_in_folder: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Module {} is not in folder {}</b>"
-  _cmd_doc_presets: "| Packs of modules to load"
-  _cmd_doc_loadpreset: "Custom preset loader. Reply to a file or send a file with the command."
-  _cmd_doc_addtofolder: "<folder> <module> - Add module to a custom folder"
-  _cmd_doc_folderload: "<folder> - Send a custom folder as a preset file"
-  _cmd_doc_removefromfolder: "<folder> <module> - Remove module from a custom folder"
-  _cmd_doc_loadaliases: "Load aliases from file. Send a file with the command or reply to a file."
-  _cmd_doc_aliasload: "Send aliases as a file"
-  _cls_doc: "Suggests new Heroku users a packs of modules to load"
-
 settings:
   name: "Settings"
   vds: "💎 VDS"
   wsl: "💻 WSL"
   userland: "🐧 UserLand"
-  jamhost: "🧃 JamHost"
   hikkahost: "🌼 HikkaHost"
   choose_installation: "<tg-emoji emoji-id=5363805650327450240>🪐</tg-emoji> <b>Choose your Heroku installation option:</b>"
   vds_install: "<tg-emoji emoji-id=5471952986970267163>💎</tg-emoji> The installation process on a VDS is done with a single command:\n<pre><code class=\"language-shell\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install git python3-pip &amp;&amp; git clone https://github.com/Heroku-userbot/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n<i>Note: If you do not have sudo privileges, omit the corresponding part of the command.</i>"
@@ -414,12 +375,15 @@ settings:
   _cmd_doc_clearmodule: "<module> - Clear all database entries for a module"
   _cmd_doc_unblacklist: "<chat_id> - Unblacklist the bot from operating somewhere"
   _cmd_doc_unblacklistuser: "[user_id] - Allow this user to run permitted commands"
-  _cfg_nonstandart_prefixes: "Allow non-standart prefixes like flags or more than one symbol"
+  _cfg_nonstandart_prefixes: "Allow non-standard prefixes like premium emojis or multi-symbol prefixes"
+
   _cfg_rich_mode: "Show Heroku as a Rich message."
   _cls_doc: "Control core userbot settings"
 
   cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>Command not found</b>
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Watcher {} not found</b>
+  _cfg_alias_emoji: "just emoji in .aliases"
+
 heroku_config:
   name: "HerokuConfig"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Choose a category</b>"
@@ -463,6 +427,8 @@ heroku_config:
   _cmd_doc_config: "Configure modules"
   _cmd_doc_fconfig: "<module_name> <property_name> <config_value> - set the config value for the module"
   _cls_doc: "Interactive configurator for Heroku Userbot"
+  _cfg_emoji: "Change emoji when opening config"
+
 
 inline_stuff:
   name: "InlineStuff"
@@ -510,6 +476,12 @@ test:
   _cmd_doc_ping: "Test your userbot ping"
   _cmd_doc_suspend: "<time> - Suspends the bot for N seconds"
   _cls_doc: "Perform operations based on userbot self-testing"
+  _cfg_force_send_all: "⚠️ Do not touch, if you don't know what it does!\nBy default, Heroku will try to determine, which client caused logs. E.g. there is a module TestModule installed on Client1 and TestModule2 on Client2. By default, Client2 will get logs from TestModule2, and Client1 will get logs from TestModule. If this option is enabled, this client will also receive logs, caused by other clients. It affects this client only."
+  _cfg_tglog_level: "⚠️ Do not touch, if you don't know what it does!\nMinimal loglevel for records to be sent in Telegram."
+  _cfg_ignore_common: "Ignore common errors (e.g. 'TypeError' in telethon)"
+  _cfg_disable_internet_warn: "Ignore all internet errors"
+  _cfg_quote_media: "Switch preview media to quote in ping"
+  _cfg_invert_media: "Switch preview invert media in ping"
 
 updater:
   name: "Updater"
@@ -633,6 +605,10 @@ heroku_info:
   show_preview_in_help: "Show # meta banner like preview in help [module] ?"
 
   name: HerokuInfo
+  _cfg_quote_media: "Switch preview media to quote"
+
+  _cfg_invert_media: "Switch preview invert media"
+
 loader:
   loaded_placeholders: "Placeholders"
   module_update_prompt: "<tg-emoji emoji-id=5765071340847501478>🔗</tg-emoji> <b>Module {} has been updated. Install it?</b>"
@@ -821,6 +797,10 @@ translate:
   translated_text: "<tg-emoji emoji-id=5787344001862471785>🔁</tg-emoji> Translated text:\n<blockquote>{tr_text}</blockquote>"
   _cmd_doc_tr: "[language] [text] - Translate text"
   _cls_doc: "Translates text (obviously)"
+  _cfg_only_text: "only translated text in .tr"
+
+  _cfg_provider: "Translation provider to use"
+
 
 quickstart:
   name: "Quickstart"
