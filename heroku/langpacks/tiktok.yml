@@ -350,6 +350,7 @@ settings:
   hikkahost: "🌼 HikkaHost"
   _cfg_nonstandart_prefixes: "Разрешить нестандартные префиксы, типа премиум-эмодзи или префиксов из нескольких символов"
   _cfg_alias_emoji: "Просто эмодзи в .aliases"
+  _cfg_keep_message_state: "Запоминать сообщения с командами, чтоб отличать реакцию от эдита. Если выключено, любое обновление сообщения с реакциями игнорится"
 
 heroku_config:
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Тыкай категорию</b>"

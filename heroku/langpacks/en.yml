@@ -383,6 +383,7 @@ settings:
   cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>Command not found</b>
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Watcher {} not found</b>
   _cfg_alias_emoji: "just emoji in .aliases"
+  _cfg_keep_message_state: "Remember messages with commands to tell a reaction from an edit. If disabled, any update of a message with reactions is ignored"
 
 heroku_config:
   name: "HerokuConfig"

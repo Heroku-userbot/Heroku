@@ -2,26 +2,27 @@
 ## 🪐 Heroku 2.2.0
 
  - add rich messages support (rich = True) with the {img} placeholder
- - add duplicate command dispatcher: choose which command to run when several modules share a name
- - add multiple prefixes support: `.setprefix` now accepts several prefixes (the first is the main one, the rest are aliases), including personal prefixes of owners and sgroup users
- - add -p argument to owneradd to set a personal prefix for the new owner instead of a separate .setprefix @owner
+ - add duplicate command dispatcher
+ - add multiple prefixes support
+ - add -p argument to owneradd
  - add check if the owner is already added in owneradd
  - add guest bot update
  - add reply_to parameter to Form class and inline message replies
- - add `inline_ready` module hook: called after `client_ready`, when the inline bot is ready (and again, if the bot is recreated)
- - add `loader.InlineDownError`, raised on access to `self.inline.bot` when the inline bot isn't running
+ - add `inline_ready` hook for modules
+ - add `loader.InlineDownError`
  - add the alias `kill` for the `terminate` command
+ - add message state tracking to tell a reaction from an edit (`keep_message_state` in Settings)
  - rework sudo password input in terminal
  - fix grep usage in terminal, including premium emojis
  - fix premium emojis not displaying in results of inline handlers
  - fix `e` aliases
  - fix proper removal of bot update handlers and references
- - fix LoaderRestrictor check and inline bot initialization, including the unlock prompt on a fresh install
+ - fix LoaderRestrictor check and inline bot initialization
  - fix error logging in inline query and event polling
- - fix several unauthorized sessions asking for the phone number at the same time on start
- - fix backup, updater, quickstart and LoaderRestrictor being unloaded on the first start if the inline bot is unavailable
- - fix startup of the whole client failing if the inline manager initialization raises
- - fix inline bot recreation when the bot is deactivated (frozen): warn and create a new one
+ - fix multiple unauthorized session prompts on start
+ - fix internal modules failing on the first start without the inline bot
+ - fix client startup failing on inline manager errors
+ - fix inline bot recreation when the bot is frozen
  - fix process hanging on unload, add task tracking for asyncio tasks
  - improve WebpageMediaEmpty error
  - improve look of .dlm with multiple modules

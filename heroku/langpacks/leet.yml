@@ -348,6 +348,7 @@ settings:
   cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>Cmd n07 f0und</b>
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>W47ch3r {} n07 f0und</b>
   _cfg_alias_emoji: "ju57 3m0j1 1n .4l14535"
+  _cfg_keep_message_state: "R3m3mb3r m3554g35 w17h c0mm4nd5 70 73ll 4 r34c710n fr0m 4n 3d17. 1f d154bl3d, 4ny upd473 0f 4 m3554g3 w17h r34c710n5 15 1gn0r3d"
 heroku_config:
   name: "H3r0kuC0nf1g"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Ch0053 4 c473g0ry</b>"

@@ -348,6 +348,7 @@ settings:
   cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>コマンドが見つかりません</b>
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>ウォッチャー {} が見つかりません</b>
   _cfg_alias_emoji: ".aliases では絵文字のみを表示"
+  _cfg_keep_message_state: "コマンドを含むメッセージを記憶して、リアクションと編集を区別します。無効にすると、リアクション付きメッセージの更新はすべて無視されます"
 
 heroku_config:
   name: "HerokuConfig"

@@ -36,6 +36,8 @@ from .tl_cache import CustomTelegramClient
 
 logger = logging.getLogger(__name__)
 
+MESSAGE_STATES_LIMIT = 1000
+
 # Keys for layout switch
 _LAYOUT_TRANSLATION = str.maketrans(
     'ёйцукенгшщзхъфывапролджэячсмитьбю.Ё"№;%:?ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭ/ЯЧСМИТЬБЮ,'
@@ -63,6 +65,10 @@ class CommandDispatcher:
         self._client = client
         self.client = client
         self._db = db
+
+        self._message_states: collections.OrderedDict[tuple[int, int], int] = (
+            collections.OrderedDict()
+        )
 
         self._ratelimit_storage_user = collections.defaultdict(int)
         self._ratelimit_storage_chat = collections.defaultdict(int)
@@ -237,6 +243,40 @@ class CommandDispatcher:
 
         return message
 
+    def _keep_message_state(self) -> bool:
+        settings = self._modules.lookup("settings")
+        try:
+            return bool(settings.config["keep_message_state"]) if settings else True
+        except Exception:
+            return True
+
+    def _remember_state(self, message: Message) -> None:
+        if not self._keep_message_state():
+            self._message_states.clear()
+            return
+
+        key = (utils.get_chat_id(message), message.id)
+        self._message_states[key] = hash(message.message)
+        self._message_states.move_to_end(key)
+        while len(self._message_states) > MESSAGE_STATES_LIMIT:
+            self._message_states.popitem(last=False)
+
+    def _is_reaction_update(
+        self, event: events.NewMessage | events.MessageEdited
+    ) -> bool:
+        if not getattr(event, "reactions", False):
+            return False
+
+        if not self._keep_message_state():
+            return True
+
+        message = event.message
+        state = self._message_states.get((utils.get_chat_id(message), message.id))
+        if state is None:
+            return True
+
+        return state == hash(message.message)
+
     async def _handle_command(
         self,
         event: events.NewMessage | events.MessageDeleted,
@@ -294,12 +334,16 @@ class CommandDispatcher:
             else message.message
         )
 
+        reaction_update = selected is None and self._is_reaction_update(event)
+        if not watcher:
+            self._remember_state(event.message)
+
         if (
             event.sticker
             or event.dice
             or event.audio
             or event.via_bot_id
-            or (getattr(event, "reactions", False) and getattr(event, "edit_hide", False))
+            or reaction_update
         ):
             return False
 

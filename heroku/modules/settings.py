@@ -44,6 +44,12 @@ class CoreMod(loader.Module):
                 lambda: self.strings["_cfg_rich_mode"],
                 validator=loader.validators.Boolean(),
             ),
+            loader.ConfigValue(
+                "keep_message_state",
+                True,
+                lambda: self.strings["_cfg_keep_message_state"],
+                validator=loader.validators.Boolean(),
+            ),
         )
 
     async def client_ready(self):

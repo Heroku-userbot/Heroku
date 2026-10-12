@@ -348,6 +348,7 @@ settings:
   cmd404: <tg-emoji emoji-id=5469791106591890404>🪄</tg-emoji> <b>Command nyot found</b>
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Watchew {} nyot found</b>
   _cfg_alias_emoji: "just emoji in .awiases"
+  _cfg_keep_message_state: "Wemembew messages wid commands to teww a weaction fwom an edit. If disabwed, any update of a message wid weactions is ignyowed"
 heroku_config:
   name: "HerokuConfig"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Choose a categowy</b>"

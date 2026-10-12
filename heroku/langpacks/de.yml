@@ -350,6 +350,7 @@ settings:
   hikkahost: "🌼 HikkaHost"
   _cfg_nonstandart_prefixes: "Nicht standardmäßige Präfixe wie Premium-Emojis oder mehrstellige Präfixe erlauben"
   _cfg_alias_emoji: "nur Emoji in .aliases"
+  _cfg_keep_message_state: "Nachrichten mit Befehlen merken, um eine Reaktion von einer Bearbeitung zu unterscheiden. Wenn deaktiviert, wird jede Aktualisierung einer Nachricht mit Reaktionen ignoriert"
 
 heroku_config:
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Wähle eine Kategorie</b>"
