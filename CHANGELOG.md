@@ -13,6 +13,7 @@
  - add the alias `kill` for the `terminate` command
  - rework sudo password input in terminal
  - fix grep usage in terminal, including premium emojis
+ - fix premium emojis not displaying in results of inline handlers
  - fix `e` aliases
  - fix proper removal of bot update handlers and references
  - fix LoaderRestrictor check and inline bot initialization, including the unlock prompt on a fresh install

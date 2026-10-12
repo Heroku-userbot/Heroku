@@ -10,6 +10,7 @@
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
+import asyncio
 import inspect
 import logging
 import typing
@@ -142,6 +143,23 @@ class Events(InlineUnit):
     async def _build_inline_result(
         self: "InlineManager", query: InlineQuery, res: dict
     ):
+        result_id = utils.rand(20)
+        text_key = "message" if "message" in res else "caption"
+        text = res.get(text_key)
+        if (
+            isinstance(text, str)
+            and query.from_user.id == self._me
+            and self._needs_premium_emoji_pre_edit(text)
+        ):
+            while len(self._pre_edits) >= 100:
+                self._pre_edits.pop(next(iter(self._pre_edits)))
+            self._pre_edits[result_id] = (text, res.get("reply_markup"))
+            res = {
+                **res,
+                text_key: "🪐",
+                "reply_markup": [[{"text": "­", "data": "­"}]],
+            }
+
         buttons = self.generate_markup(res.get("reply_markup"))
         match True:
             case _ if "message" in res:
@@ -153,7 +171,7 @@ class Events(InlineUnit):
                     link_preview=False,
                     thumb=self._web_document(res.get("thumb")),
                     buttons=buttons,
-                    id=utils.rand(20),
+                    id=result_id,
                 )
             case _ if "photo" in res:
                 return await query.builder.photo(
@@ -161,7 +179,7 @@ class Events(InlineUnit):
                     text=self.sanitise_text(res.get("caption")),
                     parse_mode="HTML",
                     buttons=buttons,
-                    id=utils.rand(20),
+                    id=result_id,
                 )
             case _ if "gif" in res:
                 return await query.builder.document(
@@ -171,7 +189,7 @@ class Events(InlineUnit):
                     text=self.sanitise_text(res.get("caption")),
                     parse_mode="HTML",
                     buttons=buttons,
-                    id=utils.rand(20),
+                    id=result_id,
                 )
             case _ if "video" in res:
                 return await query.builder.document(
@@ -183,7 +201,7 @@ class Events(InlineUnit):
                     text=self.sanitise_text(res.get("caption")),
                     parse_mode="HTML",
                     buttons=buttons,
-                    id=utils.rand(20),
+                    id=result_id,
                 )
             case _:
                 return await query.builder.document(
@@ -194,7 +212,7 @@ class Events(InlineUnit):
                     text=self.sanitise_text(res.get("caption")),
                     parse_mode="HTML",
                     buttons=buttons,
-                    id=utils.rand(20),
+                    id=result_id,
                 )
 
     async def _callback_query_handler(
@@ -333,6 +351,17 @@ class Events(InlineUnit):
         chosen_inline_query,
     ):
         if not isinstance(chosen_inline_query, UpdateBotInlineSend):
+            return
+
+        if pre_edit := self._pre_edits.pop(chosen_inline_query.id, None):
+            if chosen_inline_query.msg_id:
+                await asyncio.sleep(0.3)
+                text, reply_markup = pre_edit
+                await self.bot.edit_message_text(
+                    text=self.sanitise_text(text),
+                    inline_message_id=chosen_inline_query.msg_id,
+                    reply_markup=self.generate_markup(reply_markup),
+                )
             return
 
         query = chosen_inline_query.query

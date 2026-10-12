@@ -160,6 +160,7 @@ class InlineManager(
         self.translator: Translator = allmodules.translator
 
         self._units: dict[str, dict] = {}
+        self._pre_edits: dict[str, tuple[str, typing.Any]] = {}
         self._custom_map: dict[str, callable] = {}
         self.fsm: dict[str, str] = {}
         self._error_events: dict[str, asyncio.Event] = {}
