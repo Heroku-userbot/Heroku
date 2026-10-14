@@ -40,8 +40,13 @@ from herokutl.errors import (
     PhoneNumberInvalidError,
     SessionPasswordNeededError,
 )
+from herokutl.errors import AuthKeyNotFound
 from herokutl.errors.rpcerrorlist import (
     AuthKeyUnregisteredError,
+    SessionExpiredError,
+    SessionRevokedError,
+    UserDeactivatedBanError,
+    UserDeactivatedError,
     YouBlockedUserError,
 )
 from herokutl.network.connection import (
@@ -79,6 +84,16 @@ BASE_DIR = (
     "/data"
     if "DOCKER" in os.environ
     else os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+)
+
+SESSION_LOST_ERRORS = (
+    AuthKeyUnregisteredError,
+    AuthKeyDuplicatedError,
+    AuthKeyNotFound,
+    SessionRevokedError,
+    SessionExpiredError,
+    UserDeactivatedError,
+    UserDeactivatedBanError,
 )
 
 BASE_PATH = Path(BASE_DIR)
@@ -956,7 +971,8 @@ class Heroku:
 
                 if not await client.is_user_authorized():
                     logging.warning(
-                        "Session %s is not authorized, skipping it",
+                        "Session %s is not authorized (terminated by Telegram or the"
+                        " login wasn't finished), skipping it",
                         session.filename,
                     )
                     await client.disconnect()
@@ -973,7 +989,13 @@ class Heroku:
                     session.filename,
                 )
                 continue
-            except (TypeError, AuthKeyDuplicatedError):
+            except (TypeError, AuthKeyDuplicatedError) as e:
+                logging.error(
+                    "Session %s is unusable (%s) and is being deleted",
+                    session.filename,
+                    type(e).__name__,
+                    exc_info=isinstance(e, TypeError),
+                )
                 Path(session.filename).unlink(missing_ok=True)
                 self.sessions.remove(session)
             except (ValueError, ApiIdInvalidError):
@@ -1014,8 +1036,24 @@ class Heroku:
 
             await version.check_branch(me.id, self._allowed_ids, self)
 
-            while await self.amain(first, client):
-                first = False
+            who = f"{me.id}" + (f" (@{me.username})" if me.username else "")
+            try:
+                while await self.amain(first, client):
+                    first = False
+            except SESSION_LOST_ERRORS as e:
+                logging.error(
+                    "Session of the account %s was terminated by Telegram (%s),"
+                    " its userbot is stopped. Log in again to restore it",
+                    who,
+                    type(e).__name__,
+                )
+                return
+
+            logging.error(
+                "Client of the account %s is disconnected, its userbot is stopped"
+                " (the session may have been terminated by Telegram)",
+                who,
+            )
 
     async def _badge(self, client: CustomTelegramClient):
         """Call the badge in shell"""

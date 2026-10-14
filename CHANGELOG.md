@@ -20,6 +20,7 @@
  - fix LoaderRestrictor check and inline bot initialization
  - fix error logging in inline query and event polling
  - fix multiple unauthorized session prompts on start
+ - add logs for discarded and terminated sessions
  - fix internal modules failing on the first start without the inline bot
  - fix client startup failing on inline manager errors
  - fix inline bot recreation when the bot is frozen
