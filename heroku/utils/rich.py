@@ -123,9 +123,7 @@ def _list_item(value) -> str:
         text = f'<input type="checkbox"{" checked" if getattr(value, "checked", False) else ""}>' + text
     attributes = []
     if name == "PageListOrderedItemBlocks" or name == "PageListOrderedItemText":
-        number = getattr(value, "num", None)
-        if number is None:
-            number = getattr(value, "value", None)
+        number = getattr(value, "value", None)
         if number is not None:
             attributes.append(f' value="{_attribute(number)}"')
         if getattr(value, "type", None):
