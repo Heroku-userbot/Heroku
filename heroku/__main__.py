@@ -99,23 +99,35 @@ def get_file_hash(filename):
 
 
 def deps():
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--upgrade",
-            "-q",
-            "--disable-pip-version-check",
-            "--no-warn-script-location",
-            "-r",
-            "requirements.txt",
-        ],
-        check=True,
-        timeout=600,
-        capture_output=True,
-    )
+    try:
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--upgrade",
+                "-q",
+                "--disable-pip-version-check",
+                "--no-warn-script-location",
+                "-r",
+                "requirements.txt",
+            ],
+            check=True,
+            timeout=600,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except subprocess.CalledProcessError as e:
+        print(
+            f"\U0001f6ab pip failed with exit code {e.returncode}:\n"
+            f"{(e.stdout or '') + (e.stderr or '')}".rstrip()
+        )
+        raise
+    except subprocess.TimeoutExpired:
+        print("\U0001f6ab pip didn't finish in 600 seconds")
+        raise
     with open(".requirements_hash", "w") as f:
         f.write(get_file_hash("requirements.txt"))
 
