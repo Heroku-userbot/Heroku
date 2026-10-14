@@ -61,26 +61,30 @@ def _text(value) -> str:
     if name == "TextImage":
         return f'<i>[image:{_attribute(getattr(value, "document_id", ""))}]</i>'
     if name == "TextMath":
-        return f"<tg-math-block>{_escape(getattr(value, 'source', ''))}</tg-math-block>"
+        return f"<tg-math>{_escape(getattr(value, 'source', ''))}</tg-math>"
     if name == "TextDate":
-        attributes = [f'date="{_attribute(getattr(value, "date", ""))}"']
-        for field, tag in (
-            ("relative", "relative"),
-            ("short_time", "short-time"),
-            ("long_time", "long-time"),
-            ("short_date", "short-date"),
-            ("long_date", "long-date"),
-            ("day_of_week", "day-of-week"),
-        ):
-            if getattr(value, field, False):
-                attributes.append(tag)
-        return f'<date {" ".join(attributes)}>{_text(getattr(value, "text", None))}</date>'
+        date = getattr(value, "date", None)
+        unix = int(date.timestamp()) if hasattr(date, "timestamp") else (date or 0)
+        fmt = "".join(
+            letter
+            for field, letter in (
+                ("relative", "r"),
+                ("day_of_week", "w"),
+                ("short_date", "d"),
+                ("long_date", "D"),
+                ("short_time", "t"),
+                ("long_time", "T"),
+            )
+            if getattr(value, field, False)
+        )
+        attributes = f' format="{fmt}"' if fmt else ""
+        return f'<tg-time unix="{unix}"{attributes}>{_text(getattr(value, "text", None))}</tg-time>'
     if name == "TextAnchor":
         return f'<a name="{_attribute(getattr(value, "name", ""))}">{_text(getattr(value, "text", None))}</a>'
     if name == "TextDiff":
         return _text(getattr(value, "text", None))
     if name == "TextButton":
-        return _text(getattr(value, "text", None))
+        return _button(value)
 
     nested = getattr(value, "text", None)
     if nested is not None:
@@ -116,11 +120,16 @@ def _list_item(value) -> str:
     else:
         text = _text(getattr(value, "text", None))
     if getattr(value, "checkbox", False):
-        text = ("[x] " if getattr(value, "checked", False) else "[ ] ") + text
+        text = f'<input type="checkbox"{" checked" if getattr(value, "checked", False) else ""}>' + text
     attributes = []
     if name == "PageListOrderedItemBlocks" or name == "PageListOrderedItemText":
-        if getattr(value, "num", None) is not None:
-            attributes.append(f' value="{_attribute(value.num)}"')
+        number = getattr(value, "num", None)
+        if number is None:
+            number = getattr(value, "value", None)
+        if number is not None:
+            attributes.append(f' value="{_attribute(number)}"')
+        if getattr(value, "type", None):
+            attributes.append(f' type="{_attribute(value.type)}"')
     return f"<li{''.join(attributes)}>{text}</li>"
 
 
@@ -158,12 +167,29 @@ def _button(value) -> str:
         query = _attribute(getattr(button_type, "query", ""))
         tag = "switch_inline_query_current_chat" if getattr(button_type, "same_peer", False) else "switch_inline_query"
         attributes = [f"type=\"{tag}\"", f"query=\"{query}\""]
+        chats = {
+            "InlineQueryPeerTypePM": "allow-user-chats",
+            "InlineQueryPeerTypeBotPM": "allow-bot-chats",
+            "InlineQueryPeerTypeChat": "allow-group-chats",
+            "InlineQueryPeerTypeMegagroup": "allow-group-chats",
+            "InlineQueryPeerTypeBroadcast": "allow-channel-chats",
+        }
+        allowed = list(dict.fromkeys(
+            chats[type(item).__name__]
+            for item in getattr(button_type, "peer_types", None) or []
+            if type(item).__name__ in chats
+        ))
+        if allowed:
+            attributes[0] = "type=\"switch_inline_query_chosen_chat\""
+            attributes += allowed
     elif type_name == "InlineButtonTypeWebView":
         attributes = ["type=\"web_app\"", f"url=\"{_attribute(getattr(button_type, 'url', ''))}\""]
     elif type_name == "InlineButtonTypeCopy":
         attributes = ["type=\"copy_text\"", f"text=\"{_attribute(getattr(button_type, 'copy_text', ''))}\""]
     elif type_name == "InlineButtonTypeUrlAuth":
         attributes = ["type=\"login_url\"", f"url=\"{_attribute(getattr(button_type, 'url', ''))}\""]
+        if getattr(button_type, "fwd_text", None):
+            attributes.append(f"forward-text=\"{_attribute(button_type.fwd_text)}\"")
     elif type_name == "InlineButtonTypeUserProfile":
         attributes = ["type=\"url\"", f"url=\"tg://user?id={_attribute(getattr(button_type, 'user_id', ''))}\""]
     else:
@@ -194,7 +220,7 @@ def _block(value) -> str:
         "PageBlockHeader": "h3",
         "PageBlockSubheader": "h4",
         "PageBlockKicker": None,
-        "PageBlockParagraph": None,
+        "PageBlockParagraph": "p",
         "PageBlockFooter": "footer",
     }
     if name in simple:
@@ -209,17 +235,27 @@ def _block(value) -> str:
         return f'<a name="{_attribute(getattr(value, "name", ""))}"></a>'
     if name in {"PageBlockBlockquote", "PageBlockPullquote"}:
         caption = _caption(getattr(value, "caption", None))
-        return f"<blockquote>{text}{f'<cite>{caption}</cite>' if caption else ''}</blockquote>"
+        tag = "aside" if name == "PageBlockPullquote" else "blockquote"
+        expandable = " expandable" if getattr(value, "collapsed", False) else ""
+        return f"<{tag}{expandable}>{text}{f'<cite>{caption}</cite>' if caption else ''}</{tag}>"
     if name == "PageBlockBlockquoteBlocks":
         blocks = _blocks(getattr(value, "blocks", []))
         return f"<blockquote>{blocks}{_caption(getattr(value, 'caption', None))}</blockquote>"
     if name in {"PageBlockPhoto", "PageBlockVideo", "PageBlockAudio", "PageBlockDocument"}:
         return _media(name.removeprefix("PageBlock").lower(), value)
     if name == "PageBlockMap":
-        return _caption(getattr(value, "caption", None))
+        geo = getattr(value, "geo", None)
+        caption = _caption(getattr(value, "caption", None))
+        if geo is None:
+            return caption
+        zoom = f' zoom="{_attribute(value.zoom)}"' if getattr(value, "zoom", None) else ""
+        map_tag = f'<tg-map lat="{_attribute(geo.lat)}" long="{_attribute(geo.long)}"{zoom}/>'
+        return f"<figure>{map_tag}<figcaption>{caption}</figcaption></figure>" if caption else map_tag
     if name == "PageBlockButtonRow":
         buttons = "".join(_button(item) for item in getattr(value, "buttons", []))
-        return f"<tg-button-row>{buttons}</tg-button-row>"
+        align = next((a for a in ("left", "center", "right") if getattr(value, f"align_{a}", False)), None)
+        align = f' align="{align}"' if align else ""
+        return f"<tg-button-row{align}>{buttons}</tg-button-row>"
     if name in {"PageBlockCollage", "PageBlockSlideshow"}:
         return "".join(_block(item) for item in getattr(value, "items", [])) + _caption(getattr(value, "caption", None))
     if name == "PageBlockTable":
