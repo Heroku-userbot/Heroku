@@ -135,6 +135,10 @@ def _table_cell(value) -> str:
         attributes.append(' align="center"')
     elif getattr(value, "align_right", False):
         attributes.append(' align="right"')
+    if getattr(value, "valign_middle", False):
+        attributes.append(' valign="middle"')
+    elif getattr(value, "valign_bottom", False):
+        attributes.append(' valign="bottom"')
     return f"<{tag}{''.join(attributes)}>{_text(getattr(value, 'text', None))}</{tag}>"
 
 
@@ -220,11 +224,13 @@ def _block(value) -> str:
         return "".join(_block(item) for item in getattr(value, "items", [])) + _caption(getattr(value, "caption", None))
     if name == "PageBlockTable":
         title = _text(getattr(value, "title", None)) if getattr(value, "title", None) else ""
+        flags = "".join(f" {flag}" for flag in ("bordered", "striped", "compact") if getattr(value, flag, False))
         rows = "".join(
             "<tr>" + "".join(_table_cell(cell) for cell in getattr(row, "cells", [])) + "</tr>"
             for row in getattr(value, "rows", [])
         )
-        return title + ("\n" if title else "") + f"<table>{rows}</table>"
+        caption = f"<caption>{title}</caption>" if title else ""
+        return f"<table{flags}>{caption}{rows}</table>"
     if name in {"PageBlockList", "PageBlockOrderedList"}:
         tag = "ol" if name.endswith("OrderedList") else "ul"
         attributes = ""
@@ -240,7 +246,7 @@ def _block(value) -> str:
     if name == "PageBlockDetails":
         title = _text(getattr(value, "title", None))
         blocks = _blocks(getattr(value, "blocks", []))
-        return f"<details><summary>{title}</summary>{blocks}</details>"
+        return f"<details{' open' if getattr(value, 'open', False) else ''}><summary>{title}</summary>{blocks}</details>"
     if name == "PageBlockMath":
         return f"<tg-math-block>{_escape(getattr(value, 'source', ''))}</tg-math-block>"
     if name == "PageBlockThinking":
