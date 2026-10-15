@@ -58,6 +58,17 @@
 
 ## 🚀 Installation
 
+### Alternative: universal installer (Linux, WSL, UserLAnd)
+Installation with a single command, the step-by-step instructions below remain the main one.
+It installs the requirements, creates a virtual environment (`.venv`) and starts Heroku. Run the same command again to start the installed Heroku.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Heroku-userbot/Heroku/master/install.sh | bash
+```
+
+> - Root users: add `-s -- --root` (`... | bash -s -- --root`)
+> - `HEROKU_FORCE_INSTALL=1` forces a reinstall
+
 ### VPS/VDS
 > **Note for VPS/VDS Users:**  
 > Add `--root` for root users (to avoid entering force_insecure)

@@ -56,11 +56,21 @@ jobs:
       - name: Allow cloning the checkout
         run: git config --global --add safe.directory '*'
 
-      - name: Install via pipe
+      - name: Install in minimal mode
+        if: ${{ startsWith(matrix.image, 'ubuntu') || startsWith(matrix.image, 'debian') }}
+        shell: bash
+        run: |
+          cd "$(mktemp -d)"
+          HEROKU_MINIMAL=1 HEROKU_REPO_URL="$GITHUB_WORKSPACE" bash -s -- --help < "$GITHUB_WORKSPACE/install.sh"
+          ! command -v ffmpeg
+
+      - name: Install via pipe and run again
         shell: bash
         run: |
           cd "$(mktemp -d)"
           HEROKU_REPO_URL="$GITHUB_WORKSPACE" bash -s -- --help < "$GITHUB_WORKSPACE/install.sh"
+          HEROKU_REPO_URL="$GITHUB_WORKSPACE" bash -s -- --help < "$GITHUB_WORKSPACE/install.sh" | tee rerun.log
+          grep -q "already installed" rerun.log
 
   macos:
     runs-on: macos-latest
