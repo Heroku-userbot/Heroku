@@ -346,8 +346,8 @@ settings:
   aliases_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>All aliases removed</b>."
   no_alias: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Alias</b> <code>{}</code> <b>does not exist</b>"
   db_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Database cleared</b>"
-  heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<b><tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>Developers: <a href=\"t.me/codrago\">@codrago</a>, <a href=\"t.me/zetgo\">@zetgo</a></b>"
-  rich_heroku_message: '<figure><img src="{banner_url}"/></figure><h1>{platform} Userbot</h1><table bordered><tr><th>Component</th><th>Current release</th></tr><tr><td><b>Version</b></td><td><code>{version}</code></td></tr><tr><td><b>Build</b></td><td>{build}</td></tr><tr><td><b>Heroku TL</b></td><td><code>{htl_version}</code></td></tr><tr><td><b>API layer</b></td><td><code>{layer}</code></td></tr><tr><td><b>Current user</b></td><td><code>{current_user}</code></td></tr><tr><td><b>Developers</b></td><td><a href="https://t.me/codrago">@codrago</a>, <a href="https://t.me/zetgo">@zetgo</a></td></tr></table>'
+  heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>Developer: <a href=\"t.me/zetgo\">@zetgo</a></b>"
+  rich_heroku_message: '<figure><img src="{banner_url}"/></figure><h1>{platform} Userbot</h1><table bordered><tr><th>Component</th><th>Current release</th></tr><tr><td><b>Version</b></td><td><code>{version}</code></td></tr><tr><td><b>Build</b></td><td>{build}</td></tr><tr><td><b>Heroku TL</b></td><td><code>{htl_version}</code></td></tr><tr><td><b>API layer</b></td><td><code>{layer}</code></td></tr><tr><td><b>Current user</b></td><td><code>{current_user}</code></td></tr><tr><td><b>Developer</b></td><td><a href="https://t.me/zetgo">@zetgo</a></td></tr></table>'
   confirm_cleardb: "⚠️ <b>Are you sure, that you want to clear database?</b>"
   cleardb_confirm: "🗑 Clear database"
   cancel: "🚫 Cancel"
@@ -504,7 +504,7 @@ updater:
   stop_ub_confirm: "Your {} will be stopped, are you sure?"
   full_success: "<tg-emoji emoji-id=6028215594707324419>👍</tg-emoji> <b>Userbot is fully loaded! {}</b>\n<i>Full restart took {}s</i>"
   ub_stop: "Your {emoji} has been stopped"
-  full_fail: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Userbot is fully loaded, but an error occurred! {}\n<i>Full restart took {}s\nFailed to load {} modules</i>"
+  full_fail: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Userbot is fully loaded, but an error occurred! {}</b>\n<i>Full restart took {}s\nFailed to load {} modules</i>"
   secure_boot_complete: "<tg-emoji emoji-id=5472308992514464048>🔐</tg-emoji> <b>Secure boot completed! {}</b>\n<i>Restart took {}s</i>"
   secure_boot_fail: "<tg-emoji emoji-id=5472308992514464048>🔐</tg-emoji> <b>Secure boot completed, but an error occurred! {}</b>\n<i>Restart took {}s\nFailed to load {} modules</i>"
   invalid_args: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>You must provide number of commits to rollback!</b>"
@@ -681,7 +681,7 @@ loader:
   overwrite_command: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>This module attempted to override the core command (</b><code>{}{}</code><b>)</b>\n\n<tg-emoji emoji-id=5472146462362048818>💡</tg-emoji><i> Don't report it as bug. It's a security measure to prevent replacing core modules' commands with some junk</i>"
   unload_core: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>You can't unload core module</b> <code>{}</code><b></b>\n\n<tg-emoji emoji-id=5472146462362048818>💡</tg-emoji><i> Don't report it as bug. It's a security measure to prevent replacing core modules with some junk</i>"
   cannot_unload_lib: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>You can't unload library</b>"
-  wait_channel_approve: "<tg-emoji emoji-id=5469741319330996757>💫</tg-emoji> <b>Module</b> <code>{}</code> <b>requests permission to join channel <a href=\"https://t.me/{}\">{}</a>.\n\n<b><tg-emoji emoji-id=5467666648263564704>❓</tg-emoji> Reason: {}</b>\n\n<i>Waiting for <a href=\"https://t.me/{}\">approval</a>...</i>"
+  wait_channel_approve: "<tg-emoji emoji-id=5469741319330996757>💫</tg-emoji> <b>Module</b> <code>{}</code> <b>requests permission to join channel <a href=\"https://t.me/{}\">{}</a>.</b>\n\n<b><tg-emoji emoji-id=5467666648263564704>❓</tg-emoji> Reason: {}</b>\n\n<i>Waiting for <a href=\"https://t.me/{}\">approval</a>...</i>"
   installing: "<tg-emoji emoji-id=5325792861885570739>🕔</tg-emoji> <b>Installing module</b> <code>{}</code><b>...</b>"
   repo_exists: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Repo</b> <code>{}</code> <b>is already added</b>"
   repo_added: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>Repo</b> <code>{}</code> <b>added</b>"

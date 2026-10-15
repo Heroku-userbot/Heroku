@@ -309,8 +309,8 @@ settings:
   aliases_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Все алиасы минус</b>."
   no_alias: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Нет такого алиаса</b> <code>{}</code>"
   db_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Базу вайпнул (очистил)</b>"
-  heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<b><tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>Кодеры: <a href=\"t.me/codrago\">@codrago</a>, <a href=\"t.me/zetgo\">@zetgo</a><b>"
-  rich_heroku_message: '<figure><img src="{banner_url}"/></figure><h1>{platform} Userbot</h1><table bordered><tr><th>Компонент</th><th>Текущий релиз</th></tr><tr><td><b>Версия</b></td><td><code>{version}</code></td></tr><tr><td><b>Сборка</b></td><td>{build}</td></tr><tr><td><b>Heroku TL</b></td><td><code>{htl_version}</code></td></tr><tr><td><b>Слой API</b></td><td><code>{layer}</code></td></tr><tr><td><b>Текущий юзер</b></td><td><code>{current_user}</code></td></tr><tr><td><b>Разработчики</b></td><td><a href="https://t.me/codrago">@codrago</a>, <a href="https://t.me/zetgo">@zetgo</a></td></tr></table>'
+  heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>Кодер: <a href=\"t.me/zetgo\">@zetgo</a></b>"
+  rich_heroku_message: '<figure><img src="{banner_url}"/></figure><h1>{platform} Userbot</h1><table bordered><tr><th>Компонент</th><th>Текущий релиз</th></tr><tr><td><b>Версия</b></td><td><code>{version}</code></td></tr><tr><td><b>Сборка</b></td><td>{build}</td></tr><tr><td><b>Heroku TL</b></td><td><code>{htl_version}</code></td></tr><tr><td><b>Слой API</b></td><td><code>{layer}</code></td></tr><tr><td><b>Текущий юзер</b></td><td><code>{current_user}</code></td></tr><tr><td><b>Разработчик</b></td><td><a href="https://t.me/zetgo">@zetgo</a></td></tr></table>'
   _cfg_rich_mode: "Показывать heroku как Rich-сообщение."
   _cls_doc: "Базовые настройки"
   confirm_cleardb: "⚠️ <b>Ты реально хочешь вайпнуть базу данных? Все слетит!</b>"
@@ -462,7 +462,7 @@ updater:
   success: "<tg-emoji emoji-id=5208661316947955396>⏱</tg-emoji> <b>Ребут успешный! {}</b>\n<i>Модули еще грузятся...</i>\n<i>Заняло {} сек</i>"
   full_success: "<tg-emoji emoji-id=6028215594707324419>👍</tg-emoji> <b>Фулл загрузка! {}</b>\n<i>Всего заняло {} сек.</i>"
   ub_stop: "Твоя {emoji} стопнулась!"
-  full_fail: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Юзербот фулл загрузился, но что-то пошло не так! {}\n<i>Ребут занял {} сек\n{} модулей не загрузилось</i>"
+  full_fail: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Юзербот фулл загрузился, но что-то пошло не так! {}</b>\n<i>Ребут занял {} сек\n{} модулей не загрузилось</i>"
   secure_boot_complete: "<tg-emoji emoji-id=5472308992514464048>🔐</tg-emoji> <b>Сейф бут все! {}</b>\n<i>Заняло {} сек</i>"
   secure_boot_fail: "<tg-emoji emoji-id=5472308992514464048>🔐</tg-emoji> <b>Сейф бут все, но что-то пошло не так! {}</b>\n<i>Заняло {} сек\n{} модулей не загрузилось</i>"
   origin_cfg_doc: "Откуда обновляться (git)"
@@ -651,7 +651,7 @@ loader:
   overwrite_command: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>Этот модуль хотел перезаписать встроенную команду (</b><code>{}</code><b>)</b>\n\n<tg-emoji emoji-id=5472146462362048818>💡</tg-emoji><i> Это защита, чтоб всякий шлак не ломал бота.</i>"
   unload_core: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>Нельзя сносить встроенный модуль</b> <code>{}</code><b>, сломаешь всё</b>\n\n<tg-emoji emoji-id=5472146462362048818>💡</tg-emoji><i> Защита от дурака.</i>"
   cannot_unload_lib: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>Либу не снесешь</b>"
-  wait_channel_approve: "<tg-emoji emoji-id=5469741319330996757>💫</tg-emoji> <b>Модуль</b> <code>{}</code> <b>хочет в канал <a href=\"https://t.me/{}\">{}</a>.\n\n<b><tg-emoji emoji-id=5467666648263564704>❓</tg-emoji> Зачем: {}</b>\n\n<i>Ждем <a href=\"https://t.me/{}\">добро</a>...</i>"
+  wait_channel_approve: "<tg-emoji emoji-id=5469741319330996757>💫</tg-emoji> <b>Модуль</b> <code>{}</code> <b>хочет в канал <a href=\"https://t.me/{}\">{}</a>.</b>\n\n<b><tg-emoji emoji-id=5467666648263564704>❓</tg-emoji> Зачем: {}</b>\n\n<i>Ждем <a href=\"https://t.me/{}\">добро</a>...</i>"
   installing: "<tg-emoji emoji-id=5325792861885570739>🕔</tg-emoji> <b>Ставлю модуль</b> <code>{}</code><b>...</b>"
   repo_exists: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Репо</b> <code>{}</code> <b>уже есть</b>"
   repo_added: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>Репо</b> <code>{}</code> <b>добавил</b>"

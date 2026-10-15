@@ -312,8 +312,8 @@ settings:
   aliases_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>すべてのエイリアスを削除しました</b>"
   no_alias: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>エイリアス</b> <code>{}</code> <b>は存在しません</b>"
   db_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>データベースをクリアしました</b>"
-  heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<b><tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>開発者: <a href=\"t.me/codrago\">@codrago</a>, <a href=\"t.me/zetgo\">@zetgo</a></b>"
-  rich_heroku_message: '<figure><img src="{banner_url}"/></figure><h1>{platform} Userbot</h1><table bordered><tr><th>コンポーネント</th><th>現在のリリース</th></tr><tr><td><b>バージョン</b></td><td><code>{version}</code></td></tr><tr><td><b>ビルド</b></td><td>{build}</td></tr><tr><td><b>Heroku TL</b></td><td><code>{htl_version}</code></td></tr><tr><td><b>APIレイヤー</b></td><td><code>{layer}</code></td></tr><tr><td><b>現在のユーザー</b></td><td><code>{current_user}</code></td></tr><tr><td><b>開発者</b></td><td><a href="https://t.me/codrago">@codrago</a>, <a href="https://t.me/zetgo">@zetgo</a></td></tr></table>'
+  heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>開発者: <a href=\"t.me/zetgo\">@zetgo</a></b>"
+  rich_heroku_message: '<figure><img src="{banner_url}"/></figure><h1>{platform} Userbot</h1><table bordered><tr><th>コンポーネント</th><th>現在のリリース</th></tr><tr><td><b>バージョン</b></td><td><code>{version}</code></td></tr><tr><td><b>ビルド</b></td><td>{build}</td></tr><tr><td><b>Heroku TL</b></td><td><code>{htl_version}</code></td></tr><tr><td><b>APIレイヤー</b></td><td><code>{layer}</code></td></tr><tr><td><b>現在のユーザー</b></td><td><code>{current_user}</code></td></tr><tr><td><b>開発者</b></td><td><a href="https://t.me/zetgo">@zetgo</a></td></tr></table>'
   confirm_cleardb: "⚠️ <b>本当にデータベースをクリアしますか？</b>"
   cleardb_confirm: "🗑 データベースをクリア"
   cancel: "🚫 キャンセル"
@@ -469,7 +469,7 @@ updater:
   stop_ub_confirm: "あなたの {} は停止されました。本当によろしいですか？"
   full_success: "<tg-emoji emoji-id=6028215594707324419>👍</tg-emoji> <b>ユーザーボットが完全に読み込まれました！ {}</b>\n<i>完全な再起動に {}秒かかりました</i>"
   ub_stop: "{emoji} は停止されました"
-  full_fail: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>ユーザーボットは完全に読み込まれましたが、エラーが発生しました！ {}\n<i>完全な再起動に {}秒かかりました\n{} 個のモジュールを読み込めませんでした</i>"
+  full_fail: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>ユーザーボットは完全に読み込まれましたが、エラーが発生しました！ {}</b>\n<i>完全な再起動に {}秒かかりました\n{} 個のモジュールを読み込めませんでした</i>"
   secure_boot_complete: "<tg-emoji emoji-id=5472308992514464048>🔐</tg-emoji> <b>セキュアブートが完了しました！ {}</b>\n<i>再起動に {}秒かかりました</i>"
   secure_boot_fail: "<tg-emoji emoji-id=5472308992514464048>🔐</tg-emoji> <b>セキュアブートが完了しましたが、エラーが発生しました！ {}</b>\n<i>再起動に {}秒かかりました\n{} 個のモジュールを読み込めませんでした</i>"
   invalid_args: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>ロールバックするコミット数を指定する必要があります！</b>"
@@ -644,7 +644,7 @@ loader:
   overwrite_command: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>このモジュールはコアコマンド (</b><code>{}{}</code><b>) を上書きしようとしました</b>\n\n<tg-emoji emoji-id=5472146462362048818>💡</tg-emoji><i> バグとして報告しないでください。これはコアモジュールのコマンドがジャンクなものに置き換えられるのを防ぐセキュリティ対策です</i>"
   unload_core: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>コアモジュール</b> <code>{}</code> <b>はアンロードできません</b>\n\n<tg-emoji emoji-id=5472146462362048818>💡</tg-emoji><i> バグとして報告しないでください。これはコアモジュールがジャンクなものに置き換えられるのを防ぐセキュリティ対策です</i>"
   cannot_unload_lib: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>ライブラリはアンロードできません</b>"
-  wait_channel_approve: "<tg-emoji emoji-id=5469741319330996757>💫</tg-emoji> <b>モジュール</b> <code>{}</code> <b>がチャンネル <a href=\"https://t.me/{}\">{}</a> への参加許可を求めています。\n\n<b><tg-emoji emoji-id=5467666648263564704>❓</tg-emoji> 理由: {}</b>\n\n<i><a href=\"https://t.me/{}\">承認</a>を待っています...</i>"
+  wait_channel_approve: "<tg-emoji emoji-id=5469741319330996757>💫</tg-emoji> <b>モジュール</b> <code>{}</code> <b>がチャンネル <a href=\"https://t.me/{}\">{}</a> への参加許可を求めています。</b>\n\n<b><tg-emoji emoji-id=5467666648263564704>❓</tg-emoji> 理由: {}</b>\n\n<i><a href=\"https://t.me/{}\">承認</a>を待っています...</i>"
   installing: "<tg-emoji emoji-id=5325792861885570739>🕔</tg-emoji> <b>モジュール</b> <code>{}</code> <b>をインストールしています...</b>"
   repo_exists: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>リポジトリ</b> <code>{}</code> <b>は既に追加されています</b>"
   repo_added: "<tg-emoji emoji-id=5784993237412351403>✅</tg-emoji> <b>リポジトリ</b> <code>{}</code> <b>が追加されました</b>"
