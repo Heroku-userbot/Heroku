@@ -151,14 +151,23 @@ class BaseTranslator:
         if all(isinstance(value, str) for value in data.values()):
             return data
 
-        if all(
-            isinstance(pack, dict)
-            and all(
-                isinstance(key, str) and isinstance(value, str)
+        def valid_pack(pack) -> bool:
+            return isinstance(pack, dict) and all(
+                isinstance(key, str)
+                and (
+                    isinstance(value, str)
+                    or (
+                        isinstance(value, dict)
+                        and all(
+                            isinstance(nested_key, str) and isinstance(nested_value, str)
+                            for nested_key, nested_value in value.items()
+                        )
+                    )
+                )
                 for key, value in pack.items()
             )
-            for pack in data.values()
-        ):
+
+        if all(valid_pack(pack) for pack in data.values()):
             return data
 
         return None
