@@ -42,8 +42,10 @@ else:
         branch = "master"
 
 
-async def check_branch(me_id: int, allowed_ids: list, self):
+async def check_branch(me_id: int, allowed_ids: list[int] | None, self):
     if NO_GIT or branch == "master":
+        return
+    if not allowed_ids:
         return
     if git is None:
         return
@@ -56,7 +58,7 @@ async def check_branch(me_id: int, allowed_ids: list, self):
 
             branch_name = get_branch_name(repo_path)
             is_ancestor = check_commit_ancestor(repo, branch_name)
-            if is_ancestor:
+            if is_ancestor is not False:
                 return
     except Exception:
         return

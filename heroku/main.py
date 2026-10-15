@@ -1031,7 +1031,7 @@ class Heroku:
             register_secret(getattr(me, "phone", None))
 
             async with self._allowed_ids_lock:
-                if not self._allowed_ids:
+                if self._allowed_ids is None:
                     self._allowed_ids = await get_allowed_ids(client)
 
             await version.check_branch(me.id, self._allowed_ids, self)
@@ -1247,7 +1247,7 @@ class Heroku:
             return
 
         self.loop.set_exception_handler(self._loop_exception_handler)
-        self._allowed_ids = []
+        self._allowed_ids = None
         self._allowed_ids_lock = asyncio.Lock()
         await asyncio.gather(*[self.amain_wrapper(client) for client in self.clients])
 

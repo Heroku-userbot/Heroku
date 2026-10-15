@@ -267,11 +267,11 @@ def _parse_ids(content: str) -> list[int]:
     return [int(i) for i in re.findall(r"\b\d+\b", re.sub(r"<[^>]+>", " ", content))]
 
 
-async def allowed_ids(client) -> list[int]:
+async def allowed_ids(client) -> list[int] | None:
     """
     Read beta users ids from the public channel, fall back to the last
     successfully read list
-    :return: allowed list ids
+    :return: allowed list ids or `None`
     """
     from .._internal import private_write
 
@@ -291,4 +291,4 @@ async def allowed_ids(client) -> list[int]:
         with open(_ALLOWED_IDS_CACHE, encoding="utf-8") as f:
             return [int(i) for i in json.load(f)]
     except Exception:
-        return []
+        return None

@@ -374,9 +374,11 @@ def check_commit_ancestor(repo, branch):
             capture_output=True,
             timeout=5,
         )
-        return proc.returncode == 0
+        if proc.returncode in (0, 1):
+            return proc.returncode == 0
+        return None
     except (subprocess.TimeoutExpired, Exception):
-        return False
+        return None
 
 
 def get_branch_name(repo_path):
