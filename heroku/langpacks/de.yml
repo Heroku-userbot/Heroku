@@ -351,6 +351,8 @@ settings:
   _cfg_nonstandart_prefixes: "Nicht standardmäßige Präfixe wie Premium-Emojis oder mehrstellige Präfixe erlauben"
   _cfg_alias_emoji: "nur Emoji in .aliases"
   _cfg_keep_message_state: "Nachrichten mit Befehlen merken, um eine Reaktion von einer Bearbeitung zu unterscheiden. Wenn deaktiviert, wird jede Aktualisierung einer Nachricht mit Reaktionen ignoriert"
+  universal: "🌐 Universell"
+  universal_install: "🌐 <b>Universeller Installer</b> (Linux, WSL, UserLAnd): installiert alles Nötige und startet Heroku mit einem Befehl:\n<pre><code class=\"language-bash\">curl -fsSL https://raw.githubusercontent.com/Heroku-userbot/Heroku/master/install.sh | bash</code></pre>\n<i>Derselbe Befehl startet beim erneuten Ausführen einfach den installierten Heroku. Für root füge hinzu</i> <code>-s -- --root</code>"
 
 heroku_config:
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Wähle eine Kategorie</b>"

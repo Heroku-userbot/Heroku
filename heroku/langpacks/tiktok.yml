@@ -351,6 +351,8 @@ settings:
   _cfg_nonstandart_prefixes: "Разрешить нестандартные префиксы, типа премиум-эмодзи или префиксов из нескольких символов"
   _cfg_alias_emoji: "Просто эмодзи в .aliases"
   _cfg_keep_message_state: "Запоминать сообщения с командами, чтоб отличать реакцию от эдита. Если выключено, любое обновление сообщения с реакциями игнорится"
+  universal: "🌐 Универсальная"
+  universal_install: "🌐 <b>Универсальный установщик</b> (Linux, WSL, UserLAnd): ставит всё нужное и запускает Heroku одной командой, без лишних движений:\n<pre><code class=\"language-bash\">curl -fsSL https://raw.githubusercontent.com/Heroku-userbot/Heroku/master/install.sh | bash</code></pre>\n<i>Запустишь ещё раз — просто поднимет уже установленный Heroku. Нужен root — добавь</i> <code>-s -- --root</code>"
 
 heroku_config:
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Тыкай категорию</b>"

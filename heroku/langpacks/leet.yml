@@ -349,6 +349,9 @@ settings:
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>W47ch3r {} n07 f0und</b>
   _cfg_alias_emoji: "ju57 3m0j1 1n .4l14535"
   _cfg_keep_message_state: "R3m3mb3r m3554g35 w17h c0mm4nd5 70 73ll 4 r34c710n fr0m 4n 3d17. 1f d154bl3d, 4ny upd473 0f 4 m3554g3 w17h r34c710n5 15 1gn0r3d"
+  universal: "🌐 Un1v3r54l"
+  universal_install: "🌐 <b>Un1v3r54l 1n574ll3r</b> (L1nux, W5L, U53rL4nd): 1n574ll5 3v3ry7h1ng n33d3d 4nd 574r75 H3r0ku w17h 0n3 c0mm4nd:\n<pre><code class=\"language-bash\">curl -fsSL https://raw.githubusercontent.com/Heroku-userbot/Heroku/master/install.sh | bash</code></pre>\n<i>7h3 54m3 c0mm4nd run 4g41n w1ll ju57 574r7 7h3 1n574ll3d H3r0ku. F0r r007, 4dd</i> <code>-s -- --root</code>"
+
 heroku_config:
   name: "H3r0kuC0nf1g"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Ch0053 4 c473g0ry</b>"

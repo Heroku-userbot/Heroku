@@ -349,6 +349,8 @@ settings:
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Watchew {} nyot found</b>
   _cfg_alias_emoji: "just emoji in .awiases"
   _cfg_keep_message_state: "Wemembew messages wid commands to teww a weaction fwom an edit. If disabwed, any update of a message wid weactions is ignyowed"
+  universal: "🌐 Unyivewsaw"
+  universal_install: "🌐 <b>Unyivewsaw instawwew</b> (Winyux, WSW, UsewWAnd): instawws evewything nyeeded and stawts Hewoku with one command UwU:\n<pre><code class=\"language-bash\">curl -fsSL https://raw.githubusercontent.com/Heroku-userbot/Heroku/master/install.sh | bash</code></pre>\n<i>The same command wun again wiww just stawt the instawwed Hewoku. Fow woot, add</i> <code>-s -- --root</code>"
 heroku_config:
   name: "HerokuConfig"
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Choose a categowy</b>"

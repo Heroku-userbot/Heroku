@@ -32,6 +32,7 @@
  - update herokutl to 2.2.0 and clean up requirements
  - improve install.sh and add a workflow for testing it
  - fine-tune the installation script
+ - add the universal installer to the installation command
 
 ## 🪐 Heroku 2.1.0
 

@@ -349,6 +349,8 @@ settings:
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>ウォッチャー {} が見つかりません</b>
   _cfg_alias_emoji: ".aliases では絵文字のみを表示"
   _cfg_keep_message_state: "コマンドを含むメッセージを記憶して、リアクションと編集を区別します。無効にすると、リアクション付きメッセージの更新はすべて無視されます"
+  universal: "🌐 ユニバーサル"
+  universal_install: "🌐 <b>ユニバーサルインストーラー</b> (Linux、WSL、UserLAnd): 必要なものをすべて入れて、Herokuを一つのコマンドで起動します:\n<pre><code class=\"language-bash\">curl -fsSL https://raw.githubusercontent.com/Heroku-userbot/Heroku/master/install.sh | bash</code></pre>\n<i>同じコマンドをもう一度実行すると、インストール済みのHerokuが起動するだけです。rootの場合はこれを追加</i> <code>-s -- --root</code>"
 
 heroku_config:
   name: "HerokuConfig"

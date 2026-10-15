@@ -384,6 +384,8 @@ settings:
   mod404: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Watcher {} not found</b>
   _cfg_alias_emoji: "just emoji in .aliases"
   _cfg_keep_message_state: "Remember messages with commands to tell a reaction from an edit. If disabled, any update of a message with reactions is ignored"
+  universal: "🌐 Universal"
+  universal_install: "🌐 <b>Universal installer</b> (Linux, WSL, UserLAnd): installs everything needed and starts Heroku with one command:\n<pre><code class=\"language-bash\">curl -fsSL https://raw.githubusercontent.com/Heroku-userbot/Heroku/master/install.sh | bash</code></pre>\n<i>The same command run again will just start the installed Heroku. For root, add</i> <code>-s -- --root</code>"
 
 heroku_config:
   name: "HerokuConfig"

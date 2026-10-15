@@ -65,6 +65,7 @@ class CoreMod(loader.Module):
                     "wsl",
                     "userland",
                     "hikkahost",
+                    "universal",
                 ]
             ],
             2,
@@ -699,7 +700,7 @@ class CoreMod(loader.Module):
         args = utils.get_args_raw(message)
 
         if (
-            not args or args not in {"-vds", "-wsl", "-ul", "-jh", "-hh", "-lh"}
+            not args or args not in {"-vds", "-wsl", "-ul", "-jh", "-hh", "-lh", "-uni"}
         ) and not (
             await self.inline.form(
                 self.strings["choose_installation"],
@@ -724,6 +725,8 @@ class CoreMod(loader.Module):
                 await utils.answer(message, self.strings["userland_install"])
             case _ if "-hh" in args:
                 await utils.answer(message, self.strings["hikkahost_install"])
+            case _ if "-uni" in args:
+                await utils.answer(message, self.strings["universal_install"])
 
     async def _inline__choose__installation(self, call: InlineCall, platform: str):
         with contextlib.suppress(Exception):

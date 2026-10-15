@@ -350,6 +350,8 @@ settings:
   wsl: "💻 WSL"
   userland: "🐧 UserLand"
   hikkahost: "🌼 HikkaHost"
+  universal: "🌐 Универсальная"
+  universal_install: "🌐 <b>Универсальный установщик</b> (Linux, WSL, UserLAnd): ставит всё нужное и запускает Heroku одной командой:\n<pre><code class=\"language-bash\">curl -fsSL https://raw.githubusercontent.com/Heroku-userbot/Heroku/master/install.sh | bash</code></pre>\n<i>Та же команда при повторном запуске просто запустит установленный Heroku. Для root добавь</i> <code>-s -- --root</code>"
 
 heroku_config:
   choose_core: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Выбери категорию</b>"
