@@ -131,12 +131,10 @@ class Help(loader.Module):
 
     def find_aliases(self, command: str) -> list:
         """Find aliases for command"""
-        aliases = []
         _command = self.allmodules.commands[command]
-        if getattr(_command, "alias", None) and not (
-            aliases := getattr(_command, "aliases", None)
-        ):
-            aliases = [_command.alias]
+        aliases = getattr(_command, "aliases", None)
+        if not aliases and (alias := getattr(_command, "alias", None)):
+            aliases = [alias]
 
         return aliases or []
 

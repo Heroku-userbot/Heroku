@@ -1076,11 +1076,9 @@ class Modules:
             return None
 
         for command_name, _command in self.commands.items():
-            aliases = []
-            if getattr(_command, "alias", None) and not (
-                aliases := getattr(_command, "aliases", None)
-            ):
-                aliases = [_command.alias]
+            aliases = getattr(_command, "aliases", None) or (
+                [_command.alias] if getattr(_command, "alias", None) else []
+            )
 
             if not aliases:
                 continue
