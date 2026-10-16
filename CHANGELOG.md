@@ -33,6 +33,32 @@
  - improve install.sh and add a workflow for testing it
  - fine-tune the installation script
  - add the universal installer to the installation command
+ - add module cache with startup and periodic update checks, with an inline prompt to update (or always update) changed modules
+ - add rich mode to .dlm, .help, .heroku, ping and .translate, with {img} and collapsible sections
+ - add rich message methods to the client (send, edit, get, translate, compose)
+ - add module filter to .logs and per-client log options
+ - add several prefixes and a target user (@user, --user) to .setprefix
+ - add prefix validation and prefixes in the list of .owners
+ - add `a, b && command` syntax and multiline aliases to .addalias
+ - add token redaction for logs, errors and chat output
+ - add private file permissions and atomic writes for session, database and log files
+ - add HTTPS-only module and translation downloads, basic auth is sent to the trusted repo only
+ - add private channel check for asset, database, log and backup channels
+ - add owner-only check for inline form queries
+ - add setup of inline mode and inline feedback for a new inline bot
+ - add a hint for the BotFather bot limit and token parsing from its reply
+ - add lazy placeholders, a failing placeholder no longer breaks help and info
+ - add nested pointers for self.db.pointer(), changes in nested dicts and lists of the database are now saved
+ - add module task cancellation and inline cleanup on unload
+ - improve terminal output streaming and the sudo prompt
+ - improve api ratelimiter call chains
+ - improve module translations, with validation and background refresh
+ - improve log routing by client
+ - fix grep -v with a single argument
+ - fix unit leaks and races in inline forms, lists and galleries
+ - fix loader.loop() stop and start race
+ - fix pip output and herokutl version check
+ - move repository and assets to Heroku-userbot
 
 ## 🪐 Heroku 2.1.0
 
