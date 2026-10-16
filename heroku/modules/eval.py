@@ -12,6 +12,7 @@
 
 import contextlib
 import itertools
+import logging
 import os
 import re
 import subprocess
@@ -31,6 +32,8 @@ from meval import meval
 from .. import loader, main, utils
 from ..log import HerokuException
 from .._internal import redact
+
+logger = logging.getLogger(__name__)
 
 
 @loader.tds
@@ -74,7 +77,22 @@ class Evaluator(loader.Module):
         if not args and reply and reply.text:
             args = reply.message
 
+        shown = None
+        if not args:
+            for src in (message, reply):
+                if src and src.file:
+                    try:
+                        args = (await src.download_media(bytes)).decode()
+                    except UnicodeDecodeError:
+                        logger.warning("File can't be decoded to execute code")
+                        shown = "# File can't be decoded to execute code"
+                    else:
+                        if len(args) > 500:
+                            shown = "# Code from file..."
+                    break
+
         args = args.replace("\xa0", "\x20")
+        shown = shown or args
 
         real_db = self.db
         self.db = self._SecureDB(real_db)
@@ -100,7 +118,7 @@ class Evaluator(loader.Module):
                 self.strings["err"].format(
                     "4985626654563894116",
                     "python",
-                    utils.escape_html(self.censor(args)),
+                    utils.escape_html(self.censor(shown)),
                     "error",
                     self.censor(
                         "\n".join(item.full_stack.splitlines()[:-1])
@@ -138,7 +156,7 @@ class Evaluator(loader.Module):
                 self.strings["eval_py"].format(
                     "4985626654563894116",
                     "python",
-                    utils.escape_html(self.censor(args)),
+                    utils.escape_html(self.censor(shown)),
                 )
                 + (
                     self.strings["eval_result"].format(
