@@ -6,13 +6,12 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import asyncio
 import contextlib
-import copy
 import functools
 import logging
 import os
@@ -22,11 +21,16 @@ import typing
 from collections.abc import Callable
 from urllib.parse import urlparse
 
-from herokutl.errors.rpcerrorlist import FloodWaitError, MediaPrevInvalidError
-from herokutl.errors.rpcerrorlist import ChatSendInlineForbiddenError
+from herokutl.errors.rpcerrorlist import (
+    ChatSendInlineForbiddenError,
+    FloodWaitError,
+    MediaPrevInvalidError,
+    MessageIdInvalidError,
+)
 from herokutl.tl.types import Message
 
 from .. import main, utils
+from .._internal import tag_client_id
 from ..types import HerokuReplyMarkup
 from .types import InlineMessage, InlineUnit
 
@@ -50,6 +54,7 @@ class ListGalleryHelper:
 
 
 class Gallery(InlineUnit):
+    @tag_client_id("_client.tg_id")
     async def gallery(
         self: "InlineManager",
         message: Message | int,
@@ -93,16 +98,13 @@ class Gallery(InlineUnit):
         :param silent: Whether the gallery must be sent silently (w/o "Opening gallery..." message)
         :return: If gallery is sent, returns :obj:`InlineMessage`, otherwise returns `False`
         """
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self._client.tg_id)  # noqa: F841
-
         custom_buttons = self._validate_markup(custom_buttons)
 
         if not (
             isinstance(caption, str)
             or isinstance(caption, list)
             and all(isinstance(item, str) for item in caption)
-        ) and not Callable(caption):
+        ) and not callable(caption):
             logger.error(
                 (
                     "Invalid type for `caption`. Expected `str` or `list` or"
@@ -225,7 +227,7 @@ class Gallery(InlineUnit):
             **({"ttl": round(time.time()) + ttl} if ttl else {}),
             **({"force_me": force_me} if force_me else {}),
             **({"disable_security": disable_security} if disable_security else {}),
-            **({"on_unload": on_unload} if Callable(on_unload) else {}),
+            **({"on_unload": on_unload} if callable(on_unload) else {}),
             **({"preload": preload} if preload else {}),
             **({"gif": gif} if gif else {}),
             **({"always_allow": always_allow} if always_allow else {}),
@@ -283,6 +285,8 @@ class Gallery(InlineUnit):
             m = await self._invoke_unit(unit_id, message)
         except ChatSendInlineForbiddenError:
             await answer(self.translator.getkey("inline.inline403"))
+            del self._units[unit_id]
+            return False
         except Exception:
             logger.exception("Error sending inline gallery")
 
@@ -291,7 +295,6 @@ class Gallery(InlineUnit):
             if _reattempt:
                 logger.exception("Can't send gallery")
 
-                del self._units[unit_id]
                 await answer(
                     self.translator.getkey("inline.invoke_failed_logs").format(
                         utils.escape_html(
@@ -344,7 +347,7 @@ class Gallery(InlineUnit):
                 photo_url = callback[0]
             case _ if asyncio.iscoroutinefunction(callback):
                 photo_url = await callback()
-            case _ if Callable(callback):
+            case _ if callable(callback):
                 photo_url = callback()
             case _:
                 logger.error(
@@ -370,15 +373,17 @@ class Gallery(InlineUnit):
 
     async def _load_gallery_photos(self: "InlineManager", unit_id: str):
         """Preloads photo. Should be called via ensure_future"""
-        unit = self._units[unit_id]
+        unit = self._units.get(unit_id)
+        if not unit:
+            return
 
         photo_url = await self._call_photo(unit["next_handler"])
 
-        self._units[unit_id]["photos"] += (
-            [photo_url] if isinstance(photo_url, str) else photo_url
-        )
+        unit = self._units.get(unit_id)
+        if not unit:
+            return
 
-        unit = self._units[unit_id]
+        unit["photos"] += [photo_url] if isinstance(photo_url, str) else photo_url
 
         if unit.get("preload", False) and len(unit["photos"]) - unit[
             "current_index"
@@ -393,23 +398,31 @@ class Gallery(InlineUnit):
         while True:
             await asyncio.sleep(7)
 
+            if unit_id not in self._units:
+                return
+
             unit = self._units[unit_id]
 
-            if unit_id not in self._units or not unit.get("slideshow", False):
+            if not unit.get("slideshow", False):
                 return
 
             if unit["current_index"] + 1 >= len(unit["photos"]) and isinstance(
                 unit["next_handler"],
                 ListGalleryHelper,
             ):
-                del self._units[unit_id]["slideshow"]
-                self._units[unit_id]["current_index"] -= 1
+                unit.pop("slideshow", None)
+                unit["current_index"] -= 1
 
-            await self._gallery_page(
-                call,
-                self._units[unit_id]["current_index"] + 1,
-                unit_id=unit_id,
-            )
+            try:
+                await self._gallery_page(
+                    call,
+                    unit["current_index"] + 1,
+                    unit_id=unit_id,
+                )
+            except KeyError:
+                if unit_id not in self._units:
+                    return
+                raise
 
     async def _gallery_slideshow(
         self: "InlineManager",
@@ -523,7 +536,16 @@ class Gallery(InlineUnit):
                 await self._gallery_slideshow(call, unit_id)
                 return
             case _ if page == "close":
-                await self._delete_unit_message(call, unit_id=unit_id)
+                deleted = await self._delete_unit_message(call, unit_id=unit_id)
+                if deleted:
+                    self._units.get(unit_id, {}).pop("slideshow", None)
+                    await self._unload_unit(unit_id)
+                try:
+                    await call.answer(
+                        "" if deleted else "Error occurred", show_alert=not deleted
+                    )
+                except Exception:
+                    pass
                 return
             case _ if page < 0:
                 await call.answer("No way back")
@@ -576,6 +598,10 @@ class Gallery(InlineUnit):
                 show_alert=True,
             )
             return
+        except MessageIdInvalidError:
+            self._units.get(unit_id, {}).pop("slideshow", None)
+            await self._unload_unit(unit_id)
+            return
         except Exception:
             logger.exception("Exception while trying to edit media")
             await call.answer("Error occurred", show_alert=True)
@@ -602,7 +628,7 @@ class Gallery(InlineUnit):
         return (
             caption
             if isinstance(caption, str)
-            else caption() if Callable(caption) else ""
+            else caption() if callable(caption) else ""
         )
 
     def _gallery_markup(self: "InlineManager", unit_id: str):

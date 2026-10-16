@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -15,6 +15,8 @@ import io
 import json
 import logging
 import random
+import re
+import sys
 import time
 
 from herokutl.tl import functions
@@ -60,6 +62,50 @@ CONSTRUCTORS = {
     and TLRequest in cur_entity.__bases__
     and hasattr(cur_entity, "CONSTRUCTOR_ID")
 }
+
+
+_MODULE_FRAME_RE = re.compile(r"heroku\.modules\.([^>]+)")
+_MODULE_UID_RE = re.compile(r"%(.)")
+
+
+def _module_name(uid: str) -> str:
+    name = _MODULE_UID_RE.sub(lambda m: "." if m[1] == "d" else m[1], uid)
+    return name.rsplit("/", 1)[-1].removesuffix(".py") if "/" in name else name
+
+
+def _current_task_label() -> str:
+    try:
+        task = asyncio.current_task()
+    except RuntimeError:
+        return "<no loop>"
+
+    if not task:
+        return "<no task>"
+
+    code = getattr(task.get_coro(), "cr_code", None)
+    qualname = (
+        getattr(code, "co_qualname", None) or getattr(code, "co_name", None) or "?"
+    )
+
+    return f"<task {task.get_name()}: {qualname}>"
+
+
+def find_call_chain(*, limit: int = 4, skip: int = 1) -> str:
+    try:
+        frame = sys._getframe(skip + 1)
+        chain = []
+
+        while frame and len(chain) < limit:
+            code = frame.f_code
+            if match := _MODULE_FRAME_RE.search(code.co_filename):
+                chain += [f"{_module_name(match[1])}:{frame.f_lineno}:{code.co_name}"]
+
+            frame = frame.f_back
+
+        return " -> ".join(reversed(chain)) if chain else _current_task_label()
+    except Exception:
+        logger.debug("Failed to resolve call chain", exc_info=True)
+        return "<unknown>"
 
 
 @loader.tds
@@ -121,7 +167,7 @@ class APIRatelimiterMod(loader.Module):
 
     async def _install_protection(self):
         await asyncio.sleep(30)  # Restart lock
-        if hasattr(self._client._call, "_old_call_rewritten"):
+        if getattr(self._client._call, "_heroku_overwritten", False):
             raise loader.SelfUnload("Already installed")
 
         old_call = self._client._call
@@ -132,7 +178,6 @@ class APIRatelimiterMod(loader.Module):
             ordered: bool = False,
             flood_sleep_threshold: int = None,
         ):
-            await asyncio.sleep(random.randint(1, 5) / 100)
             req = (request,) if not is_list_like(request) else request
             for r in req:
                 if (
@@ -146,8 +191,15 @@ class APIRatelimiterMod(loader.Module):
                         in {"messages", "account", "channels"}
                     )
                 ):
+                    await asyncio.sleep(random.randint(1, 5) / 100)
                     request_name = type(r).__name__
-                    self._ratelimiter += [(request_name, time.perf_counter())]
+                    self._ratelimiter += [
+                        (
+                            request_name,
+                            time.perf_counter(),
+                            find_call_chain(),
+                        )
+                    ]
 
                     self._ratelimiter = list(
                         filter(

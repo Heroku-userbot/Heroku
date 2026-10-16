@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -221,7 +221,8 @@ class Translations(loader.Module):
             await self._choose_language(message=message)
             return
 
-        if any(len(i) != 2 and not utils.check_url(i) for i in args.split()):
+        known_langs = set(translations.SUPPORTED_LANGUAGES) | set(translations.MEME_LANGUAGES)
+        if any(i not in known_langs and not utils.check_url(i) for i in args.split()):
             await utils.answer(message, self.strings["incorrect_language"])
             return
 
@@ -252,6 +253,7 @@ class Translations(loader.Module):
                 ("\n\n" + self.strings["not_official"])
                 if any(
                     lang not in translations.SUPPORTED_LANGUAGES
+                    and lang not in translations.MEME_LANGUAGES
                     for lang in args.split()
                 )
                 else ""

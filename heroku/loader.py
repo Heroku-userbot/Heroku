@@ -8,7 +8,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -16,7 +16,6 @@ import asyncio
 import builtins
 import contextlib
 import contextvars
-import copy
 import importlib
 import importlib.machinery
 import importlib.util
@@ -26,7 +25,7 @@ import os
 import re
 import sys
 import typing
-from functools import wraps
+from functools import partial, wraps
 from pathlib import Path
 from types import FunctionType
 from uuid import uuid4
@@ -34,6 +33,7 @@ from uuid import uuid4
 from herokutl.tl.tlobject import TLObject
 
 from . import main, security, utils, validators
+from ._internal import resolve_client_id, set_client_id, tag_client_id
 from .database import Database
 from .inline.core import BotUpdateType, InlineManager
 from .translations import Strings, Translator
@@ -43,6 +43,7 @@ from .types import (
     ConfigValue,
     CoreOverwriteError,
     CoreUnloadError,
+    InlineDownError,
     InlineMessage,
     JSONSerializable,
     Library,
@@ -68,6 +69,7 @@ __all__ = [
     "Command",
     "CoreOverwriteError",
     "CoreUnloadError",
+    "InlineDownError",
     "InlineMessage",
     "JSONSerializable",
     "Library",
@@ -207,43 +209,42 @@ class InfiniteLoop:
         self._wait_before = wait_before
         self._stop_clause = stop_clause
         self.autostart = autostart
+        self._wait_for_stop = asyncio.Event()
 
-    def _stop(self, *args, **kwargs):
-        self._wait_for_stop.set()
-
-    def stop(self, *args, **kwargs):
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(  # noqa: F841
-                self.module_instance.allmodules.client.tg_id
-            )
-
-        if self._task:
-            logger.debug("Stopped loop for method %s", self.func)
-            self._wait_for_stop = asyncio.Event()
+    def _stop(self, task):
+        if self._task is task:
+            self._task = None
             self.status = False
-            self._task.add_done_callback(self._stop)
-            self._task.cancel()
-            return asyncio.ensure_future(self._wait_for_stop.wait())
+            self._wait_for_stop.set()
+        if not task.cancelled():
+            task.exception()
 
-        logger.debug("Loop is not running")
+    @tag_client_id("module_instance.allmodules.client.tg_id")
+    def stop(self, *args, **kwargs):
+        self.status = False
+        task = self._task
+        if task and not task.done() and task is not asyncio.current_task():
+            task.cancel()
+            return asyncio.ensure_future(self._wait_for_stop.wait())
         return asyncio.ensure_future(stop_placeholder())
 
+    @tag_client_id("module_instance.allmodules.client.tg_id")
     def start(self, *args, **kwargs):
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(  # noqa: F841
-                self.module_instance.allmodules.client.tg_id
-            )
-
-        if not self._task:
-            logger.debug("Started loop for method %s", self.func)
+        if getattr(self.module_instance, "_unloading", False):
+            return
+        if self._task is None:
+            self._wait_for_stop.clear()
             self._task = asyncio.ensure_future(self.actual_loop(*args, **kwargs))
-        else:
-            logger.debug("Attempted to start already running loop")
+            self._task.add_done_callback(self._stop)
 
     async def actual_loop(self, *args, **kwargs):
         # Wait for loader to set attribute
         while not self.module_instance:
             await asyncio.sleep(0.01)
+
+        set_client_id(
+            resolve_client_id(self, "module_instance.allmodules.client.tg_id")
+        )
 
         if isinstance(self._stop_clause, str) and self._stop_clause:
             self.module_instance.set(self._stop_clause, True)
@@ -268,15 +269,15 @@ class InfiniteLoop:
             except Exception:
                 logger.exception("Error running loop!")
 
+            if not self.status:
+                break
             if not self._wait_before:
                 await asyncio.sleep(self.interval)
 
-        self._wait_for_stop.set()
-
-        self.status = False
-
     def __del__(self):
-        self.stop()
+        if self._task and not self._task.done():
+            with contextlib.suppress(RuntimeError):
+                self._task.cancel()
 
 
 def loop(
@@ -347,7 +348,7 @@ def translatable_docstring(cls):
             for attr in dir(func_):
                 if (
                     attr.endswith("_doc")
-                    and len(attr) == 6
+                    and attr.count("_") == 1
                     and isinstance(getattr(func_, attr), str)
                 ):
                     var = f"strings_{attr.split('_')[0]}"
@@ -453,7 +454,7 @@ def tag(*tags, **kwarg_tags):
     @loader.tag("no_commands", "out")
     @loader.tag("no_commands", out=True)
     @loader.tag(only_messages=True)
-    @loader.tag("only_messages", "only_pm", regex=r"^[.] ?heroku$", from_id=659800858)
+    @loader.tag("only_messages", "only_pm", regex=r"^[.] ?heroku$", from_id=00000000)
 
     💡 These tags can be used directly in `@loader.watcher`:
     @loader.watcher("no_commands", out=True)
@@ -570,6 +571,7 @@ class Modules:
     ):
         self._initial_registration = True
         self.commands = {}
+        self._command_handlers = {}
         self.inline_handlers = {}
         self.callback_handlers = {}
         self.aliases = {}
@@ -585,6 +587,7 @@ class Modules:
         self.db = db
         self.translator = translator
         self.secure_boot = False
+        self._ready_sent = False
         asyncio.ensure_future(self._junk_collector())
         self.inline = InlineManager(self.client, self._db, self)
         self.client.heroku_inline = self.inline
@@ -597,16 +600,20 @@ class Modules:
         while True:
             await asyncio.sleep(30)
             commands = {}
+            command_handlers = {}
             inline_handlers = {}
             callback_handlers = {}
             watchers = []
             for module in self.modules:
-                commands.update(module.heroku_commands)
+                for name, handler in module.heroku_commands.items():
+                    commands[name.lower()] = handler
+                    command_handlers.setdefault(name.lower(), []).append(handler)
                 inline_handlers.update(module.heroku_inline_handlers)
                 callback_handlers.update(module.heroku_callback_handlers)
                 watchers.extend(module.heroku_watchers.values())
 
             self.commands = commands
+            self._command_handlers = command_handlers
             self.inline_handlers = inline_handlers
             self.callback_handlers = callback_handlers
             self.watchers = watchers
@@ -657,14 +664,12 @@ class Modules:
 
         return loaded
 
+    @tag_client_id("client.tg_id")
     async def _register_modules(
         self,
         modules: list,
         origin: str = "<core>",
     ) -> list[Module]:
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
-
         loaded = []
 
         for mod in modules:
@@ -693,6 +698,7 @@ class Modules:
 
         return loaded
 
+    @tag_client_id("client.tg_id")
     async def register_module(
         self,
         spec: importlib.machinery.ModuleSpec,
@@ -701,9 +707,6 @@ class Modules:
         save_fs: bool = False,
     ) -> Module:
         """Register single module from importlib spec"""
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
-
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = module
 
@@ -864,11 +867,9 @@ class Modules:
 
         return self._db.get(main.__name__, "remove_core_protection", False)
 
+    @tag_client_id("client.tg_id")
     def register_commands(self, instance: Module):
         """Register commands from instance"""
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
-
         if instance.__origin__.startswith("<core"):
             self._core_commands += list(
                 map(lambda x: x.lower(), list(instance.heroku_commands))
@@ -886,7 +887,11 @@ class Modules:
 
                 raise CoreOverwriteError(command=_command)
 
-            self.commands.update({_command.lower(): cmd})
+            name = _command.lower()
+            handlers = self._command_handlers.setdefault(name, [])
+            if cmd not in handlers:
+                handlers.append(cmd)
+            self.commands[name] = cmd
 
         for alias, cmd in self.aliases.copy().items():
             _cmd = cmd.split(maxsplit=1)
@@ -966,11 +971,30 @@ class Modules:
                     purpose,
                 )
 
+        def owned(handler):
+            while isinstance(handler, partial):
+                handler = handler.func
+            return getattr(handler, "__self__", None) is instance
+
+        for key, entry in list(getattr(self.inline, "_custom_map", {}).items()):
+            if owned(entry.get("handler")):
+                del self.inline._custom_map[key]
+        for unit in getattr(self.inline, "_units", {}).values():
+            unit["buttons"] = [
+                [
+                    button
+                    for button in row
+                    if not owned(button.get("callback"))
+                    and not owned(button.get("handler"))
+                ]
+                for row in unit.get("buttons", [])
+            ]
+            if owned(unit.get("on_unload")):
+                unit.pop("on_unload")
+
+    @tag_client_id("client.tg_id")
     def register_watchers(self, instance: Module):
         """Register watcher from instance"""
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
-
         for _watcher in self.watchers:
             if _watcher.__self__.__class__.__name__ == instance.__class__.__name__:
                 logger.debug("Removing watcher %s for update", _watcher)
@@ -1004,34 +1028,22 @@ class Modules:
         """Get command prefix"""
         from . import main
 
-        key = main.__name__
-        default = "."
-
-        if ent_id:
-            prefixes = self._db.get(key, "command_prefixes", {})
-            result = prefixes.get(str(ent_id), default)
-        else:
-            result = self._db.get(key, "command_prefix", default)
-        return result
+        return utils.user_prefixes(self._db, main.__name__, ent_id, self.client.tg_id)[
+            0
+        ]
 
     def get_prefixes(self) -> set[str]:
         """Get all command prefixes"""
         from . import main
 
-        key = main.__name__
-        default = "."
-
-        prefixes = ()
-        prefixes += tuple(self._db.get(key, "command_prefixes", {}).values())
-        prefixes += tuple(self._db.get(key, "command_prefix", default))
-
+        prefixes = utils.user_prefixes(self._db, main.__name__)
+        for value in self._db.get(main.__name__, "command_prefixes", {}).values():
+            prefixes.extend(utils.normalize_prefixes(value))
         return set(prefixes)
 
+    @tag_client_id("client.tg_id")
     async def complete_registration(self, instance: Module):
         """Complete registration of instance"""
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
-
         instance.allmodules = self
         instance.internal_init()
 
@@ -1049,17 +1061,9 @@ class Modules:
                     )
 
                 logger.debug("Removing module %s for update", module)
-                await module.on_unload()
-
-                self.modules.remove(module)
-                for _, method in utils.iter_attrs(module):
-                    if isinstance(method, InfiniteLoop):
-                        method.stop()
-                        logger.debug(
-                            "Stopped loop in module %s, method %s",
-                            module,
-                            method,
-                        )
+                await self._shutdown_module(module, "update")
+                if module in self.modules:
+                    self.modules.remove(module)
 
         self.modules += [instance]
 
@@ -1072,11 +1076,9 @@ class Modules:
             return None
 
         for command_name, _command in self.commands.items():
-            aliases = []
-            if getattr(_command, "alias", None) and not (
-                aliases := getattr(_command, "aliases", None)
-            ):
-                aliases = [_command.alias]
+            aliases = getattr(_command, "aliases", None) or (
+                [_command.alias] if getattr(_command, "alias", None) else []
+            )
 
             if not aliases:
                 continue
@@ -1093,61 +1095,43 @@ class Modules:
 
         return None
 
-    def dispatch(self, _command: str) -> tuple[str, str | None]:
-        """Dispatch command to appropriate module"""
+    def dispatch(self, _command: str):
+        text, handlers = self.dispatch_candidates(_command)
+        return text, handlers[-1] if handlers else None
 
-        resolved = next(
-            (
-                (cmd, self.commands[cmd.split()[0].lower()])
-                for cmd in [
-                    _command,
-                    self.aliases.get(_command.lower()),
-                    self.find_alias(_command),
-                ]
-                if cmd and cmd.split()[0].lower() in self.commands
-            ),
-            (_command, None),
-        )
-
-        cmd, func = resolved
-        if not func:
-            return resolved
-
-        try:
-            disabled_modules = self._db.get(main.__name__, "disabled_modules", [])
+    def dispatch_candidates(self, _command: str):
+        for text in (
+            _command,
+            self.aliases.get(_command.lower()),
+            self.find_alias(_command),
+        ):
+            if not text:
+                continue
+            name = text.split()[0].lower()
+            if name not in self.commands:
+                continue
+            disabled = self._db.get(main.__name__, "disabled_modules", [])
             disabled_commands = self._db.get(main.__name__, "disabled_commands", {})
-        except Exception:
-            disabled_modules = []
-            disabled_commands = {}
-
-        module_name = None
-        try:
-            module_name = func.__self__.__class__.__name__
-        except Exception:
-            module_name = None
-
-        if module_name and module_name in disabled_modules:
-            return (_command, None)
-
-        if module_name and module_name in disabled_commands:
-            disabled_for_mod = [
-                x.lower() for x in disabled_commands.get(module_name, [])
-            ]
-            if cmd.split()[0].lower() in disabled_for_mod:
-                return (_command, None)
-
-        return (cmd, func)
+            handlers = self._command_handlers.get(name, [self.commands[name]])
+            available = []
+            for handler in handlers:
+                module_name = handler.__self__.__class__.__name__
+                if module_name in disabled or name in {
+                    item.lower() for item in disabled_commands.get(module_name, [])
+                }:
+                    continue
+                available.append(handler)
+            return text, available
+        return _command, []
 
     def send_config(self, skip_hook: bool = False):
         """Configure modules"""
         for mod in self.modules:
             self.send_config_one(mod, skip_hook)
 
+    @tag_client_id("client.tg_id")
     def send_config_one(self, mod: Module, skip_hook: bool = False):
         """Send config to single instance"""
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
-
         if hasattr(mod, "config"):
             modcfg = self._db.get(
                 mod.__class__.__name__,
@@ -1203,16 +1187,30 @@ class Modules:
         await asyncio.gather(
             *[self.send_ready_one_wrapper(mod) for mod in self.modules]
         )
+        self._ready_sent = True
 
+    @tag_client_id("client.tg_id")
+    async def send_inline_ready_one(self, mod: Module):
+        try:
+            await mod.inline_ready()
+        except Exception:
+            logger.exception("Failed to call `inline_ready` of %s", mod)
+
+    async def send_inline_ready(self):
+        if not (self._ready_sent and self.inline.init_complete):
+            return
+
+        await asyncio.gather(
+            *[self.send_inline_ready_one(mod) for mod in self.modules.copy()]
+        )
+
+    @tag_client_id("client.tg_id")
     async def send_ready_one(
         self,
         mod: Module,
         no_self_unload: bool = False,
         from_dlmod: bool = False,
     ):
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
-
         if from_dlmod:
             try:
                 if len(inspect.signature(mod.on_dlmod).parameters) == 2:
@@ -1232,7 +1230,9 @@ class Modules:
                 raise e
 
             logger.debug("Unloading %s, because it raised SelfUnload", mod)
-            self.modules.remove(mod)
+            await self._shutdown_module(mod, "failed initialization")
+            if mod in self.modules:
+                self.modules.remove(mod)
             return
         except SelfSuspend as e:
             if no_self_unload:
@@ -1249,9 +1249,12 @@ class Modules:
                 mod,
                 e,
             )
-            self.modules.remove(mod)
+            await self._shutdown_module(mod, "failed initialization")
+            if mod in self.modules:
+                self.modules.remove(mod)
             raise
 
+        pack_url = None
         # Check for pack_url and load translations
         if hasattr(mod, "__source__"):
             pack_url = next(
@@ -1268,6 +1271,7 @@ class Modules:
                     pack_url,
                     MODULES_LANGPACKS_PATH
                     / f"{self.client.tg_id}_{mod.__class__.__name__}.yml",
+                    cache_only=not from_dlmod,
                 )
             ):
                 mod.strings.external_strings = transations
@@ -1290,6 +1294,22 @@ class Modules:
         self.register_raw_handlers(mod)
         self.register_bot_update_handlers(mod)
 
+        if pack_url and not from_dlmod:
+
+            async def refresh_translations():
+                translations = await self.translator.load_module_translations(
+                    pack_url,
+                    MODULES_LANGPACKS_PATH
+                    / f"{self.client.tg_id}_{mod.__class__.__name__}.yml",
+                )
+                if translations:
+                    mod.strings.external_strings = translations
+
+            mod.create_task(refresh_translations())
+
+        if self._ready_sent and self.inline.init_complete:
+            await self.send_inline_ready_one(mod)
+
     def get_classname(self, name: str) -> str:
         return next(
             (
@@ -1300,14 +1320,12 @@ class Modules:
             name,
         )
 
+    @tag_client_id("client.tg_id")
     async def unload_module(self, classname: str) -> list[str]:
         """Remove module and all stuff from it"""
         worked = []
 
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
-
-        for module in self.modules:
+        for module in self.modules.copy():
             if classname.lower() in (
                 module.name.lower(),
                 module.__class__.__name__.lower(),
@@ -1332,17 +1350,82 @@ class Modules:
                 logger.debug("Removing module %s for unload", module)
                 self.modules.remove(module)
 
-                await module.on_unload()
-
-                self.unregister_raw_handlers(module, "unload")
-                self.unregister_bot_update_handlers(module, "unload")
-                self.unregister_loops(module, "unload")
-                self.unregister_commands(module, "unload")
-                self.unregister_watchers(module, "unload")
-                self.unregister_inline_stuff(module, "unload")
+                await self._shutdown_module(module, "unload")
 
         logger.debug("Worked: %s", worked)
         return worked
+
+    async def _shutdown_module(self, module: Module, purpose: str):
+        existing = getattr(module, "_shutdown_task", None)
+        if existing is None:
+            module._unloading = True
+            caller = asyncio.current_task()
+            existing = asyncio.create_task(
+                self._finish_shutdown(module, purpose, caller)
+            )
+            module._shutdown_task = existing
+        await asyncio.shield(existing)
+
+    async def _wait_module_tasks(self, tasks, module, phase):
+        if not tasks:
+            return
+        done, pending = await asyncio.wait(tasks, timeout=5)
+        for task in done:
+            if not task.cancelled():
+                error = task.exception()
+                if error is not None:
+                    logger.error(
+                        "Module %s failed during %s",
+                        module,
+                        phase,
+                        exc_info=(type(error), error, error.__traceback__),
+                    )
+        for task in pending:
+            task.cancel()
+            task.add_done_callback(self._consume_shutdown_result)
+        if pending:
+            logger.warning(
+                "Module %s: %s timed out (%s tasks)", module, phase, len(pending)
+            )
+
+    @staticmethod
+    def _consume_shutdown_result(task):
+        if not task.cancelled():
+            task.exception()
+
+    async def _finish_shutdown(self, module: Module, purpose: str, caller):
+        for unregister in (
+            self.unregister_raw_handlers,
+            self.unregister_bot_update_handlers,
+            self.unregister_commands,
+            self.unregister_watchers,
+            self.unregister_inline_stuff,
+        ):
+            try:
+                unregister(module, purpose)
+            except Exception:
+                logger.exception(
+                    "Unable to unregister %s for %s", unregister.__name__, module
+                )
+        tasks = set(getattr(module, "_managed_tasks", ()))
+        for _, method in utils.iter_attrs(module):
+            if isinstance(method, InfiniteLoop):
+                method.status = False
+                if method._task is not None:
+                    tasks.add(method._task)
+        tasks.discard(caller)
+        tasks.discard(asyncio.current_task())
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+        await self._wait_module_tasks(tasks, module, "task cancellation")
+
+        async def unload():
+            await module.on_unload()
+
+        await self._wait_module_tasks(
+            {asyncio.create_task(unload())}, module, "on_unload"
+        )
 
     def unregister_loops(self, instance: Module, purpose: str):
         for name, method in utils.iter_attrs(instance):
@@ -1356,17 +1439,20 @@ class Modules:
                 method.stop()
 
     def unregister_commands(self, instance: Module, purpose: str):
-        for name, cmd in self.commands.copy().items():
-            if cmd.__self__.__class__.__name__ == instance.__class__.__name__:
-                logger.debug(
-                    "Removing command %s of module %s for %s",
-                    name,
-                    instance.__class__.__name__,
-                    purpose,
-                )
-                del self.commands[name]
-                for alias, _command in self.aliases.copy().items():
-                    if _command == name:
+        for name, handlers in list(self._command_handlers.items()):
+            remaining = [
+                handler
+                for handler in handlers
+                if handler.__self__.__class__.__name__ != instance.__class__.__name__
+            ]
+            if remaining:
+                self._command_handlers[name] = remaining
+                self.commands[name] = remaining[-1]
+            else:
+                del self._command_handlers[name]
+                self.commands.pop(name, None)
+                for alias, command in list(self.aliases.items()):
+                    if purpose != "update" and command.split()[0].lower() == name:
                         del self.aliases[alias]
 
     def unregister_watchers(self, instance: Module, purpose: str):
@@ -1382,7 +1468,7 @@ class Modules:
 
     def unregister_raw_handlers(self, instance: Module, purpose: str):
         """Unregister event handlers for a module"""
-        for handler in self.client.dispatcher.raw_handlers:
+        for handler in self.client.dispatcher.raw_handlers.copy():
             if handler.__self__.__class__.__name__ == instance.__class__.__name__:
                 self.client.dispatcher.raw_handlers.remove(handler)
                 logger.debug(

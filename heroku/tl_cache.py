@@ -6,10 +6,11 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
+import asyncio
 import copy
 import inspect
 import logging
@@ -19,10 +20,14 @@ from collections.abc import Callable
 
 from herokutl import TelegramClient
 from herokutl import helpers
+from herokutl import utils as tl_utils
+from herokutl.extensions import html as html_parser
+from herokutl.extensions.messagepacker import MessagePacker
 from herokutl._updates import ChannelState, Entity, EntityType, SessionState
 from herokutl.errors.rpcerrorlist import TopicDeletedError
 from herokutl.hints import EntityLike
-from herokutl.network import MTProtoSender
+from herokutl.network import MTProtoSender, mtprotosender
+from herokutl.network.requeststate import RequestState
 from herokutl.tl import functions
 from herokutl.tl.alltlobjects import LAYER
 from herokutl.tl.functions.channels import GetFullChannelRequest
@@ -30,6 +35,11 @@ from herokutl.tl.functions.users import GetFullUserRequest
 from herokutl.tl.tlobject import TLRequest
 from herokutl.tl.types import (
     ChannelFull,
+    InputReplyToMessage,
+    InputRichMessage,
+    InputRichMessageHTML,
+    InputRichMessageMarkdown,
+    InputSendMessageRichMessageDraftAction,
     Message,
     Updates,
     UpdatesCombined,
@@ -39,6 +49,7 @@ from herokutl.tl.types import (
 )
 from herokutl.utils import is_list_like
 
+from ._internal import normalize_rich_html, tag_client_id
 from .types import (
     CacheRecordEntity,
     CacheRecordFullChannel,
@@ -54,6 +65,57 @@ if typing.TYPE_CHECKING:
     from .inline.core import InlineManager
 
 logger = logging.getLogger(__name__)
+
+
+class HerokuMessagePacker(MessagePacker):
+    async def get(self):
+        if not self._deque:
+            self._ready.clear()
+            await self._ready.wait()
+
+        rejected = set()
+        for _ in range(len(self._deque)):
+            state = self._deque.popleft()
+            try:
+                if not isinstance(state, RequestState):
+                    raise TypeError("Outgoing queue item is not a RequestState")
+                if id(state.after) in rejected:
+                    raise ValueError("Previous ordered request could not be serialized")
+                if not isinstance(state.data, bytes):
+                    self._log.warning(
+                        "Invalid outgoing payload: state=%s request=%s data=%s; "
+                        "serializing the request again",
+                        type(state).__name__,
+                        type(state.request).__name__,
+                        type(state.data).__name__,
+                    )
+                    replacement = RequestState(state.request, after=state.after)
+                    try:
+                        if not isinstance(replacement.data, bytes):
+                            raise TypeError("RequestState did not serialize to bytes")
+                        state.data = replacement.data
+                    finally:
+                        replacement.future.cancel()
+            except Exception as error:
+                rejected.add(id(state))
+                self._log.error(
+                    "Rejected invalid outgoing state %s: %s",
+                    type(state).__name__,
+                    type(error).__name__,
+                )
+                future = getattr(state, "future", None)
+                if isinstance(future, asyncio.Future) and not future.done():
+                    future.set_exception(error)
+            else:
+                self._deque.append(state)
+
+        if not self._deque:
+            return None, None
+        return await super().get()
+
+
+
+mtprotosender.MessagePacker = HerokuMessagePacker
 
 
 def hashable(value: typing.Any) -> bool:
@@ -111,6 +173,342 @@ class CustomTelegramClient(TelegramClient):
         self.heroku_db: "Database"
         self.loader: "Modules"
         self.heroku_inline: "InlineManager"
+
+    @staticmethod
+    def _rich_output_block_to_input(block):
+        from herokutl.tl.types import (
+            InputGeoPoint,
+            InputGeoPointEmpty,
+            InputPageBlockMap,
+        )
+
+        block = copy.deepcopy(block)
+        if type(block).__name__ == "PageBlockMap":
+            geo = block.geo
+            if type(geo).__name__ == "GeoPoint":
+                geo = InputGeoPoint(
+                    lat=geo.lat,
+                    long=geo.long,
+                    accuracy_radius=geo.accuracy_radius,
+                )
+            else:
+                geo = InputGeoPointEmpty()
+            return InputPageBlockMap(
+                geo=geo,
+                zoom=block.zoom,
+                w=block.w,
+                h=block.h,
+                caption=block.caption,
+            )
+
+        for field in ("blocks", "items"):
+            value = getattr(block, field, None)
+            if isinstance(value, list):
+                setattr(
+                    block,
+                    field,
+                    [CustomTelegramClient._rich_output_block_to_input(item) for item in value],
+                )
+        return block
+
+    @staticmethod
+    def _rich_output_to_input(rich_message):
+        if type(rich_message).__name__ != "RichMessage":
+            return rich_message
+
+        photos = [
+            tl_utils.get_input_photo(photo)
+            for photo in getattr(rich_message, "photos", [])
+        ]
+        documents = [
+            tl_utils.get_input_document(document)
+            for document in getattr(rich_message, "documents", [])
+        ]
+        return InputRichMessage(
+            blocks=[
+                CustomTelegramClient._rich_output_block_to_input(block)
+                for block in getattr(rich_message, "blocks", [])
+            ],
+            rtl=getattr(rich_message, "rtl", None),
+            photos=photos,
+            documents=documents,
+        )
+
+    @staticmethod
+    def _rich_input(
+        html: str | None = None,
+        markdown: str | None = None,
+        rich_message=None,
+        *,
+        rtl: bool | None = None,
+        noautolink: bool | None = None,
+    ):
+        if rich_message is not None:
+            return CustomTelegramClient._rich_output_to_input(rich_message)
+        if html is not None:
+            return InputRichMessageHTML(
+                html=normalize_rich_html(html), rtl=rtl, noautolink=noautolink
+            )
+        if markdown is not None:
+            return InputRichMessageMarkdown(
+                markdown=markdown,
+                rtl=rtl,
+                noautolink=noautolink,
+            )
+        raise ValueError("One of html, markdown or rich_message is required")
+
+    @staticmethod
+    def _rich_fallback_text(html=None, markdown=None, rich_message=None):
+        if html:
+            text, _ = html_parser.parse(html)
+            return text or " "
+        if markdown:
+            return str(markdown) or " "
+        if rich_message is not None:
+            rich_html = getattr(rich_message, "html", None)
+            if rich_html:
+                text, _ = html_parser.parse(rich_html)
+                return text or " "
+            rich_markdown = getattr(rich_message, "markdown", None)
+            if rich_markdown:
+                return str(rich_markdown)
+            try:
+                from .utils.rich import rich_message_to_html
+
+                text, _ = html_parser.parse(rich_message_to_html(rich_message))
+                return text or " "
+            except Exception:
+                return " "
+        return " "
+
+    async def send_rich_message(
+        self,
+        entity: EntityLike,
+        html: str | None = None,
+        *,
+        markdown: str | None = None,
+        rich_message=None,
+        reply_to: int | None = None,
+        top_msg_id: int | None = None,
+        buttons=None,
+        silent: bool | None = None,
+        rtl: bool | None = None,
+        noautolink: bool | None = None,
+    ):
+        input_entity = await self.get_input_entity(entity)
+        rich_input = self._rich_input(
+            html,
+            markdown,
+            rich_message,
+            rtl=rtl,
+            noautolink=noautolink,
+        )
+        request = functions.messages.SendMessageRequest(
+            peer=input_entity,
+            message=self._rich_fallback_text(html, markdown, rich_message),
+            no_webpage=True,
+            silent=silent,
+            reply_to=(
+                InputReplyToMessage(
+                    reply_to_msg_id=reply_to,
+                    top_msg_id=top_msg_id,
+                )
+                if reply_to is not None
+                else None
+            ),
+            reply_markup=self.build_reply_markup(buttons),
+            rich_message=rich_input,
+        )
+        return self._get_response_message(request, await self(request), input_entity)
+
+    async def edit_rich_message(
+        self,
+        entity: EntityLike,
+        message,
+        html: str | None = None,
+        *,
+        markdown: str | None = None,
+        rich_message=None,
+        buttons=None,
+        rtl: bool | None = None,
+        noautolink: bool | None = None,
+    ):
+        input_entity = await self.get_input_entity(entity)
+        rich_input = self._rich_input(
+            html,
+            markdown,
+            rich_message,
+            rtl=rtl,
+            noautolink=noautolink,
+        )
+        request = functions.messages.EditMessageRequest(
+            peer=input_entity,
+            id=tl_utils.get_message_id(message),
+            no_webpage=True,
+            reply_markup=self.build_reply_markup(buttons),
+            rich_message=rich_input,
+        )
+        return self._get_response_message(request, await self(request), input_entity)
+
+    async def get_rich_message(self, entity: EntityLike, message, *, raw=True):
+        input_entity = await self.get_input_entity(entity)
+        result = await self(
+            functions.messages.GetRichMessageRequest(
+                peer=input_entity,
+                id=tl_utils.get_message_id(message),
+            )
+        )
+        rich_message = result.messages[0].rich_message if result.messages else None
+        if raw or rich_message is None:
+            return rich_message
+        from .utils.rich import rich_message_to_html
+
+        return rich_message_to_html(rich_message)
+
+    async def translate_rich_message(
+        self,
+        to_lang: str,
+        *,
+        entity: EntityLike | None = None,
+        messages=None,
+        rich_messages=None,
+        tone: str | None = None,
+        raw=True,
+    ):
+        input_entity = (
+            await self.get_input_entity(entity) if entity is not None else None
+        )
+        result = await self(
+            functions.messages.TranslateRichMessageRequest(
+                to_lang=to_lang,
+                peer=input_entity,
+                id=(
+                    [tl_utils.get_message_id(message) for message in messages]
+                    if messages is not None
+                    else None
+                ),
+                text=rich_messages,
+                tone=tone,
+            )
+        )
+        translated = result.result
+        if raw:
+            return translated
+        from .utils.rich import rich_message_to_html
+
+        return [rich_message_to_html(item) for item in translated]
+
+    async def compose_rich_message(
+        self,
+        html: str | None = None,
+        *,
+        markdown: str | None = None,
+        rich_message=None,
+        proofread: bool | None = None,
+        emojify: bool | None = None,
+        translate_to_lang: str | None = None,
+        tone=None,
+        raw=True,
+    ):
+        result = await self(
+            functions.messages.ComposeRichMessageWithAIRequest(
+                proofread=proofread,
+                emojify=emojify,
+                text=self._rich_input(html, markdown, rich_message),
+                translate_to_lang=translate_to_lang,
+                tone=tone,
+            )
+        )
+        composed = result.result
+        if raw:
+            return composed
+        from .utils.rich import rich_message_to_html
+
+        return rich_message_to_html(composed)
+
+    async def save_rich_draft(
+        self,
+        entity: EntityLike,
+        html: str | None = None,
+        *,
+        markdown: str | None = None,
+        rich_message=None,
+        reply_to: int | None = None,
+        rtl: bool | None = None,
+        noautolink: bool | None = None,
+    ):
+        input_entity = await self.get_input_entity(entity)
+        return await self(
+            functions.messages.SaveDraftRequest(
+                peer=input_entity,
+                message="",
+                reply_to=(
+                    InputReplyToMessage(reply_to) if reply_to is not None else None
+                ),
+                rich_message=self._rich_input(
+                    html,
+                    markdown,
+                    rich_message,
+                    rtl=rtl,
+                    noautolink=noautolink,
+                ),
+            )
+        )
+
+    async def send_rich_typing(
+        self,
+        entity: EntityLike,
+        html: str | None = None,
+        *,
+        markdown: str | None = None,
+        rich_message=None,
+        top_msg_id: int | None = None,
+        can_stop: bool | None = None,
+        keep_on_stop: bool | None = None,
+    ):
+        input_entity = await self.get_input_entity(entity)
+        return await self(
+            functions.messages.SetTypingRequest(
+                peer=input_entity,
+                top_msg_id=top_msg_id,
+                action=InputSendMessageRichMessageDraftAction(
+                    rich_message=self._rich_input(html, markdown, rich_message),
+                    can_stop=can_stop,
+                    keep_on_stop=keep_on_stop,
+                ),
+            )
+        )
+
+    async def send_rich_ephemeral(
+        self,
+        entity: EntityLike,
+        receiver_id: EntityLike,
+        html: str | None = None,
+        *,
+        markdown: str | None = None,
+        rich_message=None,
+        reply_to: int | None = None,
+    ):
+        input_entity = await self.get_input_entity(entity)
+        return await self(
+            functions.ephemeral.SendMessageRequest(
+                peer=input_entity,
+                receiver_id=receiver_id,
+                message="",
+                reply_to=(
+                    InputReplyToMessage(reply_to) if reply_to is not None else None
+                ),
+                rich_message=self._rich_input(html, markdown, rich_message),
+            )
+        )
+
+    rich_send_ephemeral = send_rich_ephemeral
+
+    rich_get_message = get_rich_message
+    rich_translate = translate_rich_message
+    rich_answer_ai = compose_rich_message
+    rich_save_draft = save_rich_draft
+    rich_send_typing = send_rich_typing
 
     async def connect(self, unix_socket_path: str | None = None):
         if self.session is None:
@@ -239,6 +637,7 @@ class CustomTelegramClient(TelegramClient):
 
         return await self.get_entity(*args, force=True, **kwargs)
 
+    @tag_client_id("tg_id")
     async def get_entity(
         self,
         entity: EntityLike,
@@ -253,10 +652,6 @@ class CustomTelegramClient(TelegramClient):
         :param force: Whether to force refresh the cache (make API request)
         :return: :obj:`Entity`
         """
-
-        # Will be used to determine, which client caused logging messages
-        # parsed via inspect.stack()
-        _heroku_client_id_logging_tag = copy.copy(self.tg_id)  # noqa: F841
 
         if not hashable(entity):
             try:
@@ -314,6 +709,7 @@ class CustomTelegramClient(TelegramClient):
 
         return copy.deepcopy(resolved_entity)
 
+    @tag_client_id("tg_id")
     async def get_perms_cached(
         self,
         entity: EntityLike,
@@ -330,10 +726,6 @@ class CustomTelegramClient(TelegramClient):
         :param force: Whether to force refresh the cache (make API request)
         :return: :obj:`ChatPermissions`
         """
-
-        # Will be used to determine, which client caused logging messages
-        # parsed via inspect.stack()
-        _heroku_client_id_logging_tag = copy.copy(self.tg_id)  # noqa: F841
 
         entity = await self.get_entity(entity)
         user = await self.get_entity(user) if user else None

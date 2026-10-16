@@ -6,11 +6,12 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import asyncio
+import contextlib
 import logging
 
 from deep_translator import GoogleTranslator
@@ -34,13 +35,13 @@ class Translator(loader.Module):
             loader.ConfigValue(
                 "only_text",
                 False,
-                "only translated text in .tr",
+                lambda: self.strings["_cfg_only_text"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
                 "provider",
                 "telegram",
-                "Translation provider to use",
+                lambda: self.strings["_cfg_provider"],
                 validator=loader.validators.Choice(["telegram", "google"]),
             ),
         )
@@ -77,8 +78,10 @@ class Translator(loader.Module):
                 except IndexError:
                     text = None
 
+        reply = None
         if not text:
-            if not (reply := await message.get_reply_message()):
+            reply = await message.get_reply_message()
+            if not reply:
                 await utils.answer(message, self.strings["no_args"])
                 return
 
@@ -91,9 +94,47 @@ class Translator(loader.Module):
 
         try:
             if provider == "telegram":
-                tr_text = await self._client.translate(
-                    message.peer_id, message, lang, raw_text=text, entities=entities
-                )
+                rich_message = None
+                if reply is not None:
+                    with contextlib.suppress(Exception):
+                        rich_message = await self._client.get_rich_message(
+                            message.peer_id,
+                            reply.id,
+                            raw=True,
+                        )
+
+                if rich_message is not None:
+                    translated = await self._client.translate_rich_message(
+                        lang,
+                        entity=message.peer_id,
+                        messages=[reply],
+                        raw=True,
+                    )
+                    if not translated:
+                        raise ValueError("Telegram returned no translated Rich Message")
+                    if self.config["only_text"]:
+                        tr_text = utils.rich_message_to_html(translated[0])
+                    elif not self._client.heroku_me.premium:
+                        await utils.answer(
+                            message,
+                            rich_message=utils.rich_message_to_html(translated[0]),
+                            reply_to=reply.id,
+                        )
+                        return
+                    else:
+                        await self._client.send_rich_message(
+                            message.peer_id,
+                            rich_message=translated[0],
+                            reply_to=reply.id,
+                            top_msg_id=utils.get_topic(reply),
+                        )
+                        if message.out:
+                            await message.delete()
+                        return
+                else:
+                    tr_text = await self._client.translate(
+                        message.peer_id, message, lang, raw_text=text, entities=entities
+                    )
             else:
                 tr_text = await self._translate_external(text, lang)
 

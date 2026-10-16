@@ -1,20 +1,15 @@
-herokutl==2.1.0
+herokutl==2.2.0
 pyaes
-aiofile==3.8.1
-aiofiles==24.1.0
 gitpython==3.1.50
 deep-translator
 meval==2.5
 aiohttp==3.13.5
 requests==2.33.1
-certifi==2024.8.30
 grapheme==0.6.0
 emoji>=1.7
 psutil==6.0.0
-TgCrypto-pyrofork
 rsa==4.9
 ruamel.yaml==0.17.21
-bs4==0.0.2
 orjson
 Pillow
 

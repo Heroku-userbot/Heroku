@@ -2,14 +2,24 @@ import io
 import typing
 
 from herokutl import Button
+from herokutl.extensions import html as html_parser
 from herokutl import utils as tl_utils
 from herokutl.tl import types
 from herokutl.tl.functions.messages import (
     EditInlineBotMessageRequest,
+    EditMessageRequest,
+    SendMessageRequest,
     SetInlineBotResultsRequest,
 )
-from herokutl.tl.types import DocumentAttributeAudio
+from herokutl.tl.types import (
+    DocumentAttributeAudio,
+    InputReplyToMessage,
+    InputRichMessageHTML,
+    InputRichMessageMarkdown,
+)
 from herokutl.tl import TLObject
+
+from .._internal import normalize_rich_html
 
 
 class TelethonBot:
@@ -157,8 +167,18 @@ class TelethonBot:
         reply_markup=None,
         message_thread_id: int | None = None,
         disable_notification: bool | None = None,
+        rich_message: str | None = None,
         **kwargs,
     ):
+        if rich_message is not None:
+            return await self.send_rich_message(
+                chat_id,
+                rich_message,
+                reply_markup=reply_markup,
+                message_thread_id=message_thread_id,
+                disable_notification=disable_notification,
+            )
+
         return self._with_message_id_alias(
             await self.client.send_message(
                 chat_id,
@@ -174,6 +194,110 @@ class TelethonBot:
                 **self._thread_kwargs(message_thread_id),
             )
         )
+
+    @staticmethod
+    def _rich_input(html=None, markdown=None, rich_message=None):
+        if rich_message is not None:
+            return rich_message
+        if html is not None:
+            return InputRichMessageHTML(html=normalize_rich_html(html))
+        if markdown is not None:
+            return InputRichMessageMarkdown(markdown=markdown)
+        raise ValueError("One of html, markdown or rich_message is required")
+
+    @staticmethod
+    def _rich_fallback_text(html=None, markdown=None, rich_message=None):
+        if html:
+            text, _ = html_parser.parse(html)
+            return text or " "
+        if markdown:
+            return str(markdown) or " "
+        if rich_message is not None:
+            rich_html = getattr(rich_message, "html", None)
+            if rich_html:
+                text, _ = html_parser.parse(rich_html)
+                return text or " "
+            rich_markdown = getattr(rich_message, "markdown", None)
+            if rich_markdown:
+                return str(rich_markdown)
+            try:
+                from ..utils.rich import rich_message_to_html
+
+                text, _ = html_parser.parse(rich_message_to_html(rich_message))
+                return text or " "
+            except Exception:
+                return " "
+        return " "
+
+    async def send_rich_message(
+        self,
+        chat_id,
+        html: str | None = None,
+        *,
+        markdown: str | None = None,
+        rich_message=None,
+        reply_markup=None,
+        message_thread_id: int | None = None,
+        disable_notification: bool | None = None,
+    ):
+        if html is not None and not isinstance(html, str):
+            raise TypeError("html must be a str")
+
+        entity = await self.client.get_input_entity(chat_id)
+        rich_input = self._rich_input(html, markdown, rich_message)
+        request = SendMessageRequest(
+            peer=entity,
+            message=self._rich_fallback_text(html, markdown, rich_message),
+            no_webpage=True,
+            silent=disable_notification,
+            reply_to=(
+                InputReplyToMessage(message_thread_id)
+                if message_thread_id is not None
+                else None
+            ),
+            reply_markup=self.client.build_reply_markup(reply_markup),
+            rich_message=rich_input,
+        )
+        result = await self.client(request)
+        return self.client._get_response_message(request, result, entity)
+
+    async def edit_rich_message(
+        self,
+        html: str | None = None,
+        *,
+        markdown: str | None = None,
+        rich_message=None,
+        inline_message_id=None,
+        chat_id=None,
+        message_id=None,
+        reply_markup=None,
+    ):
+        if html is not None and not isinstance(html, str):
+            raise TypeError("html must be a str")
+
+        markup = self._build_reply_markup(reply_markup)
+        rich_input = self._rich_input(html, markdown, rich_message)
+        fallback_text = self._rich_fallback_text(html, markdown, rich_message)
+        if inline_message_id is not None:
+            request = EditInlineBotMessageRequest(
+                id=self._coerce_inline_message_id(inline_message_id),
+                message=fallback_text,
+                no_webpage=True,
+                rich_message=rich_input,
+                reply_markup=markup,
+            )
+            return await self.client(request)
+
+        entity = await self.client.get_input_entity(chat_id)
+        request = EditMessageRequest(
+            peer=entity,
+            id=message_id,
+            message=fallback_text,
+            no_webpage=True,
+            rich_message=rich_input,
+            reply_markup=markup,
+        )
+        return await self.client(request)
 
     async def send_document(
         self,
@@ -432,9 +556,9 @@ def make_button(
 
     if web_app is not None:
         app_url = web_app if isinstance(web_app, str) else web_app["url"]
-        return types.KeyboardButtonWebView(text, app_url)
+        return types.KeyboardInlineButton(text, types.InlineButtonTypeWebView(url=app_url))
 
     if copy_text is not None:
-        return types.KeyboardButtonCopy(text, copy_text)
+        return types.KeyboardInlineButton(text, types.InlineButtonTypeCopy(copy_text=copy_text))
 
     return Button.inline(text, text, style=style, icon=icon)

@@ -6,12 +6,11 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import time
-import psutil
 import logging
 import herokutl
 
@@ -22,6 +21,7 @@ from herokutl.utils import get_display_name
 from .. import loader, utils, version
 import platform as lib_platform
 import getpass
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class HerokuInfoMod(loader.Module):
             ),
             loader.ConfigValue(
                 "banner_url",
-                "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_info.png",
+                "https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku_info.jpg",
                 lambda: self.strings["_cfg_banner"],
                 validator=loader.validators.RandomLink(),
             ),
@@ -64,16 +64,44 @@ class HerokuInfoMod(loader.Module):
             loader.ConfigValue(
                 "quote_media",
                 False,
-                "Switch preview media to quote",
+                lambda: self.strings["_cfg_quote_media"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
                 "invert_media",
                 False,
-                "Switch preview invert media",
+                lambda: self.strings["_cfg_invert_media"],
+                validator=loader.validators.Boolean(),
+            ),
+            loader.ConfigValue(
+                "rich_mode",
+                True,
+                lambda: self.strings["_cfg_rich_mode"],
                 validator=loader.validators.Boolean(),
             ),
         )
+
+    def _get_cpu_info(self) -> str | None:
+        try:
+            import psutil
+
+            return f"{psutil.cpu_count(logical=False)} ({psutil.cpu_count()}) core(-s); {psutil.cpu_percent()}% total"
+        except PermissionError:
+            return None
+        except Exception:
+            logger.exception("Unsupported placeholder")
+            return None
+
+    def _get_cpu_usage(self) -> str:
+        try:
+            import psutil
+
+            return f"{psutil.cpu_percent(interval=None):.2f}"
+        except PermissionError:
+            return ""
+        except Exception:
+            logger.exception("Unsupported placeholder")
+            return ""
 
     def _get_os_name(self):
         try:
@@ -84,7 +112,19 @@ class HerokuInfoMod(loader.Module):
         except FileNotFoundError:
             return self.strings["non_detectable"]
 
-    async def _render_info(self, start: float) -> str:
+    def _get_ram_usage(self):
+        import psutil
+
+        process = psutil.Process()
+        memory = process.memory_info().rss
+        for child in process.children(recursive=True):
+            try:
+                memory += child.memory_info().rss
+            except psutil.NoSuchProcess:
+                continue
+        return f"{round(memory / 2**20, 1)} MB"
+
+    def _get_update_status(self):
         try:
             up_to_date = utils.is_up_to_date()
             if up_to_date:
@@ -94,19 +134,9 @@ class HerokuInfoMod(loader.Module):
         except Exception:
             upd = ""
 
-        me = (
-            '<b><a href="tg://user?id={}">{}</a></b>'.format(
-                self._client.heroku_me.id,
-                utils.escape_html(get_display_name(self._client.heroku_me)),
-            )
-            .replace("{", "")
-            .replace("}", "")
-        )
-        build = utils.get_commit_url()
-        _version = f'<i>{".".join(list(map(str, list(version.__version__))))}</i>'
-        prefix = f"«<code>{utils.escape_html(self.get_prefix())}</code>»"
+        return upd
 
-        platform = utils.get_named_platform()
+    def _get_platform_emoji(self):
         platform_emoji = utils.get_named_platform_emoji()
 
         for emoji, icon in [
@@ -132,64 +162,97 @@ class HerokuInfoMod(loader.Module):
             ("🍏", '<tg-emoji emoji-id="5372908412604525258">🍏</tg-emoji>'),
         ]:
             platform_emoji = platform_emoji.replace(emoji, icon)
-        data = {
-            "me": me,
-            "version": _version,
-            "build": build,
-            "prefix": prefix,
-            "platform": platform,
-            "platform_emoji": platform_emoji,
-            "upd": upd,
-            "python_ver": lib_platform.python_version(),
-            "uptime": utils.formatted_uptime(),
-            "cpu_usage": utils.get_cpu_usage(),
-            "ram_usage": f"{utils.get_ram_usage()} MB",
-            "branch": version.branch,
-            "hostname": lib_platform.node(),
-            "user": getpass.getuser(),
-            "os": self._get_os_name() or self.strings["non_detectable"],
-            "kernel": lib_platform.release(),
-            "cpu": f"{psutil.cpu_count(logical=False)} ({psutil.cpu_count()}) core(-s); {psutil.cpu_percent()}% total",
-            "ping": round((time.perf_counter_ns() - start) / 10**6, 3),
-            "htl_ver": herokutl.__version__,
-            "git_status": utils.get_git_status(),
+        return platform_emoji
+
+    def _get_placeholder_providers(self, template_key):
+        return {
+            "banner_url": lambda: self.config["banner_url"],
+            "me": lambda: (
+                '<b><a href="tg://user?id={}">{}</a></b>'.format(
+                    self._client.heroku_me.id,
+                    utils.escape_html(get_display_name(self._client.heroku_me)),
+                ).replace("{", "").replace("}", "")
+            ),
+            "version": lambda: f'<i>{".".join(map(str, version.__version__))}</i>',
+            "build": utils.get_commit_url,
+            "prefix": lambda: f"«<code>{utils.escape_html(self.get_prefix())}</code>»",
+            "platform": utils.get_named_platform,
+            "platform_emoji": self._get_platform_emoji,
+            "upd": self._get_update_status,
+            "python_ver": lib_platform.python_version,
+            "uptime": utils.formatted_uptime,
+            "cpu_usage": self._get_cpu_usage,
+            "ram_usage": self._get_ram_usage,
+            "branch": lambda: version.branch,
+            "hostname": lib_platform.node,
+            "user": getpass.getuser,
+            "os": self._get_os_name,
+            "kernel": lib_platform.release,
+            "htl_ver": lambda: herokutl.__version__,
+            "git_status": utils.get_git_status,
+            "cpu": self._get_cpu_info,
+            "img": lambda: (
+                f'<img src="{utils.escape_html(str(self.config["banner_url"]))}"/>'
+                if template_key == "rich_info_message" and self.config["banner_url"]
+                else ""
+            ),
         }
-        data = await utils.get_placeholders(data, self.config["custom_message"])
-        if self.config["custom_message"]:
-            try:
-                placeholders_msg = self.config["custom_message"].format(**data)
-            except KeyError:
-                logger.exception("Missing placeholder in custom_message")
-                placeholders_msg = (
-                    "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji>"
-                )
-        return (
-            placeholders_msg
-            if self.config["custom_message"]
-            else self.strings["info_message"].format(
-                (
-                    utils.get_platform_emoji()
-                    if self._client.heroku_me.premium and self.config["show_heroku"]
-                    else ""
-                ),
-                me=me,
-                version=_version,
-                prefix=prefix,
-                uptime=utils.formatted_uptime(),
-                branch=version.branch,
-                cpu_usage=utils.get_cpu_usage(),
-                ram_usage=f"{utils.get_ram_usage()} MB",
-                ping=round((time.perf_counter_ns() - start) / 10**6, 3),
-                upd=upd,
-                platform=platform,
-                os=self._get_os_name() or self.strings["non_detectable"],
-                python_ver=lib_platform.python_version(),
+
+    def _format_custom_message(self, template, data):
+        def replace(match):
+            name = match.group(1)
+            if name in data:
+                return str(data[name])
+            return self.strings["missing_placeholder"].format(
+                placeholder=utils.escape_html(match.group(0))
             )
+
+        return re.sub(r"{(\w+)}", replace, template)
+
+    async def _render_info(
+        self,
+        start: float,
+        template_key: str = "info_message",
+    ) -> str:
+        custom_message = self.config["custom_message"]
+        template = custom_message or self.strings[template_key]
+        required = set(re.findall(r"{(\w+)}", template))
+        providers = self._get_placeholder_providers(template_key)
+        data = utils.LazyPlaceholderData(providers)
+        for name in required & providers.keys():
+            data[name]
+
+        if "ping" in required:
+            data["ping"] = round((time.perf_counter_ns() - start) / 10**6, 3)
+        if custom_message:
+            data = await utils.get_placeholders(data, custom_message)
+            return self._format_custom_message(custom_message, data)
+        return template.format(
+            (
+                utils.get_platform_emoji()
+                if "{}" in template
+                and self._client.heroku_me.premium
+                and self.config.get("show_heroku", False)
+                else ""
+            ),
+            **data,
         )
 
     @loader.command()
     async def infocmd(self, message: Message):
         start = time.perf_counter_ns()
+
+        if self.config["rich_mode"]:
+            await utils.answer_with_media_fallback(
+                message,
+                rich_message=await self._render_info(
+                    start,
+                    template_key="rich_info_message",
+                ),
+                reply_to=getattr(message, "reply_to_msg_id", None),
+            )
+            return
+
         media = str(self.config["banner_url"])
 
         if self.config["banner_url"] and self.config["quote_media"] is True:
@@ -199,25 +262,16 @@ class HerokuInfoMod(loader.Module):
             media = None
 
         try:
-            match True:
-                case _ if self.config["custom_message"] is None:
-                    await utils.answer(
-                        message,
-                        await self._render_info(start),
-                        file=media,
-                        reply_to=getattr(message, "reply_to_msg_id", None),
-                        invert_media=self.config["invert_media"],
-                    )
-                case _:
-                    if "{ping}" in self.config["custom_message"]:
-                        message = await utils.answer(message, self.config["ping_emoji"])
-                    await utils.answer(
-                        message,
-                        await self._render_info(start),
-                        file=media,
-                        reply_to=getattr(message, "reply_to_msg_id", None),
-                        invert_media=self.config["invert_media"],
-                    )
+            custom_message = self.config["custom_message"]
+            if custom_message is not None and "{ping}" in custom_message:
+                message = await utils.answer(message, self.config["ping_emoji"])
+            await utils.answer_with_media_fallback(
+                message,
+                await self._render_info(start),
+                file=media,
+                reply_to=getattr(message, "reply_to_msg_id", None),
+                invert_media=self.config["invert_media"],
+            )
         except WebpageMediaEmptyError:
             await utils.answer(
                 message,

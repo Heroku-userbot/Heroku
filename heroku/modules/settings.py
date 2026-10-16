@@ -6,11 +6,12 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import contextlib
+import getpass
 import herokutl
 from herokutl.tl.types import Message, User
 
@@ -29,13 +30,25 @@ class CoreMod(loader.Module):
             loader.ConfigValue(
                 "allow_nonstandart_prefixes",
                 False,
-                "Allow non-standard prefixes like premium emojis or multi-symbol prefixes",
+                lambda: self.strings["_cfg_nonstandart_prefixes"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
                 "alias_emoji",
                 "<tg-emoji emoji-id=4974259868996207180>▪️</tg-emoji>",
-                "just emoji in .aliases",
+                lambda: self.strings["_cfg_alias_emoji"],
+            ),
+            loader.ConfigValue(
+                "rich_mode",
+                True,
+                lambda: self.strings["_cfg_rich_mode"],
+                validator=loader.validators.Boolean(),
+            ),
+            loader.ConfigValue(
+                "keep_message_state",
+                True,
+                lambda: self.strings["_cfg_keep_message_state"],
+                validator=loader.validators.Boolean(),
             ),
         )
 
@@ -52,6 +65,7 @@ class CoreMod(loader.Module):
                     "wsl",
                     "userland",
                     "hikkahost",
+                    "universal",
                 ]
             ],
             2,
@@ -102,6 +116,25 @@ class CoreMod(loader.Module):
         else:
             branch_text = self.strings["unstable"].format(version.branch)
 
+        if self.config["rich_mode"]:
+            rich_message = self.strings["rich_heroku_message"].format(
+                platform=utils.get_platform_emoji(),
+                version=".".join(map(str, version.__version__)),
+                build=utils.get_commit_url(),
+                htl_version=herokutl.__version__,
+                layer=herokutl.tl.alltlobjects.LAYER,
+                current_user=getpass.getuser(),
+                banner_url="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku_cmd.jpg",
+            )
+            if branch_text:
+                rich_message += f"<footer>{branch_text.strip()}</footer>"
+            await utils.answer(
+                message,
+                rich_message=rich_message,
+                reply_to=getattr(message, "reply_to_msg_id", None),
+            )
+            return
+
         await utils.answer(
             message,
             self.strings["heroku"].format(
@@ -115,7 +148,7 @@ class CoreMod(loader.Module):
                 f"{herokutl.__version__} #{herokutl.tl.alltlobjects.LAYER}",
             )
             + (branch_text),
-            file="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_cmd.png",
+            file="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku_cmd.jpg",
             reply_to=getattr(message, "reply_to_msg_id", None),
         )
 
@@ -193,90 +226,64 @@ class CoreMod(loader.Module):
 
     @loader.command()
     async def setprefix(self, message: Message):
-        if not (args := utils.get_args(message)):
-            await utils.answer(message, self.strings["what_prefix"])
-            return
-
-        if len(args[0]) != 1 and self.config.get("allow_nonstandart_prefixes") is False:
-            await utils.answer(message, self.strings["prefix_incorrect"])
-            return
-
-        if args[0] == "s":
-            await utils.answer(message, self.strings["prefix_incorrect"])
-            return
-
-        if len(args) == 2:
-            if args[1].isdigit():
-                args[1] = int(args[1])
-            try:
-                entity = await self.client.get_entity(args[1])
-            except Exception:
-                return await utils.answer(
-                    message, self.strings["invalid_id_or_username"]
-                )
-
-            if not isinstance(entity, User):
-                return await utils.answer(
-                    message, self.strings["not_a_user"].format(args[1])
-                )
-
-            if entity.id != self.tg_id:
-                sgroup_users = []
-                for g in self._client.dispatcher.security._sgroups.values():
-                    for u in g.users:
-                        sgroup_users.append(u)
-
-                tsec_users = [
-                    rule["target"]
-                    for rule in self._client.dispatcher.security._tsec_user
-                ]
-                ub_owners = self._client.dispatcher.security.owner.copy()
-
-                all_users = sgroup_users + tsec_users + ub_owners
-
-                if entity.id not in all_users:
-                    return await utils.answer(
-                        message, self.strings["id_not_found_scgroup"]
-                    )
-
-                oldprefix = utils.escape_html(self.get_prefix(entity.id))
-                all_prefixes = self._db.get(
-                    main.__name__,
-                    "command_prefixes",
-                    {},
-                )
-
-                all_prefixes[str(entity.id)] = args[0]
-
-                self._db.set(
-                    main.__name__,
-                    "command_prefixes",
-                    all_prefixes,
-                )
-                return await utils.answer(
-                    message,
-                    self.strings["entity_prefix_set"].format(
-                        "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji>",
-                        entity_name=utils.escape_html(entity.first_name),
-                        newprefix=utils.escape_html(args[0]),
-                        oldprefix=utils.escape_html(oldprefix),
-                        entity_id=args[1],
-                    ),
-                )
-
-        oldprefix = utils.escape_html(self.get_prefix())
-
-        self._db.set(
-            main.__name__,
-            "command_prefix",
-            args[0],
+        """<prefix ...> [@owner] or --user <ID> <prefix ...> — Set personal prefixes."""
+        args = utils.get_args(message)
+        if not isinstance(args, list):
+            return await utils.answer(message, self.strings["what_prefix"])
+        target = getattr(message, "sender_id", None) or self.tg_id
+        if "--user" in args:
+            index = args.index("--user")
+            if index + 1 >= len(args):
+                return await utils.answer(message, self.strings["what_prefix"])
+            target = args[index + 1]
+            del args[index:index + 2]
+        elif len(args) > 1 and (
+            (args[-1].startswith("@") and len(args[-1]) > 1)
+            or (args[-1].isdigit() and len(args[-1]) >= 5)
+        ):
+            target = args.pop()
+        if not args:
+            return await utils.answer(message, self.strings["what_prefix"])
+        if any(
+            not p or p == "s" or any(c.isspace() for c in p)
+            or (len(p) != 1 and not self.config.get("allow_nonstandart_prefixes"))
+            for p in args
+        ):
+            return await utils.answer(message, self.strings["prefix_incorrect"])
+        prefixes = utils.normalize_prefixes(args)
+        target = int(target) if str(target).isdigit() else target
+        try:
+            entity = await self.client.get_entity(target)
+        except Exception:
+            return await utils.answer(message, self.strings["invalid_id_or_username"])
+        if not isinstance(entity, User):
+            return await utils.answer(message, self.strings["not_a_user"].format(target))
+        oldprefixes = utils.user_prefixes(
+            self._db, main.__name__, entity.id, self.tg_id
         )
+        if entity.id != self.tg_id:
+            security = self._client.dispatcher.security
+            allowed = set(security.owner)
+            allowed.update(u for g in security._sgroups.values() for u in g.users)
+            allowed.update(rule["target"] for rule in security._tsec_user)
+            if entity.id not in allowed:
+                return await utils.answer(message, self.strings["id_not_found_scgroup"])
+            personal = dict(self._db.get(main.__name__, "command_prefixes", {}))
+            personal[str(entity.id)] = prefixes[0] if len(prefixes) == 1 else prefixes
+            self._db.set(main.__name__, "command_prefixes", personal)
+        else:
+            self._db.set(main.__name__, "command_prefix", prefixes[0])
+            self._db.set(main.__name__, "command_prefix_aliases", prefixes[1:])
         await utils.answer(
             message,
-            self.strings["prefix_set"].format(
+            self.strings[
+                "prefix_set" if entity.id == self.tg_id else "entity_prefix_set"
+            ].format(
                 "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji>",
-                newprefix=utils.escape_html(args[0]),
-                oldprefix=utils.escape_html(oldprefix),
+                entity_name=utils.escape_html(entity.first_name),
+                entity_id=entity.id,
+                newprefix=utils.escape_html(utils.format_prefixes(prefixes)),
+                oldprefix=utils.escape_html(" ".join(oldprefixes)),
             ),
         )
 
@@ -303,43 +310,93 @@ class CoreMod(loader.Module):
             await utils.answer(message, self.strings["alias_args"])
             return
 
-        alias_lines = []
-        for line in args_raw.splitlines():
+        import keyword
+
+        def parse_alias_line(line: str) -> tuple[list[str], str] | None:
             line = line.strip()
             if not line:
-                continue
+                return None
 
-            if "," in line:
+            if "&&" in line:
+                parts = line.split("&&", 1)
+                alias_part, command_part = parts[0].strip(), parts[1].strip()
+                aliases = [a.strip().lower() for a in alias_part.split(",") if a.strip()]
+                return aliases, command_part
+            elif "," in line:
                 parts = [part.strip() for part in line.split(",")]
-                last = parts[-1].split(maxsplit=1)
-                if len(last) < 2:
-                    await utils.answer(message, self.strings["alias_args"])
-                    return
-
-                aliases = [part.lower() for part in parts[:-1] if part]
-                aliases.append(last[0].lower())
-                command = last[1]
+                if parts:
+                    last = parts[-1].split(maxsplit=1)
+                    if len(last) >= 2:
+                        aliases = [part.lower() for part in parts[:-1] if part]
+                        aliases.append(last[0].lower())
+                        return aliases, last[1]
             else:
                 args = line.split(maxsplit=1)
-                if len(args) < 2:
+                if len(args) >= 2:
+                    return [args[0].lower()], args[1]
+            return None
+
+        alias_lines = []
+        lines = args_raw.splitlines()
+
+        for line_idx, line in enumerate(lines):
+            is_new_alias = False
+            parsed_aliases = None
+            parsed_cmd = None
+            parsed_rest = None
+
+            stripped_line = line.strip()
+            if stripped_line:
+                parsed = parse_alias_line(line)
+                if parsed:
+                    aliases, command = parsed
+                    command_parts = command.split(maxsplit=1)
+                    cmd = command_parts[0]
+                    rest = command_parts[1] if len(command_parts) > 1 else None
+
+                    first_word = stripped_line.split()[0] if stripped_line else ""
+                    is_valid_candidate = (
+                        not line.startswith(" ")
+                        and not line.startswith("\t")
+                        and not keyword.iskeyword(first_word)
+                        and all(c.isalnum() or c in "_-" for c in first_word)
+                    )
+
+                    if is_valid_candidate and cmd in self.allmodules.commands:
+                        is_new_alias = True
+                        parsed_aliases = aliases
+                        parsed_cmd = cmd
+                        parsed_rest = rest
+
+            if line_idx == 0:
+                parsed = parse_alias_line(line)
+                if not parsed:
                     await utils.answer(message, self.strings["alias_args"])
                     return
+                aliases, command = parsed
+                command_parts = command.split(maxsplit=1)
+                cmd = command_parts[0]
+                rest = command_parts[1] if len(command_parts) > 1 else None
 
-                aliases = [args[0].lower()]
-                command = args[1]
+                if cmd not in self.allmodules.commands:
+                    await utils.answer(
+                        message,
+                        self.strings["no_command"].format(utils.escape_html(cmd)),
+                    )
+                    return
 
-            command_parts = command.split(maxsplit=1)
-            cmd = command_parts[0]
-            rest = command_parts[1] if len(command_parts) > 1 else None
-
-            if cmd not in self.allmodules.commands:
-                await utils.answer(
-                    message,
-                    self.strings["no_command"].format(utils.escape_html(cmd)),
-                )
-                return
-
-            alias_lines.append((aliases, cmd, rest))
+                alias_lines.append((aliases, cmd, rest))
+            else:
+                if is_new_alias:
+                    alias_lines.append((parsed_aliases, parsed_cmd, parsed_rest))
+                else:
+                    if alias_lines:
+                        aliases, cmd, rest = alias_lines[-1]
+                        if rest is None:
+                            new_rest = line
+                        else:
+                            new_rest = rest + "\n" + line
+                        alias_lines[-1] = (aliases, cmd, new_rest)
 
         if not alias_lines:
             await utils.answer(message, self.strings["alias_args"])
@@ -643,19 +700,19 @@ class CoreMod(loader.Module):
         args = utils.get_args_raw(message)
 
         if (
-            not args or args not in {"-vds", "-wsl", "-ul", "-jh", "-hh", "-lh"}
+            not args or args not in {"-vds", "-wsl", "-ul", "-jh", "-hh", "-lh", "-uni"}
         ) and not (
             await self.inline.form(
                 self.strings["choose_installation"],
                 message,
                 reply_markup=self._markup(),
-                photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_installation.png",
+                photo="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku_installation.jpg",
             )
         ):
 
             await self.client.send_file(
                 message.peer_id,
-                "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_installation.png",
+                "https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku_installation.jpg",
                 caption=self.strings["vds_install"],
                 reply_to=getattr(message, "reply_to_msg_id", None),
             )
@@ -668,6 +725,8 @@ class CoreMod(loader.Module):
                 await utils.answer(message, self.strings["userland_install"])
             case _ if "-hh" in args:
                 await utils.answer(message, self.strings["hikkahost_install"])
+            case _ if "-uni" in args:
+                await utils.answer(message, self.strings["universal_install"])
 
     async def _inline__choose__installation(self, call: InlineCall, platform: str):
         with contextlib.suppress(Exception):

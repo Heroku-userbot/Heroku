@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -37,11 +37,20 @@ class HerokuBackupMod(loader.Module):
 
     strings = {"name": "HerokuBackup"}
 
+    async def _assert_backup_destination(self):
+        if not await utils.is_private_asset_channel(
+            self._client, self._content_channel_id, allow_participants=True
+        ):
+            raise PermissionError("Refusing to send backup to an unsafe content channel")
+
     async def client_ready(self):
+        self._content_channel_id = await utils.wait_for_content_channel(self._db)
+
+    async def inline_ready(self):
         if not self.get("period"):
             await self.inline.bot.send_photo(
                 self.tg_id,
-                photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/unit_alpha.png",
+                photo="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/unit_alpha.jpg",
                 caption=self.strings["period"],
                 reply_markup=self.inline.generate_markup(
                     utils.chunks(
@@ -66,8 +75,6 @@ class HerokuBackupMod(loader.Module):
                     ]
                 ),
             )
-
-        self._content_channel_id = await utils.wait_for_content_channel(self._db)
 
     async def _set_backup_period(self, call: BotInlineCall, value: int):
         if not value:
@@ -174,6 +181,7 @@ class HerokuBackupMod(loader.Module):
                 logger.error("Backups topic not found in database")
                 return
 
+            await self._assert_backup_destination()
             await self.inline.bot.send_document(
                 int(f"-100{self._content_channel_id}"),
                 archive,
@@ -307,6 +315,7 @@ class HerokuBackupMod(loader.Module):
             await utils.answer(message, self.strings["backup_sent"])
             return
 
+        await self._assert_backup_destination()
         backup_msg = await self.inline.bot.send_document(
             int(f"-100{self._content_channel_id}"),
             txt,
@@ -421,6 +430,7 @@ class HerokuBackupMod(loader.Module):
             )
             return
 
+        await self._assert_backup_destination()
         backup_msg = await self.inline.bot.send_document(
             int(f"-100{self._content_channel_id}"),
             archive,
@@ -531,6 +541,7 @@ class HerokuBackupMod(loader.Module):
             )
             return
 
+        await self._assert_backup_destination()
         backup_msg = await self.inline.bot.send_document(
             int(f"-100{self._content_channel_id}"),
             archive,

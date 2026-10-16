@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -14,6 +14,164 @@ import typing
 
 if typing.TYPE_CHECKING:
     from .database import Database
+
+
+def _wrap(value: typing.Any, save: typing.Callable[[], None]) -> typing.Any:
+    """Wrap a raw nested dict/list so mutating it persists through `save`"""
+    if isinstance(value, (NestedPointerDict, NestedPointerList)):
+        return value
+    if isinstance(value, dict):
+        return NestedPointerDict(value, save)
+    if isinstance(value, list):
+        return NestedPointerList(value, save)
+    return value
+
+
+class NestedPointerDict(dict):
+    def __init__(self, data: dict, save: typing.Callable[[], None]):
+        self._data = data
+        self._save = save
+
+    def __getitem__(self, key):
+        return _wrap(self._data[key], self._save)
+
+    def __setitem__(self, key, value):
+        self._data[key] = value
+        self._save()
+
+    def __delitem__(self, key):
+        del self._data[key]
+        self._save()
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self):
+        return len(self._data)
+
+    def __repr__(self):
+        return repr(self._data)
+
+    def __eq__(self, other):
+        return self._data == (
+            other._data if isinstance(other, NestedPointerDict) else other
+        )
+
+    def get(self, key, default=None):
+        return _wrap(self._data[key], self._save) if key in self._data else default
+
+    def setdefault(self, key, default=None):
+        existed = key in self._data
+        value = self._data.setdefault(key, default)
+        if not existed:
+            self._save()
+        return _wrap(value, self._save)
+
+    def pop(self, key, *args):
+        value = self._data.pop(key, *args)
+        self._save()
+        return value
+
+    def popitem(self):
+        value = self._data.popitem()
+        self._save()
+        return value
+
+    def update(self, *args, **kwargs):
+        self._data.update(*args, **kwargs)
+        self._save()
+
+    def clear(self):
+        self._data.clear()
+        self._save()
+
+    def keys(self):
+        return self._data.keys()
+
+    def values(self):
+        return (_wrap(v, self._save) for v in self._data.values())
+
+    def items(self):
+        return ((k, _wrap(v, self._save)) for k, v in self._data.items())
+
+    def copy(self):
+        return dict(self._data)
+
+
+class NestedPointerList(list):
+    def __init__(self, data: list, save: typing.Callable[[], None]):
+        self._data = data
+        self._save = save
+
+    def __getitem__(self, index):
+        value = self._data[index]
+        if isinstance(index, slice):
+            return [_wrap(v, self._save) for v in value]
+        return _wrap(value, self._save)
+
+    def __setitem__(self, index, value):
+        self._data[index] = value
+        self._save()
+
+    def __delitem__(self, index):
+        del self._data[index]
+        self._save()
+
+    def __iter__(self):
+        return (_wrap(v, self._save) for v in self._data)
+
+    def __len__(self):
+        return len(self._data)
+
+    def __contains__(self, item):
+        return item in self._data
+
+    def __repr__(self):
+        return repr(self._data)
+
+    def __eq__(self, other):
+        return self._data == (
+            other._data if isinstance(other, NestedPointerList) else other
+        )
+
+    def append(self, value):
+        self._data.append(value)
+        self._save()
+
+    def extend(self, values):
+        self._data.extend(values)
+        self._save()
+
+    def insert(self, index, value):
+        self._data.insert(index, value)
+        self._save()
+
+    def remove(self, value):
+        self._data.remove(value)
+        self._save()
+
+    def pop(self, index=-1):
+        value = self._data.pop(index)
+        self._save()
+        return value
+
+    def clear(self):
+        self._data.clear()
+        self._save()
+
+    def sort(self, *args, **kwargs):
+        self._data.sort(*args, **kwargs)
+        self._save()
+
+    def reverse(self):
+        self._data.reverse()
+        self._save()
+
+    def copy(self):
+        return list(self._data)
 
 
 class PointerList(list):
@@ -47,6 +205,12 @@ class PointerList(list):
 
     def __str__(self):
         return f"PointerList({list(self)})"
+
+    def __getitem__(self, __i: typing.SupportsIndex | slice):
+        value = super().__getitem__(__i)
+        if isinstance(__i, slice):
+            return [_wrap(v, self._save) for v in value]
+        return _wrap(value, self._save)
 
     def __delitem__(self, __i: typing.SupportsIndex | slice) -> None:
         a = super().__delitem__(__i)
@@ -136,6 +300,9 @@ class PointerDict(dict):
     def __bool__(self) -> bool:
         return bool(self._db._get_raw(self._module, self._key, self._default))
 
+    def __getitem__(self, key: str) -> typing.Any:
+        return _wrap(super().__getitem__(key), self._save)
+
     def __setitem__(self, key: str, value: typing.Any):
         super().__setitem__(key, value)
         self._save()
@@ -147,6 +314,15 @@ class PointerDict(dict):
     def __str__(self):
         return f"PointerDict({dict(self)})"
 
+    def get(self, key: str, default: typing.Any = None) -> typing.Any:
+        return _wrap(super().__getitem__(key), self._save) if key in self else default
+
+    def items(self):
+        return ((k, _wrap(v, self._save)) for k, v in super().items())
+
+    def values(self):
+        return (_wrap(v, self._save) for v in super().values())
+
     def update(self, __m: dict) -> None:
         super().update(__m)
         self._save()
@@ -154,7 +330,7 @@ class PointerDict(dict):
     def setdefault(self, key: str, default: typing.Any = None) -> typing.Any:
         a = super().setdefault(key, default)
         self._save()
-        return a
+        return _wrap(a, self._save)
 
     def pop(self, key: str, default: typing.Any = None) -> typing.Any:
         a = super().pop(key, default)

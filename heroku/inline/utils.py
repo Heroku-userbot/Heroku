@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -226,28 +226,14 @@ class Utils(InlineUnit):
     generate_markup = _generate_markup
 
     async def _close_unit_handler(self: "InlineManager", call: InlineCall):
-        if call._units is None:
-            logger.error(
-                "call._units is None. Please report this issue to the developers. "
-                "Debug info: %s",
-                call.model_dump_json(),
+        deleted = await self._delete_unit_message(call, unit_id=call.unit_id)
+        try:
+            await call.answer(
+                "" if deleted else "Error occurred", show_alert=not deleted
             )
-            try:
-                await call.answer(
-                    "❌ The userbot couldn't delete this inline message. "
-                    "See logs for more details."
-                )
-            except Exception:
-                logger.exception(
-                    "I can't even properly notify the user about the error 😭"
-                )
-
-            return
-
-        return await self._client.delete_messages(
-            call._units.get(call.unit_id).get("chat"),
-            call._units.get(call.unit_id).get("message_id"),
-        )
+        except Exception:
+            pass
+        return deleted
 
     async def _unload_unit_handler(self: "InlineManager", call: InlineCall):
         await call.unload()
@@ -569,35 +555,33 @@ class Utils(InlineUnit):
         message_id: int | None = None,
     ) -> bool:
         """Params `self`, `unit_id` are for internal use only, do not try to pass them"""
-        if getattr(
-            getattr(getattr(call, "message", None), "chat", None), "id", None
-        ) and getattr(getattr(call, "message", None), "message_id", None): #67676767
-            try:
-                await self.bot.delete_message(
-                    call.message.chat.id,
-                    call.message.message_id,
-                )
-            except Exception:
-                return False
+        if not isinstance(call, InlineCall):
+            chat_id = chat_id or getattr(
+                getattr(getattr(call, "message", None), "chat", None), "id", None
+            )
+            message_id = message_id or getattr(
+                getattr(call, "message", None), "id", None
+            )
+            if chat_id and message_id:
+                try:
+                    await self.bot.delete_message(chat_id, message_id)
+                except Exception:
+                    logger.debug(
+                        "Failed to delete bot message %s", unit_id, exc_info=True
+                    )
+                    return False
 
-            return True
+                return True
 
-        if chat_id and message_id:
-            try:
-                await self.bot.delete_message(chat_id, message_id)
-            except Exception:
-                return False
-
-            return True
-
-        if not unit_id and hasattr(call, "unit_id") and call.unit_id:
+        if not unit_id and getattr(call, "unit_id", None):
             unit_id = call.unit_id
 
+        unit = self._units.get(unit_id) or {}
+        if not (unit.get("chat") and unit.get("message_id")):
+            return False
+
         try:
-            await self._client.delete_messages(
-                call._units.get(unit_id).get("chat"),
-                call._units.get(unit_id).get("message_id"),
-            )
+            await self._client.delete_messages(unit["chat"], unit["message_id"])
         except Exception:
             logger.debug("Failed to delete unit message %s", unit_id, exc_info=True)
             return False

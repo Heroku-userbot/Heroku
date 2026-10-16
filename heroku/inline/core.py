@@ -8,14 +8,14 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import asyncio
-import contextlib
 import logging
 import os
+import sqlite3
 import time
 import typing
 
@@ -43,6 +43,7 @@ from herokutl.tl.types import (
     SendMessageTypingAction,
     UpdateBotChatBoost,
     UpdateBotChatInviteRequester,
+    UpdateBotGuestChatQuery,
     UpdateBotInlineSend,
     UpdateBotMessageReaction,
     UpdateBotMessageReactions,
@@ -56,6 +57,7 @@ from herokutl.tl.types import (
 from herokutl.utils import get_display_name
 
 from .. import main, utils
+from ..types import InlineDownError
 from ..database import Database
 from ..tl_cache import CustomTelegramClient
 from ..translations import Translator
@@ -93,6 +95,7 @@ BotUpdateType = typing.Literal[
     "message_reaction_count",
     "chat_boost",
     "removed_chat_boost",
+    "guest_message",
 ]
 
 _BOT_UPDATE_EVENTS: dict[BotUpdateType, typing.Callable[[], object]] = {
@@ -120,6 +123,7 @@ _BOT_UPDATE_EVENTS: dict[BotUpdateType, typing.Callable[[], object]] = {
     "message_reaction_count": lambda: events.Raw(types=UpdateBotMessageReactions),
     "chat_boost": lambda: events.Raw(types=UpdateBotChatBoost),
     "removed_chat_boost": lambda: events.Raw(types=UpdateBotChatBoost),
+    "guest_message": lambda: events.Raw(types=UpdateBotGuestChatQuery),
 }
 
 
@@ -156,6 +160,7 @@ class InlineManager(
         self.translator: Translator = allmodules.translator
 
         self._units: dict[str, dict] = {}
+        self._pre_edits: dict[str, tuple[str, typing.Any]] = {}
         self._custom_map: dict[str, callable] = {}
         self.fsm: dict[str, str] = {}
         self._error_events: dict[str, asyncio.Event] = {}
@@ -170,7 +175,7 @@ class InlineManager(
         self._bot_client: TelegramClient = None
         self._task: asyncio.Future = None
         self._cleaner_task: asyncio.Future = None
-        self.bot: TelethonBot = None
+        self._bot: TelethonBot = None
         self.bot_id: int = None
         self.bot_username: str = None
 
@@ -182,7 +187,7 @@ class InlineManager(
         while True:
             for unit_id, unit in self._units.copy().items():
                 if (unit.get("ttl") or (time.time() + self._markup_ttl)) < time.time():
-                    del self._units[unit_id]
+                    await self._unload_unit(unit_id)
 
             await asyncio.sleep(5)
 
@@ -235,17 +240,28 @@ class InlineManager(
                     "Failed to remove stale bot session file %s", entry.path
                 )
 
+    @property
+    def bot(self) -> TelethonBot:
+        """The inline bot. Raises `InlineDownError`, if it isn't running"""
+        if self._bot is None:
+            raise InlineDownError()
+        return self._bot
+
     async def register_manager(
         self,
         after_break: bool = False,
         ignore_token_checks: bool = False,
+        force_new_bot: bool = False,
     ):
         """
         Register manager
         :param after_break: Loop marker
         :param ignore_token_checks: If `True`, will not check for token
+        :param force_new_bot: If `True`, will not search for an existing bot
+            in BotFather and will create a brand new one instead
         :type after_break: bool
         :type ignore_token_checks: bool
+        :type force_new_bot: bool
         :return: None
         :rtype: None
         """
@@ -253,12 +269,18 @@ class InlineManager(
         self._name = get_display_name(self._client.heroku_me)
 
         if not ignore_token_checks:
-            is_token_asserted = await self._assert_token()
+            is_token_asserted = await self._assert_token(skip_search=force_new_bot)
             if not is_token_asserted:
                 self.init_complete = False
                 return
 
-        self.init_complete = True
+        self.init_complete = False
+
+        if self._bot_client:
+            try:
+                await self._bot_client.disconnect()
+            except Exception:
+                pass
 
         bot_uid = self._token.split(":", 1)[0]
         self._cleanup_stale_bot_sessions(bot_uid)
@@ -273,8 +295,7 @@ class InlineManager(
 
         try:
             await self._bot_client.start(bot_token=self._token)
-            self.bot = TelethonBot(self._bot_client)
-            self._bot = self.bot
+            self._bot = TelethonBot(self._bot_client)
             self._register_builtin_handlers()
             bot_me = await self._bot_client.get_me()
             telegram_id = bot_me.id
@@ -299,44 +320,65 @@ class InlineManager(
             )
             self.init_complete = False
             return False
+        except sqlite3.OperationalError:
+            logger.critical(
+                "Bot session database is locked, could not start bot client",
+                exc_info=True,
+            )
+            self.init_complete = False
+            return False
+
+        if self._db.get("heroku.inline", "needs_inline_setup", False):
+            try:
+                await self._configure_inline_bot(self.bot_username)
+            except Exception:
+                pass
+
+            self._db.set("heroku.inline", "needs_inline_setup", False)
 
         result = await self._ping_bot(after_break)
         if result is not True:
             return result
 
-        _folders = await self._client(GetDialogFiltersRequest())
-        for folder in _folders.filters:
-            if getattr(folder, "title", None) == "Heroku":
-                if any(
-                    [
-                        isinstance(peer, InputPeerUser) and peer.user_id == self.bot_id
-                        for peer in folder.include_peer
-                    ]
-                ):
-                    break
+        self.init_complete = True
 
-                pinned = [await self._client.get_input_entity(self.bot_id)]
-                include = folder.include_peers
-                exclude = folder.exclude_peers
-                emoticon = folder.emoticon
-                color = folder.color
+        try:
+            _folders = await self._client(GetDialogFiltersRequest())
+            for folder in _folders.filters:
+                if getattr(folder, "title", None) == "Heroku":
+                    if any(
+                        [
+                            isinstance(peer, InputPeerUser) and peer.user_id == self.bot_id
+                            for peer in folder.include_peer
+                        ]
+                    ):
+                        break
 
-                await self._client(
-                    UpdateDialogFilterRequest(
-                        folder.id,
-                        DialogFilter(
+                    pinned = [await self._client.get_input_entity(self.bot_id)]
+                    include = folder.include_peers
+                    exclude = folder.exclude_peers
+                    emoticon = folder.emoticon
+                    color = folder.color
+
+                    await self._client(
+                        UpdateDialogFilterRequest(
                             folder.id,
-                            pinned_peers=pinned,
-                            include_peers=include,
-                            exclude_peers=exclude,
-                            emoticon=emoticon,
-                            color=color,
-                        ),
+                            DialogFilter(
+                                folder.id,
+                                pinned_peers=pinned,
+                                include_peers=include,
+                                exclude_peers=exclude,
+                                emoticon=emoticon,
+                                color=color,
+                            ),
+                        )
                     )
-                )
-                break
+                    break
+        except Exception:
+            logger.exception("Failed to add the bot to the Heroku folder")
 
         self._cleaner_task = asyncio.ensure_future(self._cleaner())
+        asyncio.ensure_future(self._allmodules.send_inline_ready())
 
     async def _ping_bot(
         self,
@@ -356,11 +398,16 @@ class InlineManager(
         try:
             m = await self._client.send_message(self.bot_username, "/start heroku init")
         except (InputUserDeactivatedError, ValueError):
+            logger.warning(
+                "Inline bot @%s is deactivated (frozen) or not found, "
+                "creating a new one",
+                self.bot_username,
+            )
             self._db.set("heroku.inline", "bot_token", None)
             self._token = False
 
             if not after_break:
-                return await self.register_manager(True)
+                return await self.register_manager(True, force_new_bot=True)
 
             self.init_complete = False
             return False
@@ -446,13 +493,17 @@ class InlineManager(
             return
 
         del self._bot_update_handlers[handler_id]
-        self._bot_handler_refs.pop(handler_id, None)
+        removed_ref = self._bot_handler_refs.pop(handler_id, None)
         logger.debug("Unregistered bot update handler %s", handler_id)
 
         if not self._bot_client:
             return
 
-        for handler, event_builder in list(self._bot_handler_refs.values()):
+        refs = list(self._bot_handler_refs.values())
+        if removed_ref:
+            refs.append(removed_ref)
+
+        for handler, event_builder in refs:
             self._bot_client.remove_event_handler(handler, event_builder)
         self._bot_handler_refs.clear()
 
@@ -465,7 +516,12 @@ class InlineManager(
             self._bot_handler_refs[hid] = (handler, event_builder)
         logger.debug("Rebuilt custom handlers after unregistering %s", handler_id)
 
-    async def _invoke_unit(self, unit_id: str, message: Message) -> Message:
+    async def _invoke_unit(
+        self,
+        unit_id: str,
+        message: Message,
+        reply_to: Message | int | None = None,
+    ) -> Message:
         event = asyncio.Event()
         self._error_events[unit_id] = event
 
@@ -474,12 +530,18 @@ class InlineManager(
 
         async def result_getter():
             nonlocal unit_id, q
-            with contextlib.suppress(Exception):
+            try:
                 q = await self._client.inline_query(self.bot_username, unit_id)
+            except Exception:
+                logger.exception("Inline query for unit %s failed", unit_id)
 
         async def event_poller():
             nonlocal exception
-            await asyncio.wait_for(event.wait(), timeout=10)
+            try:
+                await asyncio.wait_for(event.wait(), timeout=10)
+            except asyncio.TimeoutError:
+                logger.debug("Inline query for unit %s timed out after 10s", unit_id)
+                return
             if self._error_events.get(unit_id):
                 exception = self._error_events[unit_id]
 
@@ -505,6 +567,10 @@ class InlineManager(
         return await q[0].click(
             utils.get_chat_id(message) if isinstance(message, Message) else message,
             reply_to=(
-                message.reply_to_msg_id if isinstance(message, Message) else None
+                reply_to
+                if reply_to is not None
+                else (
+                    message.reply_to_msg_id if isinstance(message, Message) else None
+                )
             ),
         )

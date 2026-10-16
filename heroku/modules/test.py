@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -51,13 +51,7 @@ class TestMod(loader.Module):
                 "force_send_all",
                 False,
                 (
-                    "⚠️ Do not touch, if you don't know what it does!\nBy default, "
-                    " Heroku will try to determine, which client caused logs. E.g. there"
-                    " is a module TestModule installed on Client1 and TestModule2 on"
-                    " Client2. By default, Client2 will get logs from TestModule2, and"
-                    " Client1 will get logs from TestModule. If this option is enabled,"
-                    " Heroku will send all logs to Client1 and Client2, even if it is"
-                    " not the one that caused the log."
+                    lambda: self.strings["_cfg_force_send_all"]
                 ),
                 validator=loader.validators.Boolean(),
                 on_change=self._pass_config_to_logger,
@@ -66,8 +60,7 @@ class TestMod(loader.Module):
                 "tglog_level",
                 "ERROR",
                 (
-                    "⚠️ Do not touch, if you don't know what it does!\n"
-                    "Minimal loglevel for records to be sent in Telegram."
+                    lambda: self.strings["_cfg_tglog_level"]
                 ),
                 validator=loader.validators.Choice(
                     ["ALL", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "DISABLE"]
@@ -77,14 +70,14 @@ class TestMod(loader.Module):
             loader.ConfigValue(
                 "ignore_common",
                 True,
-                "Ignore common errors (e.g. 'TypeError' in telethon)",
+                lambda: self.strings["_cfg_ignore_common"],
                 validator=loader.validators.Boolean(),
                 on_change=self._pass_config_to_logger,
             ),
             loader.ConfigValue(
                 "disable_internet_warn",
                 False,
-                "Ignore all internet errors",
+                lambda: self.strings["_cfg_disable_internet_warn"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
@@ -124,36 +117,61 @@ class TestMod(loader.Module):
             loader.ConfigValue(
                 "quote_media",
                 False,
-                "Switch preview media to quote in ping",
+                lambda: self.strings["_cfg_quote_media"],
+                validator=loader.validators.Boolean(),
+            ),
+            loader.ConfigValue(
+                "rich_mode",
+                True,
+                lambda: self.strings["_cfg_rich_mode"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
                 "invert_media",
                 False,
-                "Switch preview invert media in ping",
+                lambda: self.strings["_cfg_invert_media"],
                 validator=loader.validators.Boolean(),
             ),
         )
 
     def _pass_config_to_logger(self):
-        logging.getLogger().handlers[0].force_send_all = self.config["force_send_all"]
-        logging.getLogger().handlers[0].tg_level = {
-            "ALL": 0,
-            "DEBUG": 10,
-            "INFO": 20,
-            "WARNING": 30,
-            "ERROR": 40,
-            "CRITICAL": 50,
-            "DISABLE": 50000,
-        }[self.config["tglog_level"]]
-        logging.getLogger().handlers[0].ignore_common = self.config["ignore_common"]
+        client_id = getattr(self, "tg_id", None)
+
+        if client_id is None:
+            return
+
+        logging.getLogger().handlers[0].set_client_options(
+            client_id,
+            force_send_all=self.config["force_send_all"],
+            tg_level={
+                "ALL": 0,
+                "DEBUG": 10,
+                "INFO": 20,
+                "WARNING": 30,
+                "ERROR": 40,
+                "CRITICAL": 50,
+                "DISABLE": 50000,
+            }[self.config["tglog_level"]],
+            ignore_common=self.config["ignore_common"],
+        )
+
+    def _resolve_mod(self, name: str):
+        """Resolve a module name to (canonical_display_name, logger_prefix)
+        or None if no such module/library is loaded."""
+        mod = self.lookup(name)
+        if not mod:
+            return None
+
+        canonical = getattr(mod, "name", None) or mod.__class__.__name__
+        prefix = mod.__class__.__module__
+        return canonical, prefix
 
     @loader.command()
     async def clearlogs(self, message: Message):
         for handler in logging.getLogger().handlers:
             handler.buffer = []
             handler.handledbuffer = []
-            handler.tg_buff = ""
+            handler.tg_buff = []
 
         await utils.answer(message, self.strings["logs_cleared"])
 
@@ -163,12 +181,48 @@ class TestMod(loader.Module):
         message: Message | InlineCall,
         force: bool = False,
         lvl: int | None = None,
+        mods: list[str] | None = None,
+        mod_names: list[str] | None = None,
     ):
+        """[modules] [-f] - Dump logs, optionally filtered by module name(s)"""
         raw_args = utils.get_args_raw(message) if isinstance(message, Message) else ""
         args = raw_args.split()
         if "-f" in args or "--force" in args:
             force = True
             args = [arg for arg in args if arg not in {"-f", "--force"}]
+
+        if mods is None and mod_names is None and isinstance(message, Message):
+            level_names = {
+                "critical",
+                "error",
+                "warning",
+                "info",
+                "debug",
+                "all",
+                "notset",
+            }
+            raw_mod_args = [
+                a
+                for a in args
+                if not a.lstrip("-").isdigit() and a.lower() not in level_names
+            ]
+            args = [a for a in args if a not in raw_mod_args]
+
+            if raw_mod_args:
+                mods = []
+                mod_names = []
+                for raw_name in raw_mod_args:
+                    resolved = self._resolve_mod(raw_name)
+                    if resolved is None:
+                        await utils.answer(
+                            message,
+                            self.strings["bad_module"].format(utils.escape_html(raw_name)),
+                        )
+                        return
+
+                    canonical, prefix = resolved
+                    mod_names.append(canonical)
+                    mods.append(prefix)
 
         if not isinstance(lvl, int):
             if args:
@@ -189,15 +243,22 @@ class TestMod(loader.Module):
 
             try:
                 if self.inline.init_complete:
+                    text = (
+                        self.strings["choose_loglevel_of"].format(
+                            ", ".join(mod_names)
+                        )
+                        if mod_names
+                        else self.strings["choose_loglevel"]
+                    )
                     await utils.answer(
                         message,
-                        self.strings["choose_loglevel"],
+                        text,
                         reply_markup=utils.chunks(
                             [
                                 {
                                     "text": name,
                                     "callback": self.logs,
-                                    "args": (False, level),
+                                    "args": (False, level, mods, mod_names),
                                 }
                                 for name, level in [
                                     ("🚫 Critical", 60),
@@ -219,16 +280,16 @@ class TestMod(loader.Module):
 
             return
 
-        logs = "\n\n".join(
-            [
-                "\n".join(
-                    handler.dumps(lvl, client_id=self._client.tg_id)
-                    if "client_id" in inspect.signature(handler.dumps).parameters
-                    else handler.dumps(lvl)
-                )
-                for handler in logging.getLogger().handlers
-            ]
-        )
+        def _dump(handler):
+            params = inspect.signature(handler.dumps).parameters
+            kwargs = {}
+            if "client_id" in params:
+                kwargs["client_id"] = self._client.tg_id
+            if "mods" in params:
+                kwargs["mods"] = mods
+            return "\n".join(handler.dumps(lvl, **kwargs))
+
+        logs = "\n\n".join(_dump(handler) for handler in logging.getLogger().handlers)
 
         named_lvl = (
             lvl
@@ -247,7 +308,7 @@ class TestMod(loader.Module):
                         {
                             "text": self.strings["send_anyway"],
                             "callback": self.logs,
-                            "args": [True, lvl],
+                            "args": [True, lvl, mods, mod_names],
                         },
                         {"text": self.strings["cancel"], "action": "close"},
                     ],
@@ -276,6 +337,7 @@ class TestMod(loader.Module):
                         "reply_markup": {
                             "text": self.strings["back"],
                             "callback": self.logs,
+                            "args": (False, None, mods, mod_names),
                         },
                     }
                 ),
@@ -293,7 +355,7 @@ class TestMod(loader.Module):
             *main.__version__,
             (
                 " <a"
-                f' href="https://github.com/ZetGoHack/Heroku/commit/{ghash}">@{ghash[:8]}</a>'
+                f' href="https://github.com/Heroku-userbot/Heroku/commit/{ghash}">@{ghash[:8]}</a>'
                 if ghash
                 else ""
             ),
@@ -314,6 +376,7 @@ class TestMod(loader.Module):
                 caption=caption,
                 reply_to=message.form["top_msg_id"],
             )
+            await message.delete()
 
     @loader.command()
     async def suspend(self, message: Message):
@@ -352,14 +415,27 @@ class TestMod(loader.Module):
             "hostname": lib_platform.node(),
             "user": getpass.getuser(),
             "platform": utils.get_platform_name(),
+            "img": (
+                f'<img src="{utils.escape_html(str(self.config["banner_url"]))}"/>'
+                if self.config["rich_mode"] and self.config["banner_url"]
+                else ""
+            ),
         }
         data = await utils.get_placeholders(data, self.config["custom_message"])
         try:
             placeholders_msg = self.config["custom_message"].format(**data)
         except KeyError:
             logger.exception("Missing placeholder in custom_message")
-            placeholders_msg = "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji>"
-        await utils.answer(
+            placeholders_msg = "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji>"
+        if self.config["rich_mode"]:
+            rich_message = placeholders_msg.replace("\r\n", "<br>").replace("\n", "<br>")
+            await utils.answer_with_media_fallback(
+                message,
+                rich_message=rich_message,
+            )
+            return
+
+        await utils.answer_with_media_fallback(
             message,
             placeholders_msg,
             file=banner,

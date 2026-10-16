@@ -1,6 +1,7 @@
 # Utilites
 
 from .messages import *
+from .rich import *
 from .other import *
 from .entity import *
 from .heroku import *

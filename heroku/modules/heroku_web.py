@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -33,7 +33,7 @@ from herokutl.utils import parse_phone
 
 from .. import loader, main, security, utils
 from ..loader import LOADED_MODULES_PATH
-from .._internal import restart
+from .._internal import private_write, register_secret, restart
 from ..inline.types import InlineCall
 from ..tl_cache import CustomTelegramClient
 from ..version import __version__
@@ -110,6 +110,25 @@ class HerokuWebMod(loader.Module):
                 ),
             )
         return
+
+    async def donate(self, call: InlineCall):
+        await call.edit(
+            self.strings["donate"],
+            reply_markup=[
+                [
+                    {"text": "CryptoBot", "url": "http://t.me/send?start=IVJdKAOn8ihG"}
+                ],
+                [
+                    {"text": "TON", "url": "ton://transfer/UQD_vekSRxbCmgBnYLhPFaeN5ilviOh8onpOXa8VDFmhZBLO?text=%D0%9C%D1%8F%D0%B2"}
+                ],
+                [
+                    {"text": "DALink", "url": "https://dalink.to/zetgo"}
+                ],
+                [
+                    {"text": self.strings["feedback_me"], "url": "https://t.me/ZetGo"}
+                ],
+            ],
+        )
 
     async def _inline_login(
         self,
@@ -202,9 +221,9 @@ class HerokuWebMod(loader.Module):
                 lambda: redis.set(str(new_id), json.dumps(data, ensure_ascii=True))
             )
 
-        (Path(main.BASE_PATH) / f"config-{new_id}.json").write_text(
+        private_write(
+            Path(main.BASE_PATH) / f"config-{new_id}.json",
             json.dumps(data, ensure_ascii=False, indent=4),
-            encoding="utf-8",
         )
 
     async def _save_switch_session(
@@ -339,6 +358,7 @@ class HerokuWebMod(loader.Module):
             )
 
     async def inline_phone_handler(self, call, data, user, is_switch: bool = False):
+        register_secret(data)
         if not (phone := parse_phone(data)):
             await self._inline_login(call, user, after_fail=True, is_switch=is_switch)
             return
@@ -381,6 +401,7 @@ class HerokuWebMod(loader.Module):
     async def inline_code_handler(
         self, call, data, client, phone, user, is_switch: bool = False
     ):
+        register_secret(data)
         _code_markup = {
             "text": self.strings["enter_code"],
             "input": self.strings["login_code"],
@@ -504,6 +525,7 @@ class HerokuWebMod(loader.Module):
     async def inline_2fa_handler(
         self, call, data, client, phone, user, is_switch: bool = False
     ):
+        register_secret(data)
         _2fa_markup = {
             "text": self.strings["enter_2fa"],
             "input": self.strings["your_2fa"],

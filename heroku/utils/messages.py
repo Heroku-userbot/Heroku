@@ -1,6 +1,6 @@
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -13,20 +13,23 @@ import typing
 
 import grapheme
 import herokutl
+from herokutl.errors import RPCError, WebpageMediaEmptyError
+from herokutl.tl.custom import Message
 from herokutl.tl.types import (
     Channel,
     Chat,
     InputDocument,
-    Message,
+    InputReplyToMessage,
     MessageMediaPhoto,
     MessageMediaDocument,
     MessageMediaWebPage,
+    MessageReplyHeader,
 )
 
 from .other import _copy_tl
 from .entity import get_chat_id, FormattingEntity
 
-from ..inline.types import BotInlineCall, InlineCall, InlineMessage
+from ..inline.types import BotInlineCall, BotInlineMessage, InlineCall, InlineMessage
 from ..types import HerokuReplyMarkup, ListLike
 
 emoji_pattern = re.compile(
@@ -49,19 +52,20 @@ def get_topic(message: Message) -> int | None:
     :param message: Message to get topic of
     :return: int or None if not present
     """
-    return (
-        (message.reply_to.reply_to_top_id or message.reply_to.reply_to_msg_id)
-        if (
-            isinstance(message, Message)
-            and message.reply_to
-            and message.reply_to.forum_topic
-        )
-        else (
-            message.form["top_msg_id"]
-            if isinstance(message, (InlineCall, InlineMessage))
-            else None
-        )
-    )
+    if isinstance(message, (InlineCall, InlineMessage)):
+        return message.form["top_msg_id"]
+
+    if not isinstance(message, Message):
+        return None
+
+    reply_to = message.reply_to
+    if isinstance(reply_to, MessageReplyHeader):
+        if reply_to.forum_topic:
+            return reply_to.reply_to_top_id or reply_to.reply_to_msg_id
+        return None
+    if isinstance(reply_to, InputReplyToMessage):
+        return reply_to.top_msg_id
+    return None
 
 
 def mime_type(message: Message) -> str:
@@ -266,11 +270,115 @@ def array_sum(array: list[list[typing.Any]], /) -> list[typing.Any]:
     return result
 
 
+async def _send_rich_message(
+    message: Message,
+    html: typing.Any,
+    *,
+    reply_to: int | None = None,
+    reply_markup=None,
+    silent: bool | None = None,
+):
+    return await message.client.send_rich_message(
+        message.peer_id,
+        html,
+        reply_to=reply_to,
+        buttons=reply_markup,
+        silent=silent,
+    )
+
+
+async def _edit_rich_message(
+    message: Message,
+    html: typing.Any,
+    *,
+    reply_markup=None,
+):
+    return await message.client.edit_rich_message(
+        message.peer_id,
+        message,
+        html,
+        buttons=reply_markup,
+    )
+
+
+async def _edit_inline_rich_message(
+    message,
+    rich_message: str,
+    reply_markup=None,
+):
+    unit = getattr(message, "form", None) or {}
+    caller = unit.get("caller")
+    if caller is None:
+        caller = unit.get("chat")
+    if caller is None:
+        caller = getattr(message, "chat_id", None)
+    if caller is not None and hasattr(message, "inline_manager"):
+        with contextlib.suppress(Exception):
+            await message.delete()
+        return await message.inline_manager.form(
+            "",
+            caller,
+            reply_markup=reply_markup or [],
+            rich_message=rich_message,
+            reply_to=unit.get("top_msg_id"),
+            silent=True,
+            ttl=600,
+        )
+    rich_markup = (
+        message.inline_manager.generate_markup(reply_markup)
+        if reply_markup is not None
+        else None
+    )
+    if isinstance(message, (InlineMessage, InlineCall)):
+        await message.inline_manager.bot.edit_rich_message(
+            rich_message,
+            inline_message_id=message.inline_message_id,
+            reply_markup=rich_markup,
+        )
+    else:
+        await message.inline_manager.bot.edit_rich_message(
+            rich_message,
+            chat_id=message.chat_id,
+            message_id=message.message_id,
+            reply_markup=rich_markup,
+        )
+    return message
+
+
+async def answer_with_media_fallback(message, *args, **kwargs):
+    try:
+        return await answer(message, *args, **kwargs)
+    except RPCError as error:
+        if not isinstance(error, WebpageMediaEmptyError) and getattr(
+            error, "message", None
+        ) not in {"RICH_MESSAGE_PHOTO_NO_MEDIA_FOUND", "EXTERNAL_MEDIA_NOT_SUPPORTED"}:
+            raise
+        rich_message = kwargs.get("rich_message")
+        if rich_message:
+            without_images = re.sub(
+                r"<img\b(?:[^>\"']|\"[^\"]*\"|'[^']*')*>",
+                "",
+                rich_message,
+                flags=re.IGNORECASE,
+            )
+            if without_images == rich_message:
+                raise
+            kwargs["rich_message"] = without_images
+        elif not kwargs.get("file"):
+            raise
+        kwargs.pop("file", None)
+        kwargs.pop("invert_media", None)
+        kwargs["link_preview"] = False
+    return await answer(message, *args, **kwargs)
+
+
 async def answer(
     message: Message | InlineCall | InlineMessage,
-    response: str,
+    response: str = "",
     *,
     reply_markup: HerokuReplyMarkup | None = None,
+    rich_message: str | None = None,
+    rich: bool = False,
     **kwargs,
 ) -> InlineCall | InlineMessage | Message:
     """
@@ -301,12 +409,77 @@ async def answer(
     if isinstance(message, list) and message:
         message = message[0]
 
+    if rich and rich_message is None:
+        if not isinstance(response, str):
+            raise TypeError("response must be a string when rich=True")
+        rich_message = response
+
+    if rich_message is not None:
+        rich_filter = getattr(message, "_heroku_grep_rich", None)
+        if callable(rich_filter):
+            rich_message = rich_filter(rich_message)
+
+        if isinstance(
+            message,
+            (InlineMessage, InlineCall, BotInlineMessage, BotInlineCall),
+        ):
+            return await _edit_inline_rich_message(
+                message,
+                rich_message,
+                reply_markup=reply_markup,
+            )
+
+        if reply_markup or not getattr(
+            getattr(message.client, "heroku_me", None), "premium", False
+        ):
+            inline = message.client.loader.inline
+            form_kwargs = {
+                key: kwargs[key]
+                for key in (
+                    "force_me", "always_allow", "manual_security",
+                    "disable_security", "on_unload",
+                )
+                if key in kwargs
+            }
+            return await inline.form(
+                text=response or "Rich message",
+                message=message if message.out else get_chat_id(message),
+                rich_message=rich_message,
+                reply_markup=inline._normalize_markup(reply_markup)
+                if reply_markup else [],
+                reply_to=kwargs.get("reply_to")
+                or getattr(message, "reply_to_msg_id", None)
+                or get_topic(message),
+                silent=kwargs.get("silent", True),
+                ttl=kwargs.get("ttl", 600),
+                **form_kwargs,
+            )
+
+        edit = message.out and not message.via_bot_id and not message.fwd_from
+        if edit:
+            return await _edit_rich_message(
+                message,
+                rich_message,
+                reply_markup=reply_markup,
+            )
+
+        return await _send_rich_message(
+            message,
+            rich_message,
+            reply_to=kwargs.pop("reply_to", None)
+            or getattr(message, "reply_to_msg_id", None)
+            or get_topic(message),
+            reply_markup=reply_markup,
+            silent=kwargs.pop("silent", None),
+        )
+
     if reply_markup is not None:
         if not isinstance(reply_markup, (list, dict)):
             raise ValueError("reply_markup must be a list or dict")
 
         if reply_markup:
             kwargs.pop("message", None)
+            kwargs.pop("parse_mode", None)
             if isinstance(message, (InlineMessage, InlineCall, BotInlineCall)):
                 await message.edit(response, reply_markup, **kwargs)
                 return
@@ -344,7 +517,7 @@ async def answer(
     )
 
     if isinstance(response, str) and not kwargs.pop("asfile", False):
-        text, entities = parse_mode.parse(response)
+        text, entities = parse_mode.parse(response) if parse_mode else (response, [])
 
         if len(text) >= 4096 and not hasattr(message, "heroku_grepped"):
             try:

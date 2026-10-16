@@ -8,15 +8,14 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import argparse
 import asyncio
-import base64
-import binascii
 import collections
+import contextlib
 import importlib
 import json
 import logging
@@ -27,12 +26,11 @@ import signal
 import sqlite3
 import string
 import sys
+import traceback
 import typing
-import zlib
 from getpass import getpass
 from pathlib import Path
 
-import aiohttp
 from herokutl import events
 from herokutl.errors import (
     ApiIdInvalidError,
@@ -42,8 +40,13 @@ from herokutl.errors import (
     PhoneNumberInvalidError,
     SessionPasswordNeededError,
 )
+from herokutl.errors import AuthKeyNotFound
 from herokutl.errors.rpcerrorlist import (
     AuthKeyUnregisteredError,
+    SessionExpiredError,
+    SessionRevokedError,
+    UserDeactivatedBanError,
+    UserDeactivatedError,
     YouBlockedUserError,
 )
 from herokutl.network.connection import (
@@ -51,24 +54,46 @@ from herokutl.network.connection import (
     ConnectionTcpMTProxyRandomizedIntermediate,
 )
 from herokutl.password import compute_check
-from herokutl.sessions import MemorySession, SQLiteSession
+from herokutl.sessions import MemorySession, SQLiteSession, StringSession
 from herokutl.tl.functions.account import GetPasswordRequest
 from herokutl.tl.functions.auth import CheckPasswordRequest
 from herokutl.tl.functions.contacts import UnblockRequest
 
 from . import database, loader, utils, version
-from ._internal import print_banner, restart
+from ._internal import (
+    client_id_ctx,
+    client_id_override,
+    install_task_tracking,
+    print_banner,
+    restart,
+    set_client_id,
+    private_write,
+    register_secret,
+    register_secrets,
+)
 from .dispatcher import CommandDispatcher
 from .qr import QRCode
 from .secure import patcher
 from .tl_cache import CustomTelegramClient
+from .utils.other import allowed_ids as get_allowed_ids
 from .translations import Translator
 from .version import __version__
+
 
 BASE_DIR = (
     "/data"
     if "DOCKER" in os.environ
     else os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+)
+
+SESSION_LOST_ERRORS = (
+    AuthKeyUnregisteredError,
+    AuthKeyDuplicatedError,
+    AuthKeyNotFound,
+    SessionRevokedError,
+    SessionExpiredError,
+    UserDeactivatedError,
+    UserDeactivatedBanError,
 )
 
 BASE_PATH = Path(BASE_DIR)
@@ -311,6 +336,7 @@ def _read_config() -> dict:
         return _CONFIG_CACHE
 
     _CONFIG_CACHE = json.loads(CONFIG_PATH.read_text())
+    register_secrets(_CONFIG_CACHE)
     _CONFIG_MTIME_NS = stat.st_mtime_ns
     return _CONFIG_CACHE
 
@@ -348,7 +374,8 @@ def save_config_key(key: str, value: str) -> bool:
     # Assign config value
     config[key] = value
     # And save config
-    CONFIG_PATH.write_text(json.dumps(config, indent=4))
+    register_secrets(config)
+    private_write(CONFIG_PATH, json.dumps(config, indent=4))
     _CONFIG_CACHE = config
     _CONFIG_MTIME_NS = CONFIG_PATH.stat().st_mtime_ns
     return True
@@ -507,6 +534,8 @@ class Heroku:
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
 
+        install_task_tracking()
+
         self.clients = SuperList()
         self.ready = asyncio.Event()
         self._migrate_sessions()
@@ -555,7 +584,8 @@ class Heroku:
         self.conn = ConnectionTcpFull
 
     def _migrate_sessions(self):
-        os.makedirs(SESSIONS_DIR, exist_ok=True)
+        os.makedirs(SESSIONS_DIR, mode=0o700, exist_ok=True)
+        os.chmod(SESSIONS_DIR, 0o700)
 
         with os.scandir(BASE_DIR) as entries:
             legacy = [
@@ -938,6 +968,17 @@ class Heroku:
                     patcher.patch(client, session)
 
                 await client.connect()
+
+                if not await client.is_user_authorized():
+                    logging.warning(
+                        "Session %s is not authorized (terminated by Telegram or the"
+                        " login wasn't finished), skipping it",
+                        session.filename,
+                    )
+                    await client.disconnect()
+                    self.sessions.remove(session)
+                    continue
+
                 client.phone = "None"
 
                 self.clients += [client]
@@ -948,7 +989,13 @@ class Heroku:
                     session.filename,
                 )
                 continue
-            except (TypeError, AuthKeyDuplicatedError):
+            except (TypeError, AuthKeyDuplicatedError) as e:
+                logging.error(
+                    "Session %s is unusable (%s) and is being deleted",
+                    session.filename,
+                    type(e).__name__,
+                    exc_info=isinstance(e, TypeError),
+                )
                 Path(session.filename).unlink(missing_ok=True)
                 self.sessions.remove(session)
             except (ValueError, ApiIdInvalidError):
@@ -970,7 +1017,7 @@ class Heroku:
 
         return bool(self.sessions)
 
-    async def amain_wrapper(self, client: CustomTelegramClient, a_i: list):
+    async def amain_wrapper(self, client: CustomTelegramClient):
         """Wrapper around amain"""
         async with client:
             first = True
@@ -979,11 +1026,34 @@ class Heroku:
             client.tg_id = me.id
             client.hikka_me = me
             client.heroku_me = me
+            set_client_id(me.id)
+            register_secret(StringSession.save(client.session))
+            register_secret(getattr(me, "phone", None))
 
-            #await version.check_branch(me.id, a_i, self)
+            async with self._allowed_ids_lock:
+                if self._allowed_ids is None:
+                    self._allowed_ids = await get_allowed_ids(client)
 
-            while await self.amain(first, client):
-                first = False
+            await version.check_branch(me.id, self._allowed_ids, self)
+
+            who = f"{me.id}" + (f" (@{me.username})" if me.username else "")
+            try:
+                while await self.amain(first, client):
+                    first = False
+            except SESSION_LOST_ERRORS as e:
+                logging.error(
+                    "Session of the account %s was terminated by Telegram (%s),"
+                    " its userbot is stopped. Log in again to restore it",
+                    who,
+                    type(e).__name__,
+                )
+                return
+
+            logging.error(
+                "Client of the account %s is disconnected, its userbot is stopped"
+                " (the session may have been terminated by Telegram)",
+                who,
+            )
 
     async def _badge(self, client: CustomTelegramClient):
         """Call the badge in shell"""
@@ -1035,10 +1105,10 @@ class Heroku:
 
                 await client.heroku_inline.bot.send_photo(
                     log_chat_id,
-                    "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/heroku_started.png",
+                    "https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku_started.jpg",
                     caption=(
                         "{} <b>{} started!</b>\n\n<tg-emoji emoji-id=5231065262228250587>⚙</tg-emoji> <b>GitHub commit SHA: <a"
-                        ' href="https://github.com/ZetGoHack/Heroku/commit/{}">{}</a></b>\n<tg-emoji emoji-id=5873225338984599714>🔎</tg-emoji>'
+                        ' href="https://github.com/Heroku-userbot/Heroku/commit/{}">{}</a></b>\n<tg-emoji emoji-id=5873225338984599714>🔎</tg-emoji>'
                         " <b>Update status: {}</b>\n<tg-emoji emoji-id=5870903672937911120>🕶</tg-emoji> <b>Prefix:</b> <code>{}</code>"
                     ).format(
                         (
@@ -1121,18 +1191,54 @@ class Heroku:
 
         await modules.register_all(None)
         modules.send_config()
-        await modules.inline.register_manager()
+        try:
+            await modules.inline.register_manager()
+        except Exception:
+            logging.critical(
+                "Inline manager initialization failed, continuing without the inline bot",
+                exc_info=True,
+            )
+            modules.inline.init_complete = False
+
         await db.ensure_content_channel()
         await modules.send_ready()
+        await modules.send_inline_ready()
 
         if first:
             await self._badge(client)
 
         await client.run_until_disconnected()
 
+    @staticmethod
+    def _loop_exception_handler(_, context: dict):
+        """Log an error, caught by the event loop, with the task, which caused it"""
+        culprit = (
+            context.get("task") or context.get("future") or context.get("handle")
+        )
+        details = f" [{culprit!r}]" if culprit is not None else ""
+        source = context.get("source_traceback")
+
+        if source:
+            details += "\nTask was created at:\n" + "".join(
+                traceback.format_list(source[-5:])
+            ).rstrip()
+
+        owner = None
+
+        if hasattr(culprit, "get_context"):
+            with contextlib.suppress(Exception):
+                owner = culprit.get_context().get(client_id_ctx)
+
+        with client_id_override(owner):
+            logging.error(
+                "Exception on event loop! %s%s",
+                context.get("message", "unknown error"),
+                details,
+                exc_info=context.get("exception"),
+            )
+
     async def _main(self):
         """Main entrypoint"""
-        _s = "485633554d534b53475a4c454336444b4e5a43474357424c4b4e5957495a43494b5a5558555a52514e4a4744435a4c43475649464d5753484b524b5649525a554a465a45555332584e493246453332574e5a58544d325a4c4734344553534c514f4a4358473332514d5252574f5642574e4242484b595a5a47524d544f34535a4d464655533333424a4e4e47324e33594d55595649524c45494a4755435133584a4e43554b364b574f3546474b3d3d3d"
         await self._get_token()
 
         if (
@@ -1140,44 +1246,10 @@ class Heroku:
         ) and not await self._initial_setup():
             return
 
-        self.loop.set_exception_handler(
-            lambda _, x: logging.error(
-                "Exception on event loop! %s",
-                x["message"],
-                exc_info=x.get("exception", None),
-            )
-        )
-
-        try:
-            d5 = binascii.unhexlify(_s)
-            d4 = base64.b32decode(d5).decode("utf-8")
-            d3 = d4[::-1]
-            d2 = base64.b64decode(d3)
-            d1 = zlib.decompress(d2).decode("utf-8")
-        except Exception as e:
-            logging.error(f"Error decoding URL: {e}")
-            return
-
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                d1, headers={"Accept": "application/vnd.github.v3.raw"}
-            ) as response:
-                if response.status == 200:
-                    content = await response.text()
-                    allowed_ids = [
-                        int(line.strip())
-                        for line in content.split("\n")
-                        if line.strip()
-                    ]
-                else:
-                    logging.error(
-                        f"Exception on loading allowed beta testers ids: {response.status}"
-                    )
-                    return []
-
-        await asyncio.gather(
-            *[self.amain_wrapper(client, allowed_ids) for client in self.clients]
-        )
+        self.loop.set_exception_handler(self._loop_exception_handler)
+        self._allowed_ids = None
+        self._allowed_ids_lock = asyncio.Lock()
+        await asyncio.gather(*[self.amain_wrapper(client) for client in self.clients])
 
     async def _shutdown_handler(self):
         for client in self.clients:

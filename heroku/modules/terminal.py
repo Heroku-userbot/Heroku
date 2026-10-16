@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -36,31 +36,39 @@ def hash_msg(message):
 
 
 async def read_stream(func: Callable, stream, delay: float):
-    last_task = None
-    data = b""
+    data = bytearray()
+    dirty = False
+    last_update = time.monotonic()
+    interval = max(float(delay), 0.05)
     while True:
-        dat = await stream.read(1)
-
-        if not dat:
-            # EOF
-            if last_task:
-                # Send all pending data
-                last_task.cancel()
-                await func(data.decode())
-                # If there is no last task there is inherently no data, so theres no point sending a blank string
-            break
-
-        data += dat
-
-        if last_task:
-            last_task.cancel()
-
-        last_task = asyncio.ensure_future(sleep_for_task(func, data, delay))
+        try:
+            chunk = await asyncio.wait_for(stream.read(4096), timeout=interval)
+        except asyncio.TimeoutError:
+            chunk = None
+        if chunk == b"":
+            if dirty:
+                await func(data.decode(errors="replace"))
+            return
+        if chunk:
+            data.extend(chunk)
+            dirty = True
+        if dirty and time.monotonic() - last_update >= interval:
+            await func(data.decode(errors="replace"))
+            dirty = False
+            last_update = time.monotonic()
 
 
-async def sleep_for_task(func: Callable, data: bytes, delay: float):
-    await asyncio.sleep(delay)
-    await func(data.decode())
+def sudo_stdin_command(command, shell="/bin/sh"):
+    if os.path.basename(os.path.realpath(shell)) == "fish":
+        return (
+            "function sudo\n"
+            "    command sudo -S -p '[heroku-sudo] password:' $argv\n"
+            "end\n" + command
+        )
+    return (
+        "sudo() { command sudo -S -p '[heroku-sudo] password:' \"$@\"; };\n"
+        + command
+    )
 
 
 class MessageEditor:
@@ -125,125 +133,63 @@ class MessageEditor:
 
 
 class SudoMessageEditor(MessageEditor):
-    PASS_REQ = ["[sudo] password for", "[sudo] пароль для"]
-    WRONG_PASS = [
-        r"\[sudo\] password for (.*): Sorry, try again\.",
-        r"\[sudo\] пароль для (.*): Попробуйте еще раз.\.",
-    ]
-    TOO_MANY_TRIES = [r"\[sudo\] password for (.*): sudo: [0-9]+ incorrect password attempts", r"\[sudo\] пароль для (.*): sudo: [0-9]+ неверные попытки ввода пароля"]  # fmt: skip
-
     def __init__(self, message, command, config, strings, request_message):
         super().__init__(message, command, config, strings, request_message)
         self.process = None
-        self.state = 0
-        self.authmsg = None
+        self.inline_editor = None
+        self._output_lock = asyncio.Lock()
 
     def update_process(self, process):
-        logger.debug("got sproc obj %s", process)
         self.process = process
 
     async def update_stderr(self, stderr):
-        logger.debug("stderr update " + stderr)
-        self.stderr = stderr
-        lines = stderr.strip().split("\n")
-        lastline = lines[-1]
-        lastlines = lastline.rsplit(" ", 1)
-        handled = False
-
-        if (
-            len(lines) > 1
-            and any(re.fullmatch(i, lines[-2]) for i in self.WRONG_PASS)
-            and any(lastlines[0] == i for i in self.PASS_REQ)
-            and self.state == 1
-        ):
-            logger.debug("switching state to 0")
-            await utils.answer(self.message, self.strings["auth_fail"])
-
-            self.state = 0
-            handled = True
-            await asyncio.sleep(2)
-            if self.authmsg:
-                await self.authmsg.delete()
-
-        if any(lastlines[0] == i for i in self.PASS_REQ) and self.state == 0:
-            logger.debug("Success to find sudo log!")
-            text = self.strings["auth_needed"].format(self.message.client.heroku_me.id)
-
-            try:
-                await utils.answer(self.message, text)
-            except herokutl.errors.rpcerrorlist.MessageNotModifiedError as e:
-                logger.debug(e)
-
-            logger.debug("edited message with link to self")
-            command = "<code>" + utils.escape_html(self.command) + "</code>"
-            user = utils.escape_html(lastlines[1][:-1])
-
-            self.authmsg = await self.message.client.send_message(
-                "me",
-                self.strings["auth_msg"].format(command, user),
-            )
-            logger.debug("sent message to self")
-
-            self.message.client.remove_event_handler(self.on_message_edited)
-            self.message.client.add_event_handler(
-                self.on_message_edited,
-                herokutl.events.messageedited.MessageEdited(chats=["me"]),
-            )
-
-            logger.debug("registered handler")
-            handled = True
-
-        if len(lines) > 1 and (
-            any(re.fullmatch(i, lastline) for i in self.TOO_MANY_TRIES)
-            and self.state in {1, 3, 4}
-        ):
-            logger.debug("password wrong lots of times")
-            await utils.answer(self.message, self.strings["auth_locked"])
-            await self.authmsg.delete()
-            self.state = 2
-            handled = True
-
-        if not handled:
-            logger.debug("Didn't find sudo log.")
-            if self.authmsg is not None:
-                await self.authmsg.delete()
-                self.authmsg = None
-            self.state = 2
-            await self.redraw()
-
-        logger.debug(self.state)
+        async with self._output_lock:
+            self.stderr = stderr
+            if self.inline_editor is None and InlineMessageEditor.password_requested(stderr):
+                module = self.request_message.client.loader.lookup("TerminalMod")
+                editor = InlineMessageEditor(
+                    None, self.command, self.strings, self.config
+                )
+                editor.stdout = self.stdout
+                editor.stderr = self.stderr
+                editor.start_time = self.start_time
+                editor.update_process(self.process)
+                editor.owner_id = self.request_message.client.heroku_me.id
+                editor.observe_password_prompt()
+                form = await module.inline.form(
+                    message=self.message,
+                    text=editor.render_text(),
+                    reply_markup=editor.get_reply_markup(),
+                    force_me=True,
+                    on_unload=editor.on_unload,
+                )
+                if not form:
+                    if self.process.stdin and not self.process.stdin.is_closing():
+                        self.process.stdin.close()
+                    return
+                editor.form = form
+                self.inline_editor = editor
+                module._inline_sessions[form.unit_id] = editor
+            elif self.inline_editor is not None:
+                await self.inline_editor.update_stderr(stderr)
+            else:
+                await self.redraw()
 
     async def update_stdout(self, stdout):
-        self.stdout = stdout
+        async with self._output_lock:
+            self.stdout = stdout
+            if self.inline_editor is not None:
+                await self.inline_editor.update_stdout(stdout)
+            else:
+                await self.redraw()
 
-        if self.state != 2:
-            self.state = 3  # Means that we got stdout only
-
-        if self.authmsg is not None:
-            await self.authmsg.delete()
-            self.authmsg = None
-
-        await self.redraw()
-
-    async def on_message_edited(self, message):
-        # Message contains sensitive information.
-        if self.authmsg is None:
-            return
-
-        logger.debug("got message edit update in self %s", str(message.id))
-
-        if hash_msg(message) == hash_msg(self.authmsg):
-            # The user has provided interactive authentication. Send password to stdin for sudo.
-            try:
-                self.authmsg = await utils.answer(message, self.strings["auth_ongoing"])
-            except herokutl.errors.rpcerrorlist.MessageNotModifiedError:
-                # Try to clear personal info if the edit fails
-                await message.delete()
-
-            self.state = 1
-            self.process.stdin.write(
-                message.message.message.split("\n", 1)[0].encode() + b"\n"
-            )
+    async def cmd_ended(self, rc):
+        async with self._output_lock:
+            self.rc = rc
+            if self.inline_editor is not None:
+                await self.inline_editor.cmd_ended(rc)
+            else:
+                await self.redraw()
 
 
 class RawMessageEditor(SudoMessageEditor):
@@ -313,6 +259,79 @@ class InlineMessageEditor:
         self.reply_markup = reply_markup
         self.start_time = time.time()
         self.process = None
+        self.owner_id = getattr(getattr(form, "inline_manager", None), "_me", None)
+        self.waiting_password = False
+        self._prompt_end = 0
+        self._password_token = None
+        self._auth_notice = ""
+        self._edit_lock = asyncio.Lock()
+
+    @staticmethod
+    def password_requested(stderr):
+        return re.search(
+            r"(?:\[heroku-sudo\] password:|\[sudo\] (?:password for|пароль для) [^\r\n]+:)\s*$",
+            stderr,
+        )
+
+    def observe_password_prompt(self):
+        prompt = self.password_requested(self.stderr)
+        if (
+            prompt
+            and prompt.end() > self._prompt_end
+            and self.rc is None
+            and self.process is not None
+            and self.process.returncode is None
+        ):
+            self._auth_notice = self.strings[
+                "sudo_password_retry" if self._prompt_end else "sudo_password_required"
+            ]
+            self._prompt_end = prompt.end()
+            self._password_token = utils.rand(24)
+            self.waiting_password = True
+
+    def get_reply_markup(self):
+        if self.waiting_password and self.rc is None:
+            return [[{
+                "text": self.strings["btn_input_password"],
+                "input": self.strings["sudo_password_input"],
+                "handler": self.input_password,
+                "args": (self._password_token,),
+            }]]
+        return self.reply_markup(self) if callable(self.reply_markup) else self.reply_markup or []
+
+    async def input_password(self, call, query: str, token: str):
+        if getattr(call.from_user, "id", None) != self.owner_id:
+            return
+        if (
+            not self.waiting_password
+            or token != self._password_token
+            or self.rc is not None
+            or self.process is None
+            or self.process.returncode is not None
+            or self.process.stdin is None
+            or self.process.stdin.is_closing()
+        ):
+            return
+        if not query or any(char in query for char in "\r\n\x00"):
+            return
+        self.waiting_password = False
+        self._password_token = None
+        self._auth_notice = ""
+        try:
+            self.process.stdin.write(query.encode() + b"\n")
+            await self.process.stdin.drain()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        finally:
+            del query
+        await self.redraw()
+
+    def on_unload(self):
+        if self.waiting_password:
+            self.waiting_password = False
+            self._password_token = None
+            if self.process and self.process.stdin and not self.process.stdin.is_closing():
+                self.process.stdin.close()
 
     def reset(self, command: str):
         self.command = command
@@ -321,6 +340,10 @@ class InlineMessageEditor:
         self.rc = None
         self.start_time = time.time()
         self.process = None
+        self.waiting_password = False
+        self._prompt_end = 0
+        self._password_token = None
+        self._auth_notice = ""
 
     def update_process(self, process):
         self.process = process
@@ -331,9 +354,10 @@ class InlineMessageEditor:
 
     async def update_stderr(self, stderr):
         self.stderr = stderr
+        self.observe_password_prompt()
         await self.redraw()
 
-    async def redraw(self):
+    def render_text(self):
         text = self.strings["running"].format(utils.escape_html(self.command))
 
         if self.rc is not None:
@@ -349,17 +373,23 @@ class InlineMessageEditor:
             exec_time = time.time() - self.start_time
             text += self.strings["time_exec"].format(round(exec_time, 2))
 
-        reply_markup = (
-            self.reply_markup(self)
-            if callable(self.reply_markup)
-            else self.reply_markup
-        )
+        if self.waiting_password and self.rc is None:
+            text += "\n" + self._auth_notice
+        return text
 
-        with contextlib.suppress(Exception):
-            await self.form.edit(text, reply_markup=reply_markup)
+    async def redraw(self):
+        async with self._edit_lock:
+            if self.form is not None:
+                with contextlib.suppress(Exception):
+                    await self.form.edit(
+                        self.render_text(), reply_markup=self.get_reply_markup()
+                    )
 
     async def cmd_ended(self, rc):
         self.rc = rc
+        self.waiting_password = False
+        self._password_token = None
+        self._auth_notice = ""
         await self.redraw()
 
 
@@ -720,14 +750,14 @@ class TerminalMod(loader.Module):
         asyncio.ensure_future(self._run_inline(cmd, editor))
 
     async def _run_inline(self, cmd: str, editor: InlineMessageEditor):
-        shell = os.environ.get("SHELL", "/bin/sh")
+        shell = os.environ.get("SHELL") or "/bin/sh"
         utils.ensure_child_watcher()
 
         try:
             sproc = await asyncio.create_subprocess_exec(
                 shell,
                 "-c",
-                cmd,
+                sudo_stdin_command(cmd, shell),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -773,14 +803,14 @@ class TerminalMod(loader.Module):
             )
             return
 
-        shell = os.environ.get("SHELL", "/bin/sh")
+        shell = os.environ.get("SHELL") or "/bin/sh"
         utils.ensure_child_watcher()
 
         try:
             sproc = await asyncio.create_subprocess_exec(
                 shell,
                 "-c",
-                cmd,
+                sudo_stdin_command(cmd, shell),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -850,7 +880,7 @@ class TerminalMod(loader.Module):
 
         return None
 
-    @loader.command()
+    @loader.command(alias="kill")
     async def terminatecmd(self, message):
         if not message.is_reply:
             await utils.answer(message, self.strings["what_to_kill"])

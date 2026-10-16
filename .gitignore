@@ -175,3 +175,12 @@ Pipfile.lock
 
 heroku.log.*
 unknown_errors.txt
+.modules_cache/
+.heroku-update-backups/
+.env.*
+*.session*
+*.pem
+*.key
+*credentials*.json
+git.zip
+.git.zip

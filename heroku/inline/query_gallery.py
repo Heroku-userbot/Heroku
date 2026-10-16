@@ -6,11 +6,10 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
-import asyncio
 import logging
 import time
 import typing
@@ -85,8 +84,7 @@ class QueryGallery(InlineUnit):
                 and "next_handler" in i
                 and (
                     callable(i["next_handler"])
-                    or asyncio.iscoroutinefunction(i)
-                    or isinstance(i, list)
+                    or isinstance(i["next_handler"], list)
                 )
                 and isinstance(i["title"], str)
                 and isinstance(i["description"], str)

@@ -6,13 +6,12 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import asyncio
 import contextlib
-import copy
 import functools
 import logging
 import time
@@ -24,6 +23,7 @@ from herokutl.errors.rpcerrorlist import ChatSendInlineForbiddenError
 from herokutl.tl.types import Message
 
 from .. import main, utils
+from .._internal import tag_client_id
 from ..types import HerokuReplyMarkup
 from .types import InlineMessage, InlineUnit
 
@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 class List(InlineUnit):
+    @tag_client_id("_client.tg_id")
     async def list(
         self: "InlineManager",
         message: Message | int,
@@ -67,9 +68,6 @@ class List(InlineUnit):
         :param custom_buttons: Custom buttons to add above native ones
         :return: If list is sent, returns :obj:`InlineMessage`, otherwise returns `False`
         """
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self._client.tg_id)  # noqa: F841
-
         custom_buttons = self._validate_markup(custom_buttons)
 
         if not isinstance(manual_security, bool):
@@ -217,6 +215,8 @@ class List(InlineUnit):
             m = await self._invoke_unit(unit_id, message)
         except ChatSendInlineForbiddenError:
             await answer(self.translator.getkey("inline.inline403"))
+            del self._units[unit_id]
+            return False
         except Exception:
             logger.exception("Can't send list")
 
@@ -271,7 +271,13 @@ class List(InlineUnit):
     ):
         match True:
             case _ if page == "close":
-                await self._delete_unit_message(call, unit_id=unit_id)
+                deleted = await self._delete_unit_message(call, unit_id=unit_id)
+                try:
+                    await call.answer(
+                        "" if deleted else "Error occurred", show_alert=not deleted
+                    )
+                except Exception:
+                    pass
                 return
             case _ if self._units[unit_id]["current_index"] < 0 or page >= len(
                 self._units[unit_id]["strings"]

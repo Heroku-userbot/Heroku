@@ -1,6 +1,6 @@
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -89,12 +89,15 @@ def get_args_html(message: Message) -> str:
     :param message: Message to get arguments from
     :return: String with HTML arguments
     """
-    prefix = message.client.loader.get_prefix()
+    prefix = next((
+        p for p in sorted(message.client.loader.get_prefixes(), key=len, reverse=True)
+        if (message.raw_text or "").startswith(p)
+    ), None)
 
     if not (message := message.text):
         return False
 
-    if prefix not in message:
+    if prefix is None:
         return message
 
     raw_text, entities = parser.parse(message)
@@ -102,9 +105,7 @@ def get_args_html(message: Message) -> str:
     raw_text = parser._add_surrogate(raw_text)
 
     try:
-        command = raw_text[
-            raw_text.index(prefix) : raw_text.index(" ", raw_text.index(prefix) + 1)
-        ]
+        command = raw_text[:raw_text.index(" ")]
     except ValueError:
         return ""
 
@@ -171,3 +172,36 @@ def get_args_bool(message: Message | str) -> list[bool]:
         elif lower_arg in ["false", "no", "0", "off"]:
             result.append(False)
     return result
+
+
+def normalize_prefixes(value):
+    values = [value] if isinstance(value, str) else value or []
+    return list(dict.fromkeys(p for p in values if isinstance(p, str) and p))
+
+
+def user_prefixes(db, namespace, user_id=None, self_id=None):
+    primary = db.get(namespace, "command_prefix", ".")
+    defaults = normalize_prefixes(primary) + normalize_prefixes(
+        db.get(namespace, "command_prefix_aliases", [])
+    )
+    defaults = normalize_prefixes(defaults) or ["."]
+    if user_id is None or user_id == self_id:
+        return defaults
+    personal = db.get(namespace, "command_prefixes", {}).get(str(user_id))
+    return normalize_prefixes(personal) or defaults
+
+
+def match_prefix(text, prefixes, translation):
+    ordered = sorted(prefixes, key=len, reverse=True)
+    for prefix in ordered:
+        if text.startswith(prefix):
+            return prefix, False
+    for prefix in ordered:
+        if text.startswith(prefix.translate(translation)):
+            return prefix, True
+    return None, False
+
+
+def format_prefixes(value):
+    prefixes = normalize_prefixes(value)
+    return prefixes[0] if len(prefixes) == 1 else "[" + ", ".join(prefixes) + "]"

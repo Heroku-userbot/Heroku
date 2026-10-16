@@ -1,6 +1,6 @@
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -171,6 +171,44 @@ def get_ram_usage() -> float:
         return round(mem, 1)
     except Exception:
         return 0
+
+
+def get_ram_usage_system() -> dict:
+    """
+    Get system-wide RAM usage information
+    :return: Dictionary with used, total in MB and percent
+    """
+    try:
+        import psutil
+
+        vm = psutil.virtual_memory()
+        return {
+            "percent": round(vm.percent, 1),
+            "used": round(vm.used / 1024 / 1024),
+            "total": round(vm.total / 1024 / 1024),
+        }
+    except Exception:
+        return {"error": "Failed to get RAM usage"}
+
+
+def get_swap_usage() -> dict:
+    """
+    Get swap usage information
+    :return: Dictionary with used, total in MB and percent, or error string
+    """
+    try:
+        import psutil
+
+        swap = psutil.swap_memory()
+        if swap.total == 0:
+            return {"error": "Swap is not configured on this system"}
+        return {
+            "percent": round(swap.percent, 1),
+            "used": round(swap.used / 1024 / 1024),
+            "total": round(swap.total / 1024 / 1024),
+        }
+    except Exception:
+        return {"error": "Failed to get swap usage"}
 
 
 def get_cpu_usage():

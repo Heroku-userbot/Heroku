@@ -1,6 +1,6 @@
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -8,8 +8,11 @@ import asyncio
 import atexit as _atexit
 import contextlib
 import functools
+import json
 import logging
-import random
+import os
+import re
+import secrets
 import signal
 import sys
 import typing
@@ -50,6 +53,7 @@ def ensure_child_watcher():
         with contextlib.suppress(RuntimeError):
             asyncio.set_event_loop(asyncio.get_running_loop())
 
+
 custom_placeholders = {}
 
 
@@ -60,7 +64,7 @@ def rand(size: int, /) -> str:
     :return: Random string
     """
     return "".join(
-        [random.choice("abcdefghijklmnopqrstuvwxyz1234567890") for _ in range(size)]
+        [secrets.choice("abcdefghijklmnopqrstuvwxyz1234567890") for _ in range(size)]
     )
 
 
@@ -245,3 +249,46 @@ def safe_getattr(obj, attr, default=None):
         return getattr(obj, attr, default)
     except AttributeError:
         return default
+
+
+ALLOWED_IDS_CHANNEL = "heroku_white"
+ALLOWED_IDS_MESSAGE = 4
+_ALLOWED_IDS_CACHE = os.path.join(
+    (
+        "/data"
+        if "DOCKER" in os.environ
+        else os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    ),
+    "allowed_ids_cache.json",
+)
+
+
+def _parse_ids(content: str) -> list[int]:
+    return [int(i) for i in re.findall(r"\b\d+\b", re.sub(r"<[^>]+>", " ", content))]
+
+
+async def allowed_ids(client) -> list[int] | None:
+    """
+    Read beta users ids from the public channel, fall back to the last
+    successfully read list
+    :return: allowed list ids or `None`
+    """
+    from .._internal import private_write
+
+    try:
+        message = await client.get_messages(
+            ALLOWED_IDS_CHANNEL, ids=ALLOWED_IDS_MESSAGE
+        )
+        ids = _parse_ids(message.raw_text or "")
+        if ids:
+            with contextlib.suppress(Exception):
+                private_write(_ALLOWED_IDS_CACHE, json.dumps(ids))
+            return ids
+    except Exception:
+        logger.warning("Unable to load beta user list, using cache", exc_info=True)
+
+    try:
+        with open(_ALLOWED_IDS_CACHE, encoding="utf-8") as f:
+            return [int(i) for i in json.load(f)]
+    except Exception:
+        return None

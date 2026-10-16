@@ -1,6 +1,6 @@
 #!/bin/bash
 
-eval "git clone https://github.com/ZetGoHack/Heroku"
+eval "git clone https://github.com/Heroku-userbot/Heroku"
 cd Heroku
 
 touch heroku-install.log

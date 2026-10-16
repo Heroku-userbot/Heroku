@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -31,6 +31,7 @@ import typing
 from herokutl.tl.types import Message, User
 
 from . import main, utils
+from ._internal import private_write, register_secrets
 from .pointers import (
     BaseSerializingMiddlewareDict,
     BaseSerializingMiddlewareList,
@@ -128,6 +129,10 @@ class Database(dict):
         if existing_channel_id:
             try:
                 content_channel = await self._client.get_entity(existing_channel_id)
+                if not await utils.is_private_asset_channel(
+                    self._client, content_channel, allow_participants=True
+                ):
+                    raise PermissionError("Unsafe content channel")
                 logger.debug(
                     "Found existing content channel with ID %s in database",
                     existing_channel_id,
@@ -141,7 +146,12 @@ class Database(dict):
 
         if not content_channel:
             async for dialog in self._client.iter_dialogs():
-                if dialog.title and "heroku-userbot" in dialog.title.lower():
+                if (
+                    dialog.title == "heroku-userbot"
+                    and await utils.is_private_asset_channel(
+                        self._client, dialog.entity, allow_participants=True
+                    )
+                ):
                     content_channel = dialog.entity
                     logger.debug(
                         "Found existing channel '%s' with ID %s",
@@ -158,10 +168,11 @@ class Database(dict):
                 description="🪐 Content related to Heroku will be here",
                 silent=True,
                 invite_bot=True,
-                avatar="https://raw.githubusercontent.com/coddrago/assets/main/heroku/heroku.png",
+                avatar="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/heroku.jpg",
                 forum=True,
                 hide_general=True,
                 _folder="heroku",
+                allow_participants=True,
             )
             self.set("heroku.forums", "channel_id", int(content_channel.id))
 
@@ -198,6 +209,7 @@ class Database(dict):
 
     def _update_from_read(self, items: dict) -> None:
         """Update DB from persisted storage without write-protection checks."""
+        register_secrets(items)
         super().update(items)
 
     def process_db_autofix(self, db: dict) -> bool:
@@ -240,6 +252,7 @@ class Database(dict):
 
     def save(self) -> bool:
         """Save database"""
+        register_secrets(self)
         if not self.process_db_autofix(self):
             try:
                 rev = self._revisions.pop()
@@ -272,7 +285,7 @@ class Database(dict):
             return True
 
         try:
-            self._db_file.write_text(json.dumps(self, indent=4))
+            private_write(self._db_file, json.dumps(self, indent=4))
         except Exception:
             logger.exception("Database save failed!")
             return False

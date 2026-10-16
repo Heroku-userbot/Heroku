@@ -6,16 +6,16 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import asyncio
 import logging
-import os
 import random
 import re
 import typing
+from pathlib import Path
 
 from herokutl.errors.rpcerrorlist import YouBlockedUserError
 from herokutl.tl.functions.contacts import UnblockRequest
@@ -42,7 +42,36 @@ class TokenObtainment(InlineUnit):
             logger.debug(">> %s", m.raw_text)
             logger.debug("<< %s", r.raw_text)
 
-            if "20" in r.raw_text:
+            if "cannot create new bots" in r.raw_text.lower() or "20" in r.raw_text:
+                prefix = self._client.loader.get_prefix()
+
+                text = (
+                    "<b>🚫 @BotFather won't create an inline bot for this"
+                    " account because of spamban or has exceeded the 20-bot limit</b>.\n\n"
+                    "You can still enable inline features with an existing"
+                    " bot:\n\n"
+                    "• <b>You already own a bot</b> - attach it:"
+                    f" <code>{prefix}ch_heroku_bot &lt;username&gt;</code>"
+                    f" (or paste its token: <code>{prefix}ch_bot_token"
+                    " &lt;token&gt;</code>).\n\n"
+                    "• <b>You don't</b> - create a bot on another account"
+                    " via @BotFather, then transfer it to this account"
+                    " (@BotFather > <code>/mybots</code> > the bot >"
+                    " <b>Transfer Ownership</b>) and run"
+                    f" <code>{prefix}ch_heroku_bot &lt;username&gt;</code>"
+                    " here."
+                )
+
+                try:
+                    await self._client.send_message(
+                        "me",
+                        text,
+                    )
+                except Exception:
+                    logger.exception("Unable to send a warn to user's Saved Messages")
+
+                logger.error(utils.remove_html(text))
+
                 return False
 
             await fw_protect()
@@ -71,6 +100,12 @@ class TokenObtainment(InlineUnit):
             for msg in [
                 "🪐 Heroku userbot"[:64],
                 username,
+                "/setinline",
+                username,
+                "user@heroku:~$",
+                "/setinlinefeedback",
+                username,
+                "Enabled",
                 "/setuserpic",
                 username,
             ]:
@@ -81,22 +116,21 @@ class TokenObtainment(InlineUnit):
                 logger.debug(">> %s", m.raw_text)
                 logger.debug("<< %s", r.raw_text)
 
+                if not self._token and (
+                    match := re.search(r"\d{6,}:[A-Za-z0-9_-]{35}", r.raw_text)
+                ):
+                    self._token = match.group(0)
+                    self._db.set("heroku.inline", "bot_token", self._token)
+
                 await fw_protect()
                 await m.delete()
                 await r.delete()
 
             try:
                 await fw_protect()
-                from .. import main
-
-                if "DOCKER" in os.environ:
-                    m = await conv.send_file(
-                        "https://raw.githubusercontent.com/ZetGoHack/Heroku/refs/heads/master/assets/heroku-ava.png"
-                    )
-                else:
-                    m = await conv.send_file(
-                        main.BASE_PATH / "assets" / "heroku-ava.png"
-                    )
+                m = await conv.send_file(
+                    Path(__file__).resolve().parents[2] / "assets" / "heroku.jpeg"
+                )
                 r = await conv.get_response()
 
                 logger.debug(">> <Photo>")
@@ -114,15 +148,23 @@ class TokenObtainment(InlineUnit):
             await m.delete()
             await r.delete()
 
+        if self._token:
+            return True
+
         return await self._assert_token(create_new_if_needed=False)
 
     async def _assert_token(
         self: "InlineManager",
         create_new_if_needed: bool = True,
         revoke_token: bool = False,
+        skip_search: bool = False,
     ) -> bool:
         if self._token:
             return True
+
+        if skip_search:
+            logger.info("Skipping search for an existing bot, creating a new one")
+            return await self._create_bot() if create_new_if_needed else False
 
         logger.info("Bot token not found in db, attempting search in BotFather")
 
@@ -243,10 +285,10 @@ class TokenObtainment(InlineUnit):
 
                     try:
                         await fw_protect()
-                        from .. import main
-
                         m = await conv.send_file(
-                            main.BASE_PATH / "assets" / "heroku-ava.png"
+                            Path(__file__).resolve().parents[2]
+                            / "assets"
+                            / "heroku.jpeg"
                         )
                         r = await conv.get_response()
 
@@ -269,6 +311,29 @@ class TokenObtainment(InlineUnit):
                     return True
 
         return await self._create_bot() if create_new_if_needed else False
+
+    async def _configure_inline_bot(self: "InlineManager", username: str):
+        username = f"@{username.strip('@')}"
+        async with self._client.conversation("@BotFather", exclusive=False) as conv:
+            for msg in [
+                "/setinline",
+                username,
+                "user@heroku:~$",
+                "/setinlinefeedback",
+                username,
+                "Enabled",
+            ]:
+                await fw_protect()
+                m = await conv.send_message(msg)
+                r = await conv.get_response()
+
+                logger.debug(">> %s", m.raw_text)
+                logger.debug("<< %s", r.raw_text)
+
+                await fw_protect()
+
+                await m.delete()
+                await r.delete()
 
     async def _reassert_token(self: "InlineManager"):
         is_token_asserted = await self._assert_token(revoke_token=True)

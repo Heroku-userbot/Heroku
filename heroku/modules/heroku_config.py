@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -71,7 +71,7 @@ class HerokuConfigMod(loader.Module):
             loader.ConfigValue(
                 "cfg_emoji",
                 "🪐",
-                "Change emoji when opening config",
+                lambda: self.strings["_cfg_emoji"],
                 validator=loader.validators.String(),
             ),
         )
@@ -1780,9 +1780,6 @@ class HerokuConfigMod(loader.Module):
 
         await self.inline__choose_category(message)
 
+    @loader.command(aliases=["cfg", "fcfg"])
     async def configcmd(self, message: Message):
-        await self._configcmd_impl(message)
-
-    @loader.command(alias="fcfg")
-    async def cfgcmd(self, message: Message):
         await self._configcmd_impl(message)

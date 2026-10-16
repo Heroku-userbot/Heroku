@@ -6,19 +6,20 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
+import asyncio
 import json
 import logging
 import typing
 from pathlib import Path
 
-import requests
 from ruamel.yaml import YAML
 
 from . import utils
+from ._internal import fetch_text
 from .database import Database
 from .tl_cache import CustomTelegramClient
 from .types import Module
@@ -140,21 +141,74 @@ class BaseTranslator:
     def gettext(self, text: str) -> typing.Any:
         return self.getkey(text) or text
 
+    def _get_module_pack_raw(self, content: str) -> dict | None:
+        data = yaml.load(content)
+        if not isinstance(data, dict) or any(
+            not isinstance(key, str) for key in data
+        ):
+            return None
+
+        if all(isinstance(value, str) for value in data.values()):
+            return data
+
+        def valid_pack(pack) -> bool:
+            return isinstance(pack, dict) and all(
+                isinstance(key, str)
+                and (
+                    isinstance(value, str)
+                    or (
+                        isinstance(value, dict)
+                        and all(
+                            isinstance(nested_key, str) and isinstance(nested_value, str)
+                            for nested_key, nested_value in value.items()
+                        )
+                    )
+                )
+                for key, value in pack.items()
+            )
+
+        if all(valid_pack(pack) for pack in data.values()):
+            return data
+
+        return None
+
     async def load_module_translations(
-        self, pack_url: str, cache_path: Path = None
+        self, pack_url: str, cache_path: Path = None, *, cache_only: bool = False
     ) -> bool | dict:
+        if cache_only:
+            if cache_path is None:
+                return {}
+            try:
+                data = self._get_module_pack_raw(
+                    cache_path.read_text(encoding="utf-8")
+                )
+            except FileNotFoundError:
+                return {}
+            except Exception:
+                logger.warning("Unable to decode cached %s", cache_path, exc_info=True)
+                return {}
+            return self._select_module_language(data) if isinstance(data, dict) else {}
+
+        if not hasattr(self, "_module_translation_semaphore"):
+            self._module_translation_semaphore = asyncio.Semaphore(4)
         try:
-            content = (await utils.run_sync(requests.get, pack_url)).text
-            data = yaml.load(content)
+            async with self._module_translation_semaphore:
+                content = await utils.run_sync(fetch_text, pack_url)
+            data = self._get_module_pack_raw(content)
+            if data is None:
+                logger.warning("Invalid module translation pack from %s", pack_url)
         except Exception:
             logger.exception("Unable to decode %s", pack_url)
             data = None
             content = None
 
         if not isinstance(data, dict):
+            content = None
             if cache_path and cache_path.exists():
                 try:
-                    data = yaml.load(cache_path.read_text(encoding="utf-8"))
+                    data = self._get_module_pack_raw(
+                        cache_path.read_text(encoding="utf-8")
+                    )
                 except Exception:
                     logger.exception("Unable to decode cached %s", cache_path)
                     return False
@@ -172,7 +226,10 @@ class BaseTranslator:
             except Exception:
                 logger.exception("Failed to save `%s`'s cache copy", pack_url)
 
-        if any(len(key) != 2 for key in data):
+        return self._select_module_language(data)
+
+    def _select_module_language(self, data: dict) -> dict:
+        if all(isinstance(value, str) for value in data.values()):
             return data
 
         if lang := self.db.get(__name__, "lang", False):
@@ -205,7 +262,7 @@ class Translator(BaseTranslator):
                 if utils.check_url(language):
                     try:
                         data = self._get_pack_raw(
-                            (await utils.run_sync(requests.get, language)).text,
+                            await utils.run_sync(fetch_text, language),
                             language.split(".")[-1],
                         )
                     except Exception:
@@ -223,7 +280,7 @@ class Translator(BaseTranslator):
                     self.raw_data[language] = data
                     any_ = True
 
-        for language in SUPPORTED_LANGUAGES:
+        for language in {**SUPPORTED_LANGUAGES, **MEME_LANGUAGES}:
             if language not in self.raw_data and (
                 possible_path := get_language_pack_path(language)
             ):
@@ -235,7 +292,7 @@ class Translator(BaseTranslator):
 class ExternalTranslator(BaseTranslator):
     def __init__(self):
         self.data = {}
-        for lang in SUPPORTED_LANGUAGES:
+        for lang in {**SUPPORTED_LANGUAGES, **MEME_LANGUAGES}:
             pack_path = get_language_pack_path(lang)
             self.data[lang] = (
                 self._get_pack_content(pack_path, prefix="") if pack_path else {}

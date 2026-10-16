@@ -4,36 +4,36 @@
   <p>Продвинутый юзербот для Telegram с повышенной безопасностью и современными функциями</p>
 
   <p>
-    <a href="https://www.codacy.com/gh/ZetGoHack/Heroku/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ZetGoHack/Heroku&amp;utm_campaign=Badge_Grade">
+    <a href="https://www.codacy.com/gh/Heroku-userbot/Heroku/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Heroku-userbot/Heroku&amp;utm_campaign=Badge_Grade">
       <img src="https://app.codacy.com/project/badge/Grade/97e3ea868f9344a5aa6e4d874f83db14" alt="Codacy Grade">
     </a>
     <a href="#">
-      <img src="https://img.shields.io/github/languages/code-size/ZetGoHack/Heroku" alt="Code Size">
+      <img src="https://img.shields.io/github/languages/code-size/Heroku-userbot/Heroku" alt="Code Size">
     </a>
     <a href="#">
-      <img src="https://img.shields.io/github/issues-raw/ZetGoHack/Heroku" alt="Open Issues">
+      <img src="https://img.shields.io/github/issues-raw/Heroku-userbot/Heroku" alt="Open Issues">
     </a>
     <a href="#">
-      <img src="https://img.shields.io/github/license/ZetGoHack/Heroku" alt="License">
+      <img src="https://img.shields.io/github/license/Heroku-userbot/Heroku" alt="License">
     </a>
     <a href="#">
-      <img src="https://img.shields.io/github/commit-activity/m/ZetGoHack/Heroku" alt="Commit Activity">
+      <img src="https://img.shields.io/github/commit-activity/m/Heroku-userbot/Heroku" alt="Commit Activity">
     </a>
     <br>
     <a href="#">
-      <img src="https://img.shields.io/github/forks/ZetGoHack/Heroku?style=flat" alt="Forks">
+      <img src="https://img.shields.io/github/forks/Heroku-userbot/Heroku?style=flat" alt="Forks">
     </a>
     <a href="#">
-      <img src="https://img.shields.io/github/stars/ZetGoHack/Heroku" alt="Stars">
+      <img src="https://img.shields.io/github/stars/Heroku-userbot/Heroku" alt="Stars">
     </a>
     <a href="https://github.com/psf/black">
       <img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code Style: Black">
     </a>
     <br>
-    <a href="https://github.com/ZetGoHack/Heroku/blob/master/README.md">
+    <a href="https://github.com/Heroku-userbot/Heroku/blob/master/README.md">
       <img src="https://img.shields.io/badge/lang-en-red.svg" alt="En">
     </a>
-    <a href="https://github.com/ZetGoHack/Heroku/blob/master/README_RU.md">
+    <a href="https://github.com/Heroku-userbot/Heroku/blob/master/README_RU.md">
       <img src="https://img.shields.io/badge/lang-ru-green.svg" alt="Ru">
     </a>
   </p>
@@ -55,6 +55,17 @@
 ---
 ## 🚀 Установка
 
+### Альтернатива: универсальный установщик (Linux, WSL, UserLAnd)
+Способ установки одной командой, основной остаётся пошаговая инструкция ниже.
+Он ставит зависимости, создаёт виртуальное окружение (`.venv`) и запускает Heroku. Та же команда при повторном запуске просто запустит уже установленный Heroku.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Heroku-userbot/Heroku/master/install.sh | bash
+```
+
+> - Для root-пользователей добавьте `-s -- --root` (`... | bash -s -- --root`)
+> - `HEROKU_FORCE_INSTALL=1` принудительно запускает переустановку
+
 ### VPS/VDS
 > **Примечание для пользователей VPS/VDS:**  
 > Добавьте `--root` для пользователей root (чтобы избежать ввода force_insecure)
@@ -64,7 +75,7 @@
 
   ```bash
   sudo apt update && sudo apt install git python3 -y && \
-  git clone https://github.com/ZetGoHack/Heroku && \
+  git clone https://github.com/Heroku-userbot/Heroku && \
   cd Heroku && \
   python3 -m venv .venv && \
   source .venv/bin/activate && \
@@ -78,7 +89,7 @@
   
   ```bash
   sudo dnf update -y && sudo dnf install git python3 -y && \
-  git clone https://github.com/ZetGoHack/Heroku && \
+  git clone https://github.com/Heroku-userbot/Heroku && \
   cd Heroku && \
   python3 -m venv .venv && \
   source .venv/bin/activate && \
@@ -92,7 +103,7 @@
   
 ```bash
 sudo pacman -Syu --noconfirm && sudo pacman -S git python --noconfirm --needed && \
-git clone https://github.com/ZetGoHack/Heroku && \
+git clone https://github.com/Heroku-userbot/Heroku && \
 cd Heroku && \
 python3 -m venv .venv && \
 source .venv/bin/activate && \
@@ -126,7 +137,7 @@ curl -Ss https://bootstrap.pypa.io/get-pip.py | python3
 
 4. **Введите эту команду (ПКМ):**
 ```bash
-clear && git clone https://github.com/ZetGoHack/Heroku && cd Heroku && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && python3 -m heroku
+clear && git clone https://github.com/Heroku-userbot/Heroku && cd Heroku && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && python3 -m heroku
 ```
 > **🔗Как получить API_ID и API_HASH?:** [Видео](https://youtu.be/DcqDA249Lhg?t=24)
   
@@ -140,7 +151,7 @@ clear && git clone https://github.com/ZetGoHack/Heroku && cd Heroku && python3 -
 3. <b>Дождитесь установки дистрибутива, можете заварить чай</b>
 4. <b>После успешной установки перед вами откроется терминал, введите туда:</b>
 ```bash
-sudo apt update && sudo apt upgrade -y && sudo apt install python3 git python3-pip -y && git clone https://github.com/ZetGoHack/Heroku && cd Heroku && python3 -m venv .venv && source .venv/bin/activate && sudo pip install -r requirements.txt && python3 -m heroku
+sudo apt update ; sudo apt upgrade -y ; sudo apt install -y python3 python3-venv git ; git clone https://github.com/Heroku-userbot/Heroku ; cd Heroku ; python3 -m venv venv ; source venv/bin/activate ; python3 -m heroku
 ```
 5. <b>В конце установки появится ссылка, перейдите по ней и введите данные своей учетной записи для входа.</b>
 > Вуаля! Вы установили Heroku на UserLAnd.

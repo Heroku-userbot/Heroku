@@ -1,6 +1,6 @@
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -69,7 +69,11 @@ class LoaderRestrictor(loader.Module):
     async def client_ready(self):
         self.poll: PollStatus | None = None
 
-        if not self.get("passed", False):
+    async def inline_ready(self):
+        if self.get("passed", False):
+            return
+
+        try:
             await self.inline.bot.send_message(
                 self.client.tg_id,
                 self.strings["unlock_prompt"],
@@ -84,6 +88,8 @@ class LoaderRestrictor(loader.Module):
                     ]
                 ),
             )
+        except Exception:
+            logger.debug("Can't send unlock prompt", exc_info=True)
 
     async def _unlock_prompt_callback(self, call: BotInlineCall):
         await call.delete()

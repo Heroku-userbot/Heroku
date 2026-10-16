@@ -1,6 +1,6 @@
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -157,6 +157,16 @@ def get_entity_url(
     )
 
 
+def get_link(user: User | Channel, /) -> str:
+    """
+    Get telegram permalink to entity
+    :param user: User or channel
+    :return: Link to entity
+    """
+    return get_entity_url(user)
+
+
+
 def remove_emoji(text: str) -> str:
     """
     Removes all emoji from text
@@ -176,17 +186,23 @@ def remove_html(text: str, escape: bool = False, keep_emojis: bool = False) -> s
     :param keep_emojis: Keep custom emojis
     :return: Text without HTML
     """
-    return (escape_html if escape else str)(
-        re.sub(
-            (
-                r"(<\/?a.*?>|<\/?b>|<\/?i>|<\/?u>|<\/?strong>|<\/?em>|<\/?code.*?>|<\/?strike>|<\/?del>|<\/?pre.*?>|<\/?blockquote.*?>)"
-                if keep_emojis
-                else r"(<\/?a.*?>|<\/?b>|<\/?i>|<\/?u>|<\/?strong>|<\/?em>|<\/?code.*?>|<\/?strike>|<\/?del>|<\/?pre.*?>|<\/?emoji.*?>|<\/?blockquote.*?>)"
-            ),
-            "",
-            text,
-        )
+    cleaned = re.sub(
+        (
+            r"(<\/?a.*?>|<\/?b>|<\/?i>|<\/?u>|<\/?strong>|<\/?em>|<\/?code.*?>|<\/?strike>|<\/?del>|<\/?pre.*?>|<\/?blockquote.*?>)"
+            if keep_emojis
+            else r"(<\/?a.*?>|<\/?b>|<\/?i>|<\/?u>|<\/?strong>|<\/?em>|<\/?code.*?>|<\/?strike>|<\/?del>|<\/?pre.*?>|<\/?emoji.*?>|<\/?tg-emoji.*?>|<\/?blockquote.*?>)"
+        ),
+        "",
+        text,
     )
+
+    if not escape:
+        return cleaned
+
+    # When custom emojis are kept, don't blindly escape_html the whole
+    # string - that would turn the surviving <tg-emoji>/<emoji> tags into
+    # literal &lt;tg-emoji...&gt; text instead of rendering as emojis.
+    return escape_non_html(cleaned) if keep_emojis else escape_html(cleaned)
 
 
 def check_url(url: str) -> bool:
@@ -201,21 +217,32 @@ def check_url(url: str) -> bool:
         return False
 
 
-def get_link(user: User | Channel, /) -> str:
-    """
-    Get telegram permalink to entity
-    :param user: User or channel
-    :return: Link to entity
-    """
-    return (
-        f"tg://user?id={user.id}"
-        if isinstance(user, User)
-        else (
-            f"tg://resolve?domain={user.username}"
-            if getattr(user, "username", None)
-            else ""
+async def is_private_asset_channel(client, peer, *, allow_participants: bool = False) -> bool:
+    try:
+        entity = await client.get_entity(peer, force=True)
+        if (
+            not isinstance(entity, Channel)
+            or not entity.creator
+            or entity.username
+            or any(getattr(name, "active", False) for name in (entity.usernames or []))
+        ):
+            return False
+        if allow_participants:
+            return True
+        allowed = {client.tg_id}
+        inline = getattr(getattr(client, "loader", None), "inline", None)
+        bot_id = getattr(inline, "bot_id", None)
+        if bot_id:
+            allowed.add(bot_id)
+        participants = await client.get_participants(entity, limit=len(allowed) + 1)
+        return (
+            bool(participants)
+            and client.tg_id in {user.id for user in participants}
+            and all(user.id in allowed for user in participants)
+            and getattr(participants, "total", len(participants)) <= len(allowed)
         )
-    )
+    except Exception:
+        return False
 
 
 async def asset_channel(
@@ -232,6 +259,7 @@ async def asset_channel(
     forum: bool = False,
     hide_general: bool = False,
     _folder: str | None = None,
+    allow_participants: bool = False,
 ) -> tuple[Channel, bool]:
     """
     Create new channel (if needed) and return its entity
@@ -256,10 +284,16 @@ async def asset_channel(
         title in client._channels_cache
         and client._channels_cache[title]["exp"] > time.time()
     ):
-        return client._channels_cache[title]["peer"], False
+        peer = client._channels_cache[title]["peer"]
+        if await is_private_asset_channel(
+            client, peer, allow_participants=allow_participants
+        ):
+            return peer, False
 
     async for d in client.iter_dialogs():
-        if d.title == title:
+        if d.title == title and await is_private_asset_channel(
+            client, d.entity, allow_participants=allow_participants
+        ):
             client._channels_cache[title] = {"peer": d.entity, "exp": int(time.time())}
             if invite_bot:
                 if all(
@@ -403,6 +437,8 @@ async def asset_forum_topic(
         )
         await fw_protect()
         for found_topic in result.topics:
+            if isinstance(found_topic, ForumTopicDeleted):
+                continue
             if found_topic.title == topic_title:
                 forums_cache.setdefault(entity.title, {})[topic_title] = found_topic.id
                 return found_topic.id

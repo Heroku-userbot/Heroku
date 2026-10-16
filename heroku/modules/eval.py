@@ -6,13 +6,15 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import contextlib
 import itertools
+import logging
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -29,6 +31,9 @@ from meval import meval
 
 from .. import loader, main, utils
 from ..log import HerokuException
+from .._internal import redact
+
+logger = logging.getLogger(__name__)
 
 
 @loader.tds
@@ -64,14 +69,30 @@ class Evaluator(loader.Module):
         args = utils.get_args_raw(message)
         reply = await message.get_reply_message()
 
+        skip_output = False
+        if match := re.match(r"^(?:-so|--skip-output)(?:\s+|$)", args):
+            skip_output = True
+            args = args[match.end() :]
+
         if not args and reply and reply.text:
             args = reply.message
 
-        skip_output = args.startswith(("-so ", "--skip-output "))
-        if skip_output:
-            args = args.split(" ", 1)[1]
+        shown = None
+        if not args:
+            for src in (message, reply):
+                if src and src.file:
+                    try:
+                        args = (await src.download_media(bytes)).decode()
+                    except UnicodeDecodeError:
+                        logger.warning("File can't be decoded to execute code")
+                        shown = "# File can't be decoded to execute code"
+                    else:
+                        if len(args) > 500:
+                            shown = "# Code from file..."
+                    break
 
         args = args.replace("\xa0", "\x20")
+        shown = shown or args
 
         real_db = self.db
         self.db = self._SecureDB(real_db)
@@ -97,7 +118,7 @@ class Evaluator(loader.Module):
                 self.strings["err"].format(
                     "4985626654563894116",
                     "python",
-                    utils.escape_html(args),
+                    utils.escape_html(self.censor(shown)),
                     "error",
                     self.censor(
                         "\n".join(item.full_stack.splitlines()[:-1])
@@ -135,7 +156,7 @@ class Evaluator(loader.Module):
                 self.strings["eval_py"].format(
                     "4985626654563894116",
                     "python",
-                    utils.escape_html(args),
+                    utils.escape_html(self.censor(shown)),
                 )
                 + (
                     self.strings["eval_result"].format(
@@ -443,6 +464,7 @@ class Evaluator(loader.Module):
             )
 
     def censor(self, ret: str) -> str:
+        ret = redact(ret)
         ret = ret.replace(str(self._client.heroku_me.phone), "&lt;phone&gt;")
 
         if redis := os.environ.get("REDIS_URL") or main.get_config_key("redis_uri"):
@@ -457,7 +479,7 @@ class Evaluator(loader.Module):
                 f'{btoken.split(":")[0]}:{"*" * 26}',
             )
 
-        if htoken := self.lookup("LoaderMod").get("token", False):
+        if (lm := self.lookup("LoaderMod")) and (htoken := lm.get("token", False)):
             ret = ret.replace(htoken, f'eugeo_{"*" * 26}')
 
         ret = ret.replace(

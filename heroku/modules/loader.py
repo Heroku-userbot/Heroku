@@ -8,7 +8,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -17,6 +17,7 @@ import asyncio
 import contextlib
 import difflib
 import functools
+import hashlib
 import importlib
 import inspect
 import io
@@ -40,6 +41,7 @@ from herokutl.tl.functions.channels import JoinChannelRequest
 from herokutl.tl.types import Channel, InputMediaWebPage
 
 from .. import loader, main, utils
+from .._internal import fetch_text, private_write
 from .._local_storage import RemoteStorage
 from ..inline.types import InlineCall
 from ..types import CoreOverwriteError, CoreUnloadError
@@ -68,14 +70,15 @@ class ModuleInstallError(RuntimeError):
 class LoaderMod(loader.Module):
     """Loads modules"""
 
-    strings = {
-        "name": "Loader",
-    }
+    strings = {"name": "Loader"}
 
     def __init__(self):
         self.fully_loaded = False
         self._links_cache = {}
         self._storage: RemoteStorage = None
+        self._modules_cache_dir = os.path.join(main.BASE_DIR, ".modules_cache")
+        self._pending_module_updates = {}
+        self._startup_updates_task = None
 
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
@@ -109,6 +112,12 @@ class LoaderMod(loader.Module):
                 lambda: "Emoji for command",
             ),
             loader.ConfigValue(
+                "rich_mode",
+                True,
+                lambda: self.strings["rich_mode_doc"],
+                validator=loader.validators.Boolean(),
+            ),
+            loader.ConfigValue(
                 "show_banner",
                 True,
                 lambda: self.strings["show_banner_doc"],
@@ -131,7 +140,7 @@ class LoaderMod(loader.Module):
             )
         )
         logger.debug("Modules: %s", modules)
-        asyncio.ensure_future(self._storage.preload(modules))
+        self.create_task(self._storage.preload(modules))
 
     async def client_ready(self):
         while not (settings := self.lookup("settings")):
@@ -143,8 +152,7 @@ class LoaderMod(loader.Module):
 
         main.heroku.ready.set()
 
-        asyncio.ensure_future(self._update_modules())
-        asyncio.ensure_future(self._async_init())
+        self.create_task(self._update_modules())
 
     @loader.loop(interval=3, wait_before=True, autostart=True)
     async def _config_autosaver(self):
@@ -207,8 +215,12 @@ class LoaderMod(loader.Module):
         return repo
 
     async def _check_pass(self, message: Message | InlineCall) -> bool:
-        if self.lookup("LoaderRestrictor").get("passed", False):
+        if self.db.get("LoaderRestrictor", "passed", False):
             return False
+
+        if not self.inline.init_complete:
+            return False # in case the inline bot did not start successfully,
+                         # allow the user to install the modules
 
         await utils.answer(
             message,
@@ -236,24 +248,29 @@ class LoaderMod(loader.Module):
                         self.update_modules_in_db()
                 case _:
                     not_installed = []
+                    loaded_modules = []
 
-                    await utils.answer(message, f"Installing {len(args)} modules...")
+                    message = await utils.answer(
+                        message, f"Installing {len(args)} modules..."
+                    )
 
                     for arg in args:
-                        result = await self.download_and_install(arg)
-
-                        if result == MODULE_LOADING_FAILED:
+                        result = await self.download_and_install(
+                            arg, _loaded_modules=loaded_modules
+                        )
+                        if result != MODULE_LOADING_SUCCESS:
                             not_installed.append(arg)
-                    await utils.answer(
-                        message,
-                        "{} modules was installed.\n\nModules <code>{}</code> cannot be installed because they are not available in the repo".format(
-                            len(args) - len(not_installed),
-                            "</code>, <code>".join(not_installed),
-                        ),
-                    )
 
                     if self.fully_loaded:
                         self.update_modules_in_db()
+
+                    rich_mode = self.config["rich_mode"]
+                    result_message = self._batch_loaded_message(
+                        loaded_modules, not_installed, rich=rich_mode
+                    )
+                    await self._answer_loaded_message(
+                        message, result_message, rich=rich_mode,
+                    )
         else:
             await self.inline.list(
                 message,
@@ -356,27 +373,20 @@ class LoaderMod(loader.Module):
         if self._links_cache.get(repo, {}).get("exp", 0) >= time.time():
             return self._links_cache[repo]["data"]
 
-        res = await utils.run_sync(
-            requests.get,
-            f"{repo}/full.txt",
-            auth=(
-                tuple(self.config["basic_auth"].split(":", 1))
-                if self.config["basic_auth"]
-                else None
-            ),
-        )
-
-        if not str(res.status_code).startswith("2"):
-            logger.debug(
-                "Can't load repo %s contents because of %s status code",
-                repo,
-                res.status_code,
+        try:
+            content = await utils.run_sync(
+                fetch_text,
+                f"{repo}/full.txt",
+                auth=self.config["basic_auth"],
+                trusted_url=self.config["MODULES_REPO"],
             )
+        except (requests.RequestException, ValueError):
+            logger.warning("Can't load repository contents", exc_info=True)
             return []
 
         self._links_cache[repo] = {
             "exp": time.time() + 5 * 60,
-            "data": [link for link in res.text.strip().splitlines() if link],
+            "data": [link for link in content.strip().splitlines() if link],
         }
 
         return self._links_cache[repo]["data"]
@@ -411,17 +421,164 @@ class LoaderMod(loader.Module):
             False,
         )
 
+    async def _answer_loaded_message(
+        self, message, text: str, *, rich: bool,
+        reply_markup=None, **kwargs,
+    ):
+        """Send installation results using the selected message format."""
+        if not rich:
+            return await utils.answer_with_media_fallback(
+                message, text, reply_markup=reply_markup, **kwargs,
+            )
+        return await utils.answer_with_media_fallback(
+            message, rich_message=text, reply_markup=reply_markup, **kwargs,
+        )
+
+    def _loaded_command_name(self, name: str, handler) -> str:
+        prefix = utils.escape_html(self.get_prefix())
+        result = f"<code>{prefix}{utils.escape_html(name)}</code>"
+        aliases = getattr(handler, "aliases", None) or []
+        if not aliases and (alias := getattr(handler, "alias", None)):
+            aliases = [alias]
+        if aliases:
+            result += " ({})".format(
+                ", ".join(
+                    f"<code>{prefix}{utils.escape_html(alias)}</code>"
+                    for alias in aliases
+                )
+            )
+        return result
+
+    def _batch_loaded_message(
+        self, modules: list, failed: list[str], *, rich: bool = True,
+        command_lines: list[str] | None = None,
+        single: bool = False,
+    ) -> str:
+        """Render batch results or a single module with description and commands."""
+        header = (
+            '<tg-emoji emoji-id="5134452506935427991">🪐</tg-emoji> '
+            f"<b>{len(modules)} Modules loaded</b>"
+        )
+        parts = [] if single else [f"<p>{header}</p>" if rich else header]
+        if rich and not single and self.config["show_banner"]:
+            slides = []
+            for module in modules:
+                banner_url = getattr(module, "heroku_meta_banner", None)
+                if not isinstance(banner_url, str):
+                    continue
+                try:
+                    parsed = urlparse(banner_url)
+                except ValueError:
+                    continue
+                if parsed.scheme in {"http", "https"} and parsed.netloc:
+                    slides.append(f'<img src="{utils.escape_html(banner_url)}"/>')
+            if slides:
+                parts.insert(0, "<tg-slideshow>" + "".join(slides) + "</tg-slideshow>")
+        emoji = self.config["command_emoji"]
+
+        def section(title: str, lines: list[str], suffix: str = ""):
+            if rich:
+                parts.append(
+                    f"<details><summary>{title}{suffix}</summary>"
+                    + "".join(f"<p>{line}</p>" for line in lines)
+                    + "</details>"
+                )
+            else:
+                parts.append(f"\n\n<b>{title}</b>{suffix}")
+                if lines:
+                    parts.append(
+                        "\n<blockquote expandable>"
+                        + "\n".join(lines)
+                        + "</blockquote>"
+                    )
+
+        for module in modules:
+            strings = getattr(module, "strings", {})
+            try:
+                name = strings["name"]
+            except (KeyError, TypeError, AttributeError):
+                name = None
+            if not name or name == "Unknown strings: name":
+                base_strings = getattr(strings, "_base_strings", {})
+                name = base_strings.get("name")
+            if not name:
+                class_strings = getattr(type(module), "strings", {})
+                name = (
+                    class_strings.get("name")
+                    if isinstance(class_strings, dict)
+                    else None
+                )
+            name = name or "Unnamed module"
+
+            version = getattr(module, "__version__", None)
+            if isinstance(version, (tuple, list)):
+                version = ".".join(map(str, version))
+            elif version is not None:
+                version = str(version).strip()
+            version_suffix = (
+                f" <code>({utils.escape_html(version)})</code>" if version else ""
+            )
+            lines = []
+            for command, handler in getattr(module, "commands", {}).items():
+                description = inspect.getdoc(handler) or self.strings["undoc"]
+                description = utils.escape_html(description)
+                if rich:
+                    description = description.replace("\n", "<br/>")
+                lines.append(
+                    f"{emoji} {self._loaded_command_name(command, handler)}"
+                    f" - {description}"
+                )
+            lines = lines if command_lines is None else command_lines
+            if single:
+                title = (
+                    '<tg-emoji emoji-id="5134452506935427991">🪐</tg-emoji> '
+                    f"<b>{utils.escape_html(str(name))}</b>{version_suffix}"
+                )
+                parts.append(f"<p>{title}</p>" if rich else title)
+                description = utils.escape_html(inspect.getdoc(module) or "")
+                if description:
+                    parts.append(
+                        '<p><i><tg-emoji emoji-id="5879813604068298387">ℹ️</tg-emoji> '
+                        + description.replace("\n", "<br/>") + "</i></p>"
+                        if rich else "\n\n" + description
+                    )
+                if lines:
+                    section("Commands", lines)
+            else:
+                section(
+                    '<tg-emoji emoji-id="4916086774649848789">🔗</tg-emoji> '
+                    + utils.escape_html(str(name)),
+                    lines,
+                    version_suffix,
+                )
+            placeholders = utils.help_placeholders(module.__class__.__name__, self)
+            if placeholders:
+                section(
+                    self.strings["loaded_placeholders"],
+                    [line.replace("\n", "<br/>") for line in placeholders]
+                    if rich else placeholders,
+                )
+        if failed:
+            section(
+                "Not loaded",
+                [f"<code>{utils.escape_html(name)}</code>" for name in failed],
+            )
+        return "".join(parts)
+
     async def download_and_install(
         self,
         module_name: str,
         message: Message | None = None,
         force_pm: bool = False,
+        name: str | None = None,
+        _loaded_modules: list | None = None,
     ) -> int:
         try:
             blob_link = False
             module_name = module_name.strip()
             if urlparse(module_name).netloc:
                 url = module_name
+                resolved_name = name
                 if re.match(
                     r"^(https:\/\/github\.com\/.*?\/.*?\/blob\/.*\.py)|"
                     r"(https:\/\/gitlab\.com\/.*?\/.*?\/-\/blob\/.*\.py)$",
@@ -431,6 +588,7 @@ class LoaderMod(loader.Module):
                     blob_link = True
             else:
                 url = await self._find_link(module_name)
+                resolved_name = name or module_name
 
                 if not url:
                     logger.warning(
@@ -448,7 +606,10 @@ class LoaderMod(loader.Module):
                 )
 
             try:
-                r = await self._storage.fetch(url, auth=self.config["basic_auth"])
+                r = await self._storage.fetch(
+                    url, auth=self.config["basic_auth"],
+                    trusted_url=self.config["MODULES_REPO"],
+                )
             except requests.exceptions.HTTPError as e:
                 logger.warning(
                     "Failed to download module %s from %s: %s",
@@ -464,15 +625,17 @@ class LoaderMod(loader.Module):
             installed = await self.load_module(
                 r,
                 message,
-                module_name,
+                resolved_name,
                 url,
                 blob_link=blob_link,
                 _raise_install_errors=True,
+                _loaded_modules=_loaded_modules,
             )
 
             if not installed:
                 raise ModuleInstallError(f"Module {module_name} was not installed")
 
+            self._write_module_cache(url, r)
             return MODULE_LOADING_SUCCESS
         except Exception:
             logger.exception("Failed to install external module %s", module_name)
@@ -535,7 +698,7 @@ class LoaderMod(loader.Module):
                 "💫 <b>Joined <a"
                 f' href="https://t.me/{channel.username}">{utils.escape_html(channel.title)}</a></b>'
             ),
-            photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/joined_jr.png",
+            photo="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/joined_jr.jpg",
         )
 
     async def install_requirements(self, requirements: list):
@@ -666,6 +829,7 @@ class LoaderMod(loader.Module):
         did_requires: bool = False,
         did_packages: bool = False,
         _raise_install_errors: bool = False,
+        _loaded_modules: list | None = None,
     ) -> bool:
         module_label = name or origin
 
@@ -1153,6 +1317,10 @@ class LoaderMod(loader.Module):
         if not isinstance(developer_entity, Channel):
             developer_entity = None
 
+        if _loaded_modules is not None:
+            instance.heroku_meta_banner = self._get_banner_url(doc)
+            _loaded_modules.append(instance)
+
         if message is None:
             return True
 
@@ -1194,27 +1362,51 @@ class LoaderMod(loader.Module):
             else ""
         )
 
+        rich_mode = self.config["rich_mode"]
+
         def loaded_msg(use_subscribe: bool = True):
-            nonlocal modname, version, mod_doc, modhelp, placeholders, developer, origin, subscribe, blob_link, depends_from
-            return self.strings["loaded"].format(
-                modname.strip(),
-                version,
-                utils.ascii_face(),
-                mod_doc if mod_doc else "",
-                "<blockquote expandable>{}</blockquote>".format("\n".join(modhelp)),
-                "\n<blockquote expandable>{}</blockquote>".format(
-                    "\n".join(placeholders)
-                ),
-                developer if not subscribe or not use_subscribe else "",
-                depends_from,
-                (
-                    self.strings["modlink"].format(origin)
-                    if origin != "<string>" and self.config["share_link"]
-                    else ""
-                ),
-                blob_link,
-                subscribe if use_subscribe else "",
+            if not rich_mode:
+                return self.strings["loaded"].format(
+                    modname.strip(),
+                    version,
+                    utils.ascii_face(),
+                    mod_doc if mod_doc else "",
+                    "<blockquote expandable>{}</blockquote>".format("\n".join(modhelp)),
+                    "\n<blockquote expandable>{}</blockquote>".format(
+                        "\n".join(placeholders)
+                    ),
+                    developer if not subscribe or not use_subscribe else "",
+                    depends_from,
+                    (
+                        self.strings["modlink"].format(origin)
+                        if origin != "<string>" and self.config["share_link"]
+                        else ""
+                    ),
+                    blob_link,
+                    subscribe if use_subscribe else "",
+                )
+            result = self._batch_loaded_message(
+                [instance], [], rich=True, single=True,
+                command_lines=[
+                    line.replace("\n", "<br/>") if rich_mode else line
+                    for line in modhelp
+                ],
             )
+            if self.config["show_banner"]:
+                banner_url = self._get_banner_url(doc)
+                if banner_url and urlparse(banner_url).scheme in {"http", "https"}:
+                    result = f'<img src="{utils.escape_html(banner_url)}"/>' + result
+            extra = []
+            if origin != "<string>" and self.config["share_link"]:
+                extra.append(self.strings["modlink"].format(utils.escape_html(origin)))
+            if use_subscribe and subscribe:
+                extra.append(subscribe)
+            for text in extra:
+                result += (
+                    "<p>" + text.replace("\n", "<br/>") + "</p>"
+                    if rich_mode else "\n\n" + text
+                )
+            return result
 
         if developer:
             if developer.startswith("@") and developer not in self.get(
@@ -1236,6 +1428,7 @@ class LoaderMod(loader.Module):
                                 developer_entity.id,
                                 functools.partial(loaded_msg, use_subscribe=False),
                                 True,
+                                rich_mode,
                             ),
                         },
                         {
@@ -1245,6 +1438,7 @@ class LoaderMod(loader.Module):
                                 developer,
                                 functools.partial(loaded_msg, use_subscribe=False),
                                 False,
+                                rich_mode,
                             ),
                         },
                     ]
@@ -1257,8 +1451,8 @@ class LoaderMod(loader.Module):
         if (
             self.config["show_banner"]
             and not subscribe_markup
-            and not message.document
-            or message.web_preview
+            and not getattr(message, "document", None)
+            or getattr(message, "web_preview", False)
         ):
             try:
                 banner_url = self._get_banner_url(doc)
@@ -1274,9 +1468,10 @@ class LoaderMod(loader.Module):
             line.replace(" ", "") == "#scope:disable_onload_docs"
             for line in doc.splitlines()
         ):
-            await utils.answer(
+            await self._answer_loaded_message(
                 message,
                 loaded_msg(),
+                rich=rich_mode,
                 reply_markup=subscribe_markup,
                 **banner_kwargs,
             )
@@ -1287,10 +1482,12 @@ class LoaderMod(loader.Module):
             key=lambda x: x[0],
         ):
             modhelp.append(
-                "{} <code>{}{}</code> {}".format(
+                (
+                    "{} {} - {}"
+                    if rich_mode else "{} {} {}"
+                ).format(
                     f"{self.config['command_emoji']}",
-                    utils.escape_html(self.get_prefix()),
-                    _name,
+                    self._loaded_command_name(_name, fun),
                     (
                         utils.escape_html(inspect.getdoc(fun))
                         if fun.__doc__
@@ -1316,14 +1513,17 @@ class LoaderMod(loader.Module):
                 )
 
         try:
-            await utils.answer(
+            await self._answer_loaded_message(
                 message,
                 loaded_msg(),
+                rich=rich_mode,
                 reply_markup=subscribe_markup,
                 **banner_kwargs,
             )
         except MediaCaptionTooLongError:
-            await message.reply(loaded_msg(False))
+            await self._answer_loaded_message(
+                message, loaded_msg(False), rich=rich_mode,
+            )
 
         return True
 
@@ -1333,15 +1533,16 @@ class LoaderMod(loader.Module):
         entity: int,
         msg: typing.Callable[[], str],
         subscribe: bool,
+        rich: bool = False,
     ):
         if not subscribe:
             self.set("do_not_subscribe", self.get("do_not_subscribe", []) + [entity])
-            await utils.answer(call, msg())
+            await self._answer_loaded_message(call, msg(), rich=rich)
             await call.answer(self.strings["not_subscribed"])
             return
 
         await self._client(JoinChannelRequest(entity))
-        await utils.answer(call, msg())
+        await self._answer_loaded_message(call, msg(), rich=rich)
         await call.answer(self.strings["subscribed"])
 
     @loader.command(alias="ulm")
@@ -1577,17 +1778,13 @@ class LoaderMod(loader.Module):
             args = f"https://{args}"
 
         try:
-            r = await utils.run_sync(
-                requests.get,
+            content = await utils.run_sync(
+                fetch_text,
                 f"{args}/full.txt",
-                auth=(
-                    tuple(self.config["basic_auth"].split(":", 1))
-                    if self.config["basic_auth"]
-                    else None
-                ),
+                auth=self.config["basic_auth"],
+                trusted_url=self.config["MODULES_REPO"],
             )
-            r.raise_for_status()
-            if not r.text.strip():
+            if not content.strip():
                 raise ValueError
         except Exception:
             await utils.answer(message, self.strings["no_repo"])
@@ -1620,6 +1817,9 @@ class LoaderMod(loader.Module):
 
     async def _inline__clearmodules(self, call: InlineCall):
         self.set("loaded_modules", {})
+        self.set("always_update_modules", [])
+        self._pending_module_updates.clear()
+        shutil.rmtree(self._modules_cache_dir, ignore_errors=True)
 
         for file in os.scandir(loader.LOADED_MODULES_DIR):
             try:
@@ -1630,8 +1830,308 @@ class LoaderMod(loader.Module):
         await utils.answer(call, self.strings["all_modules_deleted"])
         await self.lookup("Updater").restart_common(call)
 
+    def _module_cache_path(self, url: str) -> str:
+        key = hashlib.sha256(url.encode()).hexdigest()
+        return os.path.join(self._modules_cache_dir, f"{key}.py")
+
+    @staticmethod
+    def _module_class_names(doc: str) -> set[str]:
+        try:
+            tree = ast.parse(doc)
+        except (SyntaxError, ValueError):
+            return set()
+
+        return {
+            node.name.casefold()
+            for node in tree.body
+            if isinstance(node, ast.ClassDef)
+            and any(
+                isinstance(base, ast.Name)
+                and base.id == "Module"
+                or isinstance(base, ast.Attribute)
+                and base.attr == "Module"
+                for base in node.bases
+            )
+        }
+
+    @staticmethod
+    def _extract_module_name(doc: str) -> str | None:
+        try:
+            tree = ast.parse(doc)
+        except (SyntaxError, ValueError):
+            return None
+
+        return next(
+            (
+                node.name
+                for node in tree.body
+                if isinstance(node, ast.ClassDef)
+                and any(
+                    isinstance(base, ast.Name)
+                    and base.id == "Module"
+                    or isinstance(base, ast.Attribute)
+                    and base.attr == "Module"
+                    for base in node.bases
+                )
+            ),
+            None,
+        )
+
+    def _is_core_module_update(self, url: str, doc: str) -> bool:
+        path = [part.casefold() for part in urlparse(url).path.strip("/").split("/")]
+        if any(
+            path[index : index + 2] == ["heroku", "modules"]
+            for index in range(len(path) - 1)
+        ):
+            return True
+
+        classes = self._module_class_names(doc)
+        return any(
+            module.__class__.__name__.casefold() in classes
+            and getattr(module, "__origin__", "").startswith("<core")
+            for module in self.allmodules.modules
+        )
+
+    def _write_module_cache(self, url: str, doc: str) -> None:
+        os.makedirs(self._modules_cache_dir, mode=0o700, exist_ok=True)
+        path = self._module_cache_path(url)
+        private_write(path, doc)
+
+    async def _accept_module_update(
+        self,
+        call: InlineCall,
+        token: str,
+        always: bool = False,
+    ):
+        pending = self._pending_module_updates.pop(token, None)
+        if pending is None:
+            await call.edit(self.strings["module_update_expired"])
+            return
+
+        url, doc = pending
+        if always:
+            urls = set(self.get("always_update_modules", []))
+            urls.add(url)
+            self.set("always_update_modules", sorted(urls))
+
+        installed = await self.load_module(
+            doc,
+            call,
+            self._extract_module_name(doc),
+            url,
+            _raise_install_errors=True,
+        )
+        if not installed:
+            await call.edit(self.strings["module_update_failed"])
+            return
+
+        self._write_module_cache(url, doc)
+        self.update_modules_in_db()
+        await call.edit(self.strings["module_update_installed"])
+
+    async def _decline_module_update(self, call: InlineCall, token: str):
+        self._pending_module_updates.pop(token, None)
+        await call.edit(self.strings["module_update_declined"])
+
+    async def _offer_module_update(self, url: str, doc: str) -> None:
+        name = self._extract_module_name(doc) or url.rsplit("/", 1)[-1].removesuffix(
+            ".py"
+        )
+        name = f'<a href="{utils.escape_html(url)}">{utils.escape_html(name)}</a>'
+        token = uuid.uuid4().hex
+        self._pending_module_updates[token] = (url, doc)
+
+        for _ in range(120):
+            if self.inline.init_complete and self.inline._bot_client:
+                break
+            await asyncio.sleep(1)
+        else:
+            self._pending_module_updates.pop(token, None)
+            logger.error("Inline bot is not ready; module update prompt was not sent")
+            return
+
+        unit_id = utils.rand(16)
+        buttons = [
+            [
+                {
+                    "text": self.strings["module_update_yes"],
+                    "callback": self._accept_module_update,
+                    "args": (token, False),
+                    "emoji_id": "5899757765743615694",
+                    "style": "success",
+                },
+                {
+                    "text": self.strings["module_update_no"],
+                    "callback": self._decline_module_update,
+                    "args": (token,),
+                    "emoji_id": "5872829476143894491",
+                    "style": "danger",
+                },
+            ],
+            [
+                {
+                    "text": self.strings["module_update_always"],
+                    "callback": self._accept_module_update,
+                    "args": (token, True),
+                    "emoji_id": "5879883461711367869",
+                    "style": "primary",
+                }
+            ],
+        ]
+        self.inline._units[unit_id] = {
+            "type": "form",
+            "text": self.strings["module_update_prompt"].format(name),
+            "buttons": buttons,
+            "caller": None,
+            "chat": int(self.tg_id),
+            "message_id": None,
+            "uid": unit_id,
+            "force_me": True,
+        }
+
+        try:
+            markup = self.inline.generate_markup(unit_id)
+            sent = await self.inline.bot.send_message(
+                int(self.tg_id),
+                self.inline._units[unit_id]["text"],
+                reply_markup=markup,
+                disable_notification=True,
+            )
+            self.inline._units[unit_id]["message_id"] = sent.id
+        except Exception:
+            self._pending_module_updates.pop(token, None)
+            self.inline._units.pop(unit_id, None)
+            logger.exception(
+                "Failed to send module update prompt from inline bot to owner %s",
+                self.tg_id,
+            )
+            return
+
+    async def _check_module_update(
+        self,
+        url: str,
+        cached_doc: str | None = None,
+        *,
+        name: str | None = None,
+        offer_update: bool = True,
+    ) -> bool:
+        if cached_doc is None:
+            path = self._module_cache_path(url)
+            if not os.path.isfile(path):
+                return False
+
+            try:
+                with open(path, encoding="utf-8", newline="") as file:
+                    cached_doc = file.read()
+            except Exception:
+                logger.exception("Failed to read cached module %s", url)
+                return False
+
+        try:
+            remote_doc = await self._storage.fetch(
+                url, auth=self.config["basic_auth"],
+                trusted_url=self.config["MODULES_REPO"],
+            )
+        except Exception:
+            logger.warning("Failed to check module update for %s", url, exc_info=True)
+            return False
+
+        cached_hash = hashlib.sha256(cached_doc.encode()).digest()
+        remote_hash = hashlib.sha256(remote_doc.encode()).digest()
+        if cached_hash == remote_hash:
+            return False
+
+        if self._is_core_module_update(url, remote_doc):
+            self._write_module_cache(url, remote_doc)
+            return True
+
+        if url in self.get("always_update_modules", []):
+            installed = await self.load_module(
+                remote_doc,
+                None,
+                name,
+                url,
+                _raise_install_errors=True,
+            )
+            if installed:
+                self._write_module_cache(url, remote_doc)
+                self.update_modules_in_db()
+
+            return bool(installed)
+
+        if offer_update and not any(
+            pending_url == url
+            for pending_url, _ in self._pending_module_updates.values()
+        ):
+            await self._offer_module_update(url, remote_doc)
+
+        return False
+
+    async def _load_cached_module(self, url: str, name: str | None = None) -> bool:
+        path = self._module_cache_path(url)
+        cached = os.path.isfile(path)
+        try:
+            if cached:
+                with open(path, encoding="utf-8", newline="") as file:
+                    doc = file.read()
+            else:
+                doc = await self._storage.fetch(
+                    url, auth=self.config["basic_auth"],
+                    trusted_url=self.config["MODULES_REPO"],
+                )
+
+            if self._is_core_module_update(url, doc):
+                if not cached:
+                    self._write_module_cache(url, doc)
+                return cached
+
+            installed = await self.load_module(
+                doc,
+                None,
+                name,
+                url,
+                _raise_install_errors=True,
+            )
+            if not installed:
+                raise ModuleInstallError(f"Cached module {url} was not installed")
+            if not cached:
+                self._write_module_cache(url, doc)
+        except Exception:
+            logger.exception("Failed to load cached module %s", url)
+            return False
+
+        return cached
+
+    async def _check_startup_updates(self, modules: dict):
+        semaphore = asyncio.Semaphore(4)
+
+        async def check(name, url):
+            async with semaphore:
+                try:
+                    await self._check_module_update(url, name=name)
+                except Exception:
+                    logger.exception("Failed to update module %s", name)
+
+        await asyncio.gather(*(check(name, url) for name, url in modules.items()))
+
+    @loader.loop(interval=60, wait_before=True, autostart=True)
+    async def _auto_update_modules(self):
+        if not self.fully_loaded or self._storage is None:
+            return
+
+        if self._startup_updates_task and not self._startup_updates_task.done():
+            return
+
+        loaded_modules = self.get("loaded_modules", {})
+        always_update_urls = set(self.get("always_update_modules", []))
+        for name, url in loaded_modules.items():
+            if url in always_update_urls:
+                await self._check_module_update(url, offer_update=False, name=name)
+
     async def _update_modules(self):
+        started = time.perf_counter()
         todo = await self._get_modules_to_load()
+        updates = {}
 
         self._secure_boot = False
 
@@ -1639,8 +2139,13 @@ class LoaderMod(loader.Module):
             self._db.set(loader.__name__, "secure_boot", False)
             self._secure_boot = True
         else:
-            for mod in todo.values():
-                await self.download_and_install(mod)
+            for name, url in todo.items():
+                module_started = time.perf_counter()
+                if await self._load_cached_module(url, name):
+                    updates[name] = url
+                elapsed = time.perf_counter() - module_started
+                if elapsed >= 1:
+                    logger.debug("Module %s initialization took %.2fs", name, elapsed)
 
             self.update_modules_in_db()
 
@@ -1653,6 +2158,16 @@ class LoaderMod(loader.Module):
             self.lookup("settings").set("aliases", aliases)
 
         self.fully_loaded = True
+        logger.debug(
+            "External module startup completed in %.2fs",
+            time.perf_counter() - started,
+        )
+
+        if not self._secure_boot:
+            self._startup_updates_task = self.create_task(
+                self._check_startup_updates(updates)
+            )
+            self.create_task(self._async_init())
 
         with contextlib.suppress(AttributeError):
             await self.lookup("Updater").full_restart_complete(self._secure_boot)

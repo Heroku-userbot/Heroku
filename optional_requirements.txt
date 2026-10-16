@@ -1,6 +1,5 @@
-requests
+cryptg
 moviepy
 python-ffmpeg
-ffmpeg
 bs4
 uvloop

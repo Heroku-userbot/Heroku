@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -29,7 +29,6 @@ import typing
 from dataclasses import dataclass, field
 from importlib.abc import SourceLoader
 
-import requests
 from herokutl.hints import EntityLike
 from herokutl.tl.functions.account import UpdateNotifySettingsRequest
 from herokutl.tl.types import (
@@ -42,6 +41,7 @@ from herokutl.tl.types import (
 )
 
 from . import version
+from ._internal import fetch_text, register_secret, tag_client_id
 from ._reference_finder import replace_all_refs
 from .inline.types import (
     BotInlineCall,
@@ -122,6 +122,14 @@ class Module:
     async def client_ready(self):
         """Called after client is ready (after config_loaded)"""
 
+    async def inline_ready(self):
+        """
+        Called after `client_ready`, when the inline bot is ready to use. Never called
+        if the inline bot failed to initialize. May be called again, if the bot is
+        registered anew (e.g. recreated), so it must be safe to call repeatedly.
+        Use it instead of `client_ready` for everything, that needs `self.inline.bot`
+        """
+
     def internal_init(self):
         """Called after the class is initialized in order to pass the client and db. Do not call it yourself"""
         self.allmodules: "Modules"
@@ -137,6 +145,17 @@ class Module:
         self.allclients = self.allmodules.allclients
         self.tg_id: int = self._client.tg_id
         self._tg_id: int = self._client.tg_id
+
+    def create_task(self, coroutine, *, name=None):
+        if getattr(self, "_unloading", False):
+            coroutine.close()
+            raise RuntimeError("Module is unloading")
+        if "_managed_tasks" not in self.__dict__:
+            self._managed_tasks = set()
+        task = asyncio.create_task(coroutine, name=name)
+        self._managed_tasks.add(task)
+        task.add_done_callback(self._managed_tasks.discard)
+        return task
 
     async def on_unload(self):
         """Called after unloading / reloading module"""
@@ -258,6 +277,7 @@ class Module:
     def heroku_watchers(self, _):
         pass
 
+    @tag_client_id("client.tg_id")
     async def animate(
         self,
         message: Message | InlineMessage,
@@ -278,9 +298,6 @@ class Module:
         button due to the limitations of Telegram API
         """
         from . import utils
-
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
 
         if interval < 0.1:
             logger.warning(
@@ -344,7 +361,7 @@ class Module:
                 "✖️ <b>Declined joining <a"
                 f' href="https://t.me/{channel.username}">{utils.escape_html(channel.title)}</a></b>'
             ),
-            photo="https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/declined_jr.png",
+            photo="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/declined_jr.jpg",
         )
 
     async def request_join(
@@ -408,7 +425,7 @@ class Module:
 
         await self.inline.bot.send_photo(
             self.tg_id,
-            "https://raw.githubusercontent.com/coddrago/assets/refs/heads/main/heroku/join_request.png",
+            "https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/join_request.jpg",
             caption=(
                 self._client.loader.lookup("translations")
                 .strings("requested_join")
@@ -486,9 +503,7 @@ class Module:
         if not utils.check_url(url):
             _raise(ValueError("Invalid url for library"))
 
-        code = await utils.run_sync(requests.get, url)
-        code.raise_for_status()
-        code = code.text
+        code = await utils.run_sync(fetch_text, url)
 
         if re.search(r"# ?scope: ?heroku_min", code):
             ver = tuple(
@@ -593,17 +608,6 @@ class Module:
                     )
                 )
             )
-
-        if (
-            all(
-                line.replace(" ", "") != "#scope:no_stats" for line in code.splitlines()
-            )
-            and self._db.get("heroku.main", "stats", True)
-            and url is not None
-            and utils.check_url(url)
-        ):
-            with contextlib.suppress(Exception):
-                await self.lookup("LoaderMod")._send_stats(url)
 
         lib_obj.source_url = url.strip("/")
         lib_obj.allmodules = self.allmodules
@@ -776,6 +780,19 @@ class SelfSuspend(Exception):
         return self._error
 
 
+class InlineDownError(AttributeError):
+    """
+    Is being raised on access to `self.inline.bot`, when the inline bot isn't running
+    Subclasses `AttributeError`, so `getattr(self.inline, "bot", None)` still works
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Inline bot isn't running: it failed to initialize or hasn't started"
+            " yet. Check the logs for the reason"
+        )
+
+
 class StopLoop(Exception):
     """Stops the loop, in which is raised"""
 
@@ -925,6 +942,9 @@ class ConfigValue:
         ignore_validation: bool = False,
     ):
         if key == "value":
+            if getattr(self.validator, "internal_id", None) == "Hidden":
+                register_secret(value)
+                register_secret(self.default)
             try:
                 value = ast.literal_eval(value)
             except Exception:
@@ -948,6 +968,10 @@ class ConfigValue:
                         value = self.validator.validate(value)
                     except validators.ValidationError as e:
                         if not ignore_validation:
+                            if getattr(self.validator, "internal_id", None) == "Hidden":
+                                raise validators.ValidationError(
+                                    "Invalid value for a hidden setting"
+                                ) from None
                             raise e
 
                         logger.debug(
@@ -981,6 +1005,8 @@ class ConfigValue:
 
             # This attribute will tell the `Loader` to save this value in db
             self._save_marker = True
+            if getattr(self.validator, "internal_id", None) == "Hidden":
+                register_secret(value)
 
         object.__setattr__(self, key, value)
 

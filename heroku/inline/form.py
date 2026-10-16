@@ -6,7 +6,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -28,6 +28,7 @@ from herokutl.errors.rpcerrorlist import ChatSendInlineForbiddenError
 from herokutl.tl.types import InputGeoPoint, Message
 
 from .. import main, utils
+from .._internal import tag_client_id
 from ..types import HerokuReplyMarkup
 from .types import InlineMessage, InlineUnit
 
@@ -57,6 +58,7 @@ class Placeholder:
 
 
 class Form(InlineUnit):
+    @tag_client_id("_client.tg_id")
     async def form(
         self: "InlineManager",
         text: str,
@@ -76,7 +78,9 @@ class Form(InlineUnit):
         video: str | None = None,
         location: str | None = None,
         audio: dict | str | None = None,
+        rich_message: typing.Any = None,
         silent: bool = False,
+        reply_to: Message | int | None = None,
     ) -> InlineMessage | bool:
         """
         Send inline form to chat
@@ -105,11 +109,10 @@ class Form(InlineUnit):
                          ⚠️ If you pass this parameter, you'll need to pass empty string to `text` ⚠️
         :param audio: Attach a audio to the form. Dict or URL must be supplied
         :param silent: Whether the form must be sent silently (w/o "Opening form..." message)
+        :param reply_to: Message or message ID to reply to. If passed, the form will be sent
+                         as a reply to this message
         :return: If form is sent, returns :obj:`InlineMessage`, otherwise returns `False`
         """
-        with contextlib.suppress(AttributeError):
-            _heroku_client_id_logging_tag = copy.copy(self._client.tg_id)  # noqa: F841
-
         if reply_markup is None:
             reply_markup = []
 
@@ -151,6 +154,13 @@ class Form(InlineUnit):
             logger.error(
                 "Invalid type for `message`. Expected `Message` or `int`, got `%s`",
                 type(message),
+            )
+            return False
+
+        if reply_to is not None and not isinstance(reply_to, (Message, int)):
+            logger.error(
+                "Invalid type for `reply_to`. Expected `Message` or `int`, got `%s`",
+                type(reply_to),
             )
             return False
 
@@ -315,7 +325,7 @@ class Form(InlineUnit):
             "caller": message,
             "chat": None,
             "message_id": None,
-            "top_msg_id": utils.get_topic(message),
+            "top_msg_id": utils.get_topic(message) if isinstance(message, Message) else None,
             "uid": unit_id,
             "on_unload": on_unload,
             "future": Event(),
@@ -324,7 +334,8 @@ class Form(InlineUnit):
             **({"gif": gif} if gif else {}),
             **({"location": location} if location else {}),
             **({"audio": audio} if audio else {}),
-            **({"location": location} if location else {}),
+            **({"rich_message": rich_message} if rich_message is not None else {}),
+            **({"file": file, "mime_type": mime_type} if file else {}),
             **({"perms_map": perms_map} if perms_map else {}),
             **({"message": message} if isinstance(message, Message) else {}),
             **({"force_me": force_me} if force_me else {}),
@@ -344,9 +355,11 @@ class Form(InlineUnit):
                 await self._client.send_message(message, msg)
 
         try:
-            m = await self._invoke_unit(unit_id, message)
+            m = await self._invoke_unit(unit_id, message, reply_to=reply_to)
         except ChatSendInlineForbiddenError:
             await answer(self.translator.getkey("inline.inline403"))
+            del self._units[unit_id]
+            return False
         except Exception as e:
             logger.exception("Can't send form")
 
@@ -455,7 +468,8 @@ class Form(InlineUnit):
                     return
 
         if (
-            inline_query.query not in self._units
+            inline_query.from_user.id != self._me
+            or inline_query.query not in self._units
             or self._units[inline_query.query]["type"] != "form"
         ):
             return
@@ -464,6 +478,21 @@ class Form(InlineUnit):
         form_text = "🪐" if form.get("premium_emoji_pre_edit") else form.get("text")
         try:
             match True:
+                case _ if "rich_message" in form:
+                    rich_value = form["rich_message"]
+                    if not isinstance(rich_value, str):
+                        raise TypeError("Inline bot Rich forms require HTML text")
+                    await inline_query.answer(
+                        [
+                            await inline_query.rich_article(
+                                title="Heroku",
+                                html=rich_value,
+                                buttons=self.generate_markup(form["uid"]),
+                                id=utils.rand(20),
+                            )
+                        ],
+                        cache_time=0,
+                    )
                 case _ if "photo" in form:
                     await inline_query.answer(
                         [

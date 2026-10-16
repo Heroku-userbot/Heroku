@@ -24,8 +24,6 @@ class MTProtoState(MTProtoStateOrig):
         if len(body) < 8:
             raise InvalidBufferError(body)
 
-        logging.debug("Got raw data: %s", body)
-
         reader = BinaryReader(body)
         remote_msg_id = reader.read_long()
 

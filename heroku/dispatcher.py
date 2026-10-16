@@ -8,14 +8,14 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import asyncio
 import collections
 import contextlib
-import copy
+import html
 import inspect
 import logging
 from collections.abc import Callable
@@ -28,11 +28,15 @@ from herokutl.errors import FloodWaitError, RPCError
 from herokutl.tl.types import Message
 
 from . import main, security, utils
+from ._event_filters import ALL_TAGS, find_failed_tag
+from ._internal import tag_client_id, redact
 from .database import Database
 from .loader import Modules
 from .tl_cache import CustomTelegramClient
 
 logger = logging.getLogger(__name__)
+
+MESSAGE_STATES_LIMIT = 1000
 
 # Keys for layout switch
 _LAYOUT_TRANSLATION = str.maketrans(
@@ -41,51 +45,6 @@ _LAYOUT_TRANSLATION = str.maketrans(
     "`qwertyuiop[]asdfghjkl;'zxcvbnm,./~@#$%^&QWERTYUIOP{}ASDFGHJKL:\"|ZXCVBNM<>?"
     + 'ёйцукенгшщзхъфывапролджэячсмитьбю.Ё"№;%:?ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭ/ЯЧСМИТЬБЮ,',
 )
-
-ALL_TAGS = [
-    "no_commands",
-    "only_commands",
-    "out",
-    "in",
-    "only_messages",
-    "editable",
-    "no_media",
-    "only_media",
-    "only_photos",
-    "only_videos",
-    "only_audios",
-    "only_docs",
-    "only_stickers",
-    "only_inline",
-    "only_channels",
-    "only_groups",
-    "only_pm",
-    "no_pm",
-    "no_channels",
-    "no_groups",
-    "no_inline",
-    "no_stickers",
-    "no_docs",
-    "no_audios",
-    "no_videos",
-    "no_photos",
-    "no_forwards",
-    "no_reply",
-    "no_mention",
-    "mention",
-    "only_reply",
-    "only_forwards",
-    "startswith",
-    "endswith",
-    "contains",
-    "regex",
-    "filter",
-    "from_id",
-    "chat_id",
-    "thumb_url",
-    "alias",
-    "aliases",
-]
 
 
 def _decrement_ratelimit(delay, data, key, severity):
@@ -106,6 +65,10 @@ class CommandDispatcher:
         self._client = client
         self.client = client
         self._db = db
+
+        self._message_states: collections.OrderedDict[tuple[int, int], int] = (
+            collections.OrderedDict()
+        )
 
         self._ratelimit_storage_user = collections.defaultdict(int)
         self._ratelimit_storage_chat = collections.defaultdict(int)
@@ -195,7 +158,10 @@ class CommandDispatcher:
 
         ungrep = False
 
-        if re.search(r"-v (.+)", grep):
+        if grep.startswith("-v "):
+            ungrep = grep[3:]
+            grep = False
+        elif re.search(r"-v (.+)", grep):
             ungrep = re.search(r"-v (.+)", grep).group(1)
             grep = re.sub(r"(.+) -v .+", r"\g<1>", grep)
 
@@ -206,24 +172,34 @@ class CommandDispatcher:
         old_reply = message.reply
         old_respond = message.respond
 
-        def process_text(text: str) -> str:
+        def process_text(text: str, *, rich: bool = False) -> str:
             nonlocal grep, ungrep
             res = []
+            if rich:
+                from .utils.grep import filter_rich_lines
 
-            for line in text.split("\n"):
+                res = filter_rich_lines(
+                    text,
+                    html.unescape(grep) if grep else "",
+                    html.unescape(ungrep) if ungrep else "",
+                )
+
+            for line in ([] if rich else text.split("\n")):
                 if (
                     grep
                     and grep in utils.remove_html(line)
                     and (not ungrep or ungrep not in utils.remove_html(line))
                 ):
                     res.append(
-                        utils.remove_html(line, escape=True).replace(
-                            grep, f"<u>{grep}</u>"
-                        )
+                        utils.remove_html(
+                            line, escape=True, keep_emojis=True
+                        ).replace(grep, f"<u>{grep}</u>")
                     )
 
                 if not grep and ungrep and ungrep not in utils.remove_html(line):
-                    res.append(utils.remove_html(line, escape=True))
+                    res.append(
+                        utils.remove_html(line, escape=True, keep_emojis=True)
+                    )
 
             cont = (
                 (f"contain <b>{grep}</b>" if grep else "")
@@ -254,33 +230,77 @@ class CommandDispatcher:
             kwargs.setdefault("reply_to", utils.get_topic(message))
             return await old_respond(text, *args, **kwargs)
 
+        def process_rich(text: str) -> str:
+            return "".join(
+                f"<p>{line}</p>" for line in process_text(text, rich=True).split("\n")
+            )
+
         message.edit = my_edit
         message.reply = my_reply
         message.respond = my_respond
+        message._heroku_grep_rich = process_rich
         message.heroku_grepped = True
 
         return message
+
+    def _keep_message_state(self) -> bool:
+        settings = self._modules.lookup("settings")
+        try:
+            return bool(settings.config["keep_message_state"]) if settings else True
+        except Exception:
+            return True
+
+    def _remember_state(self, message: Message) -> None:
+        if not self._keep_message_state():
+            self._message_states.clear()
+            return
+
+        key = (utils.get_chat_id(message), message.id)
+        self._message_states[key] = hash(message.message)
+        self._message_states.move_to_end(key)
+        while len(self._message_states) > MESSAGE_STATES_LIMIT:
+            self._message_states.popitem(last=False)
+
+    def _is_reaction_update(
+        self, event: events.NewMessage | events.MessageEdited
+    ) -> bool:
+        if not getattr(event, "reactions", False):
+            return False
+
+        if not self._keep_message_state():
+            return True
+
+        message = event.message
+        state = self._message_states.get((utils.get_chat_id(message), message.id))
+        if state is None:
+            return True
+
+        return state == hash(message.message)
 
     async def _handle_command(
         self,
         event: events.NewMessage | events.MessageDeleted,
         watcher: bool = False,
+        selected: Callable | None = None,
     ) -> bool | tuple[Message, str, str, callable]:
         if not hasattr(event, "message") or not hasattr(event.message, "message"):
             return False
 
         initiator = getattr(event, "sender_id", 0)
 
-        main_prefix = self._db.get(main.__name__, "command_prefix", ".")
-        if initiator == self._client.tg_id:
-            prefix = main_prefix
-        else:
-            prefix = self._db.get(main.__name__, "command_prefixes", {})
-            prefix = prefix.get(str(initiator), main_prefix)
+        prefixes = utils.user_prefixes(
+            self._db, main.__name__, initiator, self._client.tg_id
+        )
 
         message = utils.censor(event.message)
 
         if not event.message.message:
+            return False
+
+        prefix, _switch_layout = utils.match_prefix(
+            event.message.message, prefixes, _LAYOUT_TRANSLATION
+        )
+        if prefix is None:
             return False
 
         if (
@@ -302,32 +322,28 @@ class CommandDispatcher:
                         message.message[len(prefix) :],
                         parse_mode=lambda s: (
                             s,
-                            utils.relocate_entities(
-                                message.entities, -1, message.message
-                            )
+                            utils.relocate_entities(message.entities, -len(prefix))
                             or (),
                         ),
                     )
                 return False
 
-        match True:
-            case _ if (
-                event.message.message.startswith(
-                    str.translate(prefix, _LAYOUT_TRANSLATION)
-                )
-                and str.translate(prefix, _LAYOUT_TRANSLATION) != prefix
-            ):
-                message.message = str.translate(message.message, _LAYOUT_TRANSLATION)
-                message.text = str.translate(message.text, _LAYOUT_TRANSLATION)
-            case _ if not event.message.message.startswith(prefix):
-                return False
+        _msg = (
+            str.translate(message.message, _LAYOUT_TRANSLATION)
+            if _switch_layout
+            else message.message
+        )
+
+        reaction_update = selected is None and self._is_reaction_update(event)
+        if reaction_update and not watcher:
+            self._remember_state(event.message)
 
         if (
             event.sticker
             or event.dice
             or event.audio
             or event.via_bot_id
-            or (getattr(event, "reactions", False) and getattr(event, "edit_hide", False))
+            or reaction_update
         ):
             return False
 
@@ -340,10 +356,10 @@ class CommandDispatcher:
         ):
             return False
 
-        if not message.message or len(message.message.strip()) == len(prefix):
+        if not _msg or len(_msg.strip()) == len(prefix):
             return False  # Message is just the prefix
 
-        _cmd = message.message[len(prefix) :]
+        _cmd = _msg[len(prefix) :]
         command = _cmd.strip().split(maxsplit=1)[0]
         tag = command.split("@", maxsplit=1)
 
@@ -374,17 +390,10 @@ class CommandDispatcher:
         ):
             return False
 
-        txt, func = self._modules.dispatch(tag[0])
-
-        if (
-            not func
-            or not await self._handle_ratelimit(message, func)
-            or not await self.security.check(
-                message,
-                func,
-                usernames=self._cached_usernames,
-            )
-        ):
+        txt, handlers = self._modules.dispatch_candidates(tag[0])
+        if selected is not None:
+            handlers = [handler for handler in handlers if handler == selected]
+        if not handlers:
             return False
 
         if message.is_channel and message.edit_date and not message.is_group:
@@ -403,31 +412,109 @@ class CommandDispatcher:
             return False
 
         _cmd_offset = len(prefix) + len(_cmd) - len(_cmd.strip())
+        filter_event = type(event).__new__(type(event))
+        filter_event.__dict__.update(event.__dict__)
+        message = type(message).__new__(type(message))
+        message.__dict__.update(event.message.__dict__)
+        filter_event.__dict__["message"] = message
         if not watcher:
-            new_text = prefix + txt + message.message[_cmd_offset + len(command) :]
+            new_text = prefix + txt + _msg[_cmd_offset + len(command) :]
             if new_text != message.message:
-                _offset = len(new_text) - len(message.message)
-
-                if _offset:
-                    utils.relocate_entities(message.entities, _offset, new_text)
-
+                offset = len(new_text) - len(message.message)
+                if offset and message.entities:
+                    entities = []
+                    for entity in message.entities:
+                        cloned = type(entity).__new__(type(entity))
+                        cloned.__dict__.update(entity.__dict__)
+                        entities.append(cloned)
+                    message.entities = entities
+                    utils.relocate_entities(message.entities, offset)
                 message._text = None
                 message.message = new_text
 
+        available = []
+        for handler in handlers:
+            module_key = f"{chat_id}.{handler.__self__.__module__}"
+            if module_key in blacklist_chats or (
+                whitelist_modules and module_key not in whitelist_modules
+            ):
+                continue
+            if not await self.security.check(
+                message, handler, usernames=self._cached_usernames
+            ):
+                continue
+            if await self._handle_tags(filter_event, handler):
+                continue
+            available.append(handler)
+        if not available:
+            return False
+        if not watcher:
+            self._remember_state(event.message)
+        if len(available) > 1 and not watcher:
+            await self._choose_command(event, txt, available)
+            return False
+        func = available[-1]
+        if not await self._handle_ratelimit(message, func):
+            return False
+
         if (
-            f"{str(chat_id)}.{func.__self__.__module__}" in blacklist_chats
-            or whitelist_modules
-            and f"{chat_id}.{func.__self__.__module__}" not in whitelist_modules
+            self._db.get(main.__name__, "grep", False)
+            and not watcher
+            and getattr(func.__self__.__class__, "__name__", "") != "TerminalMod"
         ):
-            return False
-
-        if await self._handle_tags(event, func):
-            return False
-
-        if self._db.get(main.__name__, "grep", False) and not watcher:
             message = self._handle_grep(message)
 
         return message, prefix, txt, func
+
+    def _conflict_text(self, key):
+        return self._modules.translator.getkey(f"heroku.modules.command_conflicts.{key}")
+
+    async def _choose_command(self, event, text, handlers):
+        state = {"author": event.sender_id, "used": False}
+        buttons = []
+        for handler in handlers:
+            module = handler.__self__
+            name = module.strings["name"]
+            buttons.append([{
+                "text": name,
+                "emoji_id": "5872695159631647090",
+                "callback": self._run_chosen_command,
+                "args": (event, handler, state),
+            }])
+        try:
+            form = await self._modules.inline.form(
+                text=self._conflict_text("choose").format(utils.escape_html(text)),
+                message=utils.get_chat_id(event),
+                reply_to=event.message.id,
+                reply_markup=buttons,
+                force_me=True,
+                always_allow=[state["author"]],
+                ttl=120,
+            )
+        except Exception:
+            logger.exception("Unable to show command selection")
+            form = False
+        if not form:
+            await utils.answer(event.message, self._conflict_text("failed"))
+
+    async def _run_chosen_command(self, call, event, handler, state):
+        if call.from_user.id != state["author"]:
+            await call.answer(self._conflict_text("denied"), show_alert=True)
+            return
+        if state["used"]:
+            await call.answer(self._conflict_text("used"), show_alert=True)
+            return
+        state["used"] = True
+        result = await self._handle_command(event, selected=handler)
+        if not result:
+            await call.edit(self._conflict_text("unavailable"), reply_markup=[])
+            return
+        message, _, _, func = result
+        try:
+            await call.delete()
+        except Exception:
+            logger.exception("Unable to delete command selection")
+        asyncio.ensure_future(self.future_dispatcher(func, message, self.command_exc))
 
     async def handle_raw(self, event: events.Raw):
         """Handle raw events."""
@@ -511,7 +598,7 @@ class CommandDispatcher:
                 )
 
         with contextlib.suppress(Exception):
-            await (message.edit if message.out else message.reply)(txt)
+            await (message.edit if message.out else message.reply)(redact(txt))
 
     async def watcher_exc(self, *_):
         logger.exception("Error running watcher", extra={"stack": inspect.stack()})
@@ -536,93 +623,16 @@ class CommandDispatcher:
         """
         m = event if isinstance(event, Message) else getattr(event, "message", event)
 
-        reverse_mapping = {
-            "out": lambda: getattr(m, "out", True),
-            "in": lambda: not getattr(m, "out", True),
-            "only_messages": lambda: isinstance(m, Message),
-            "editable": (
-                lambda: not getattr(m, "out", False)
-                and not getattr(m, "fwd_from", False)
-                and not getattr(m, "sticker", False)
-                and not getattr(m, "via_bot_id", False)
-            ),
-            "no_media": lambda: (
-                not isinstance(m, Message) or not getattr(m, "media", False)
-            ),
-            "only_media": lambda: isinstance(m, Message) and getattr(m, "media", False),
-            "only_photos": lambda: utils.mime_type(m).startswith("image/"),
-            "only_videos": lambda: utils.mime_type(m).startswith("video/"),
-            "only_audios": lambda: utils.mime_type(m).startswith("audio/"),
-            "only_stickers": lambda: getattr(m, "sticker", False),
-            "only_docs": lambda: getattr(m, "document", False),
-            "only_inline": lambda: getattr(m, "via_bot_id", False),
-            "only_channels": lambda: (
-                getattr(m, "is_channel", False) and not getattr(m, "is_group", False)
-            ),
-            "no_channels": lambda: not getattr(m, "is_channel", False),
-            "no_groups": (
-                lambda: not getattr(m, "is_group", False)
-                or getattr(m, "is_private", False)
-                or getattr(m, "is_channel", False)
-            ),
-            "only_groups": (
-                lambda: getattr(m, "is_group", False)
-                or not getattr(m, "is_private", False)
-                and not getattr(m, "is_channel", False)
-            ),
-            "no_pm": lambda: not getattr(m, "is_private", False),
-            "only_pm": lambda: getattr(m, "is_private", False),
-            "no_inline": lambda: not getattr(m, "via_bot_id", False),
-            "no_stickers": lambda: not getattr(m, "sticker", False),
-            "no_docs": lambda: not getattr(m, "document", False),
-            "no_audios": lambda: not utils.mime_type(m).startswith("audio/"),
-            "no_videos": lambda: not utils.mime_type(m).startswith("video/"),
-            "no_photos": lambda: not utils.mime_type(m).startswith("image/"),
-            "no_forwards": lambda: not getattr(m, "fwd_from", False),
-            "no_reply": lambda: not getattr(m, "reply_to_msg_id", False),
-            "only_forwards": lambda: getattr(m, "fwd_from", False),
-            "only_reply": lambda: getattr(m, "reply_to_msg_id", False),
-            "mention": lambda: getattr(m, "mentioned", False),
-            "no_mention": lambda: not getattr(m, "mentioned", False),
-            "startswith": lambda: (
-                isinstance(m, Message) and m.raw_text.startswith(func.startswith)
-            ),
-            "endswith": lambda: (
-                isinstance(m, Message) and m.raw_text.endswith(func.endswith)
-            ),
-            "contains": lambda: isinstance(m, Message) and func.contains in m.raw_text,
-            "filter": lambda: callable(func.filter) and func.filter(m),
-            "from_id": lambda: getattr(m, "sender_id", None) == func.from_id,
-            "chat_id": lambda: utils.get_chat_id(m)
-            == (
-                func.chat_id
-                if not str(func.chat_id).startswith("-100")
-                else int(str(func.chat_id)[4:])
-            ),
-            "regex": lambda: (
-                isinstance(m, Message) and re.search(func.regex, m.raw_text)
-            ),
-        }
-
-        return (
-            "no_commands"
-            if getattr(func, "no_commands", False)
-            and await self._handle_command(event, watcher=True)
-            else (
-                "only_commands"
-                if getattr(func, "only_commands", False)
-                and not await self._handle_command(event, watcher=True)
-                else next(
-                    (
-                        tag
-                        for tag in ALL_TAGS
-                        if getattr(func, tag, False)
-                        and tag in reverse_mapping
-                        and not reverse_mapping[tag]()
-                    ),
-                    None,
-                )
-            )
+        if getattr(func, "no_commands", False) and await self._handle_command(
+            event, watcher=True
+        ):
+            return "no_commands"
+        if getattr(func, "only_commands", False) and not await self._handle_command(
+            event, watcher=True
+        ):
+            return "only_commands"
+        return find_failed_tag(
+            m, func, mime_type=utils.mime_type, get_chat_id=utils.get_chat_id
         )
 
     async def handle_incoming(
@@ -687,6 +697,7 @@ class CommandDispatcher:
                 )
             )
 
+    @tag_client_id("client.tg_id")
     async def future_dispatcher(
         self,
         func: Callable,
@@ -694,10 +705,17 @@ class CommandDispatcher:
         exception_handler: Callable,
         *args,
     ):
-        # Will be used to determine, which client caused logging messages
-        # parsed via inspect.stack()
-        _heroku_client_id_logging_tag = copy.copy(self.client.tg_id)  # noqa: F841
+        module = getattr(func, "__self__", None)
+        if module is not None:
+            if getattr(module, "_unloading", False):
+                return
+            if "_managed_tasks" not in module.__dict__:
+                module._managed_tasks = set()
+            module._managed_tasks.add(asyncio.current_task())
         try:
             await func(message)
         except Exception as e:
             await exception_handler(e, message, *args)
+        finally:
+            if module is not None:
+                module._managed_tasks.discard(asyncio.current_task())

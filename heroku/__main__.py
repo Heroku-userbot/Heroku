@@ -8,13 +8,14 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
 import getpass
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -98,23 +99,35 @@ def get_file_hash(filename):
 
 
 def deps():
-    subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--upgrade",
-            "-q",
-            "--disable-pip-version-check",
-            "--no-warn-script-location",
-            "-r",
-            "requirements.txt",
-        ],
-        check=True,
-        timeout=600,
-        capture_output=True,
-    )
+    try:
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--upgrade",
+                "-q",
+                "--disable-pip-version-check",
+                "--no-warn-script-location",
+                "-r",
+                "requirements.txt",
+            ],
+            check=True,
+            timeout=600,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except subprocess.CalledProcessError as e:
+        print(
+            f"\U0001f6ab pip failed with exit code {e.returncode}:\n"
+            f"{(e.stdout or '') + (e.stderr or '')}".rstrip()
+        )
+        raise
+    except subprocess.TimeoutExpired:
+        print("\U0001f6ab pip didn't finish in 600 seconds")
+        raise
     with open(".requirements_hash", "w") as f:
         f.write(get_file_hash("requirements.txt"))
 
@@ -156,7 +169,11 @@ else:
         try:
             import herokutl  # noqa: F811
 
-            if tuple(map(int, herokutl.__version__.split("."))) < (1, 7, 2):
+            ver_ = tuple(
+                int(match.group()) if (match := re.match(r"\d+", part)) else 0
+                for part in herokutl.__version__.split(".")
+            )
+            if ver_ < (1, 7, 2):
                 raise ImportError
         except ImportError:
             print("\U0001f504 Installing dependencies...")

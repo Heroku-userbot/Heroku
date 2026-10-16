@@ -8,7 +8,7 @@
 
 # ©️ Codrago, 2024-2030
 # This file is a part of Heroku Userbot
-# 🌐 https://github.com/ZetGoHack/Heroku
+# 🌐 https://github.com/Heroku-userbot/Heroku
 # You can redistribute it and/or modify it under the terms of the GNU AGPLv3
 # 🔑 https://www.gnu.org/licenses/agpl-3.0.html
 
@@ -25,7 +25,6 @@ import traceback
 import typing
 import os
 import functools
-from logging.handlers import RotatingFileHandler
 from collections.abc import Coroutine
 
 import herokutl
@@ -35,7 +34,11 @@ from herokutl.errors.rpcerrorlist import FloodWaitError
 
 from . import utils
 from ._internal import (
+    PrivateRotatingFileHandler,
+    RedactingFormatter,
+    redact,
     get_branch_name,
+    get_client_id,
     check_commit_ancestor,
     reset_to_master,
     restore_worktree,
@@ -49,6 +52,10 @@ INTERNET_ERRORS = (
     asyncio.exceptions.TimeoutError,
     ServerError,
     PersistentTimestampOutdatedError,
+)
+COMMON_ERRORS = (
+    "InputPeerEmpty() does not have any entity type",
+    "https://docs.telethon.dev/en/stable/concepts/entities.html",
 )
 old = linecache.getlines
 
@@ -119,8 +126,8 @@ class HerokuException:
         full_stack: str,
         sysinfo: None | (tuple[object, Exception, traceback.TracebackException]) = None,
     ):
-        self.message = message
-        self.full_stack = full_stack
+        self.message = redact(message)
+        self.full_stack = redact(full_stack)
         self.sysinfo = sysinfo
         self.debug_url = None
 
@@ -157,7 +164,7 @@ class HerokuException:
 
             return dictionary
 
-        full_traceback = traceback.format_exc().replace(
+        full_traceback = redact(traceback.format_exc()).replace(
             "Traceback (most recent call last):\n",
             "",
         )
@@ -219,13 +226,13 @@ class HerokuException:
                 lineno,
                 utils.escape_html(name),
                 utils.escape_html(
-                    "".join(
+                    redact("".join(
                         traceback.format_exception_only(exc_type, exc_value)
-                    ).strip()
+                    ).strip())
                 ),
                 (
                     "\n💭 <b>Message:</b>"
-                    f" <code>{utils.escape_html(str(comment))}</code>"
+                    f" <code>{utils.escape_html(redact(comment))}</code>"
                     if comment
                     else ""
                 ),
@@ -255,6 +262,7 @@ class TelegramLogsHandler(logging.Handler):
         self.force_send_all = False
         self.tg_level = 20
         self.ignore_common = False
+        self._client_options: dict[int, dict] = {}
         self.targets = targets
         self.capacity = capacity
         self.lvl = logging.NOTSET
@@ -277,6 +285,57 @@ class TelegramLogsHandler(logging.Handler):
     def setLevel(self, level: int):
         self.lvl = level
 
+    def set_client_options(
+        self,
+        client_id: int,
+        *,
+        force_send_all: bool | None = None,
+        tg_level: int | None = None,
+        ignore_common: bool | None = None,
+    ):
+        """Override logging options for a single client"""
+        options = self._client_options.setdefault(client_id, {})
+
+        for name, value in {
+            "force_send_all": force_send_all,
+            "tg_level": tg_level,
+            "ignore_common": ignore_common,
+        }.items():
+            if value is not None:
+                options[name] = value
+
+    def _option(self, client_id: int, name: str):
+        return self._client_options.get(client_id, {}).get(name, getattr(self, name))
+
+    def _min_tg_level(self) -> int:
+        return min(
+            (self._option(client_id, "tg_level") for client_id in self._mods),
+            default=self.tg_level,
+        )
+
+    def _common_ignored(self) -> bool:
+        if not self._mods:
+            return self.ignore_common
+
+        return all(
+            self._option(client_id, "ignore_common") for client_id in self._mods
+        )
+
+    def _receives(self, client_id: int, item: tuple) -> bool:
+        _, caller, levelno, common = item
+
+        if levelno < self._option(client_id, "tg_level"):
+            return False
+
+        if common and self._option(client_id, "ignore_common"):
+            return False
+
+        return (
+            caller is None and len(self._mods) == 1
+            or caller == client_id
+            or self._option(client_id, "force_send_all")
+        )
+
     def dump(self):
         """Return a list of logging entries"""
         return self.handledbuffer + self.buffer
@@ -285,13 +344,29 @@ class TelegramLogsHandler(logging.Handler):
         self,
         lvl: int = 0,
         client_id: int | None = None,
+        mods: list[str] | None = None,
     ) -> list[str]:
-        """Return all entries of minimum level as list of strings"""
+        """Return all entries of minimum level as list of strings,
+        optionally filtered to only those whose logger name belongs to
+        one of the given `mods` namespaces. `mods` must already be
+        resolved to real logger name prefixes (e.g. module's
+        `__module__`), not raw user input — this only does an exact
+        namespace match (equal or a sub-logger of it)."""
+        prefixes = [m for m in (mods or []) if m]
+
+        def _matches(name: str) -> bool:
+            return any(name == prefix or name.startswith(f"{prefix}.") for prefix in prefixes)
+
         return [
             self.targets[0].format(record)
             for record in (self.buffer + self.handledbuffer)
             if record.levelno >= lvl
-            and (not record.heroku_caller or client_id == record.heroku_caller)
+            and (
+                client_id is None
+                or client_id == record.heroku_caller
+                or record.heroku_caller is None and len(self._mods) <= 1
+            )
+            and (not prefixes or _matches(record.name or ""))
         ]
 
     async def _show_full_trace(
@@ -341,6 +416,14 @@ class TelegramLogsHandler(logging.Handler):
 
     async def sender(self):
         async with self._send_lock:
+            if not self.tg_buff:
+                return
+            destinations = [
+                client_id for client_id, mod in self._mods.items()
+                if await utils.is_private_asset_channel(
+                    mod.client, mod.logchat, allow_participants=True
+                )
+            ]
             self._queue = {
                 client_id: utils.chunks(
                     utils.escape_html(
@@ -349,28 +432,24 @@ class TelegramLogsHandler(logging.Handler):
                                 item[0]
                                 for item in self.tg_buff
                                 if isinstance(item[0], str)
-                                and (
-                                    not item[1]
-                                    or item[1] == client_id
-                                    or self.force_send_all
-                                )
+                                and self._receives(client_id, item)
                             ]
                         )
                     ),
                     4096,
                 )
-                for client_id in self._mods
+                for client_id in destinations
             }
 
             self._exc_queue = {}
-            for client_id in self._mods:
+            for client_id in destinations:
                 topic_id = await self.get_logs_topic_id_by_client(client_id)
 
                 funcs = []
                 for item in self.tg_buff:
                     if not isinstance(item[0], HerokuException):
                         continue
-                    if not (not item[1] or item[1] == client_id or self.force_send_all):
+                    if not self._receives(client_id, item):
                         continue
                     if isinstance(item[0].sysinfo[1], INTERNET_ERRORS) and getattr(
                         self._mods[client_id].lookup("tester"), "config", {}
@@ -391,7 +470,7 @@ class TelegramLogsHandler(logging.Handler):
                                             self._mods[client_id].inline.bot,
                                             item[0],
                                         ),
-                                        "disable_security": True,
+                                        "force_me": True,
                                     },
                                 ],
                             ),
@@ -410,7 +489,7 @@ class TelegramLogsHandler(logging.Handler):
 
             self.tg_buff = []
 
-            for client_id in self._mods:
+            for client_id in destinations:
                 if client_id not in self._queue:
                     continue
 
@@ -473,30 +552,31 @@ class TelegramLogsHandler(logging.Handler):
                     exc_info=True,
                 )
 
+    @staticmethod
+    def _legacy_caller() -> int | None:
+        frame = sys._getframe(1)
+
+        while frame:
+            tag = frame.f_locals.get("_heroku_client_id_logging_tag")
+            if isinstance(tag, int):
+                return tag
+
+            frame = frame.f_back
+
+        return None
+
     def emit(self, record: logging.LogRecord):
         try:
-            caller = next(
-                (
-                    frame_info.frame.f_locals["_heroku_client_id_logging_tag"]
-                    for frame_info in inspect.stack()
-                    if isinstance(
-                        getattr(getattr(frame_info, "frame", None), "f_locals", {}).get(
-                            "_heroku_client_id_logging_tag"
-                        ),
-                        int,
-                    )
-                ),
-                False,
-            )
+            caller = get_client_id()
 
-            if not isinstance(caller, int):
-                caller = None
+            if caller is None:
+                caller = self._legacy_caller()
         except Exception:
             caller = None
 
         record.heroku_caller = caller
 
-        if record.levelno >= self.tg_level:
+        if record.levelno >= self._min_tg_level():
             if record.exc_info:
                 try:
                     if record.args:
@@ -512,19 +592,17 @@ class TelegramLogsHandler(logging.Handler):
                     comment=comment,
                 )
 
-                if not self.ignore_common or all(
-                    field not in exc.message
-                    for field in [
-                        "InputPeerEmpty() does not have any entity type",
-                        "https://docs.telethon.dev/en/stable/concepts/entities.html",
-                    ]
-                ):
-                    self.tg_buff += [(exc, caller)]
+                common = any(field in exc.message for field in COMMON_ERRORS)
+
+                if not common or not self._common_ignored():
+                    self.tg_buff += [(exc, caller, record.levelno, common)]
             else:
                 self.tg_buff += [
                     (
                         _tg_formatter.format(record),
                         caller,
+                        record.levelno,
+                        False,
                     )
                 ]
 
@@ -580,18 +658,18 @@ async def check_branch(me_id: int, allowed_ids: list, self):
     restart()
 
 
-_main_formatter = logging.Formatter(
+_main_formatter = RedactingFormatter(
     fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     style="%",
 )
-_tg_formatter = logging.Formatter(
+_tg_formatter = RedactingFormatter(
     fmt="[%(levelname)s] %(name)s: %(message)s\n",
     datefmt=None,
     style="%",
 )
 
-rotating_handler = RotatingFileHandler(
+rotating_handler = PrivateRotatingFileHandler(
     filename="heroku.log",
     mode="a",
     maxBytes=10 * 1024 * 1024,
