@@ -84,7 +84,7 @@ class Help(loader.Module):
             ),
             loader.ConfigValue(
                 "rich_mode",
-                True,
+                False,
                 lambda: self.strings["_cfg_rich_mode"],
                 validator=loader.validators.Boolean(),
             ),
