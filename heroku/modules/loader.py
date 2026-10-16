@@ -113,7 +113,7 @@ class LoaderMod(loader.Module):
             ),
             loader.ConfigValue(
                 "rich_mode",
-                True,
+                False,
                 lambda: self.strings["rich_mode_doc"],
                 validator=loader.validators.Boolean(),
             ),
