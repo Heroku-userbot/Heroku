@@ -13,7 +13,7 @@
 import contextlib
 import getpass
 import herokutl
-from herokutl.tl.types import Message, User
+from herokutl.tl.types import Message, MessageActionTopicCreate, User
 
 from .. import loader, main, utils, version
 from ..inline.types import InlineCall
@@ -224,26 +224,46 @@ class CoreMod(loader.Module):
             self.strings["user_unblacklisted"].format(user),
         )
 
-    @loader.command()
-    async def setprefix(self, message: Message):
-        """<prefix ...> [@owner] or --user <ID> <prefix ...> — Set personal prefixes."""
-        args = utils.get_args(message)
-        if not isinstance(args, list):
-            return await utils.answer(message, self.strings["what_prefix"])
-        target = getattr(message, "sender_id", None) or self.tg_id
+    async def _prefix_target(self, message: Message, args: list):
         if "--user" in args:
             index = args.index("--user")
             if index + 1 >= len(args):
-                return await utils.answer(message, self.strings["what_prefix"])
+                return None
             target = args[index + 1]
-            del args[index:index + 2]
-        elif len(args) > 1 and (
-            (args[-1].startswith("@") and len(args[-1]) > 1)
-            or (args[-1].isdigit() and len(args[-1]) >= 5)
+            del args[index : index + 2]
+            return target
+
+        if (
+            (reply := await message.get_reply_message())
+            and reply.sender_id in self._client.dispatcher.security.all_users
+            and not isinstance(reply.action, MessageActionTopicCreate)
         ):
-            target = args.pop()
-        if not args:
+            return reply.sender_id
+
+        return getattr(message, "sender_id", None) or self.tg_id
+
+    @loader.command()
+    async def setprefix(self, message: Message):
+        args = utils.get_args(message)
+        if not isinstance(args, list):
             return await utils.answer(message, self.strings["what_prefix"])
+        explicit = args.pop() if len(args) == 2 and "--user" not in args else None
+        target = explicit or await self._prefix_target(message, args)
+        if target is None or len(args) != 1:
+            return await utils.answer(message, self.strings["what_prefix"])
+        await self._apply_prefixes(message, args, target)
+
+    @loader.command()
+    async def setprefixes(self, message: Message):
+        args = utils.get_args(message)
+        if not isinstance(args, list):
+            return await utils.answer(message, self.strings["what_prefixes"])
+        target = await self._prefix_target(message, args)
+        if target is None or not args:
+            return await utils.answer(message, self.strings["what_prefixes"])
+        await self._apply_prefixes(message, args, target)
+
+    async def _apply_prefixes(self, message: Message, args: list, target):
         if any(
             not p or p == "s" or any(c.isspace() for c in p)
             or (len(p) != 1 and not self.config.get("allow_nonstandart_prefixes"))
@@ -277,7 +297,13 @@ class CoreMod(loader.Module):
         await utils.answer(
             message,
             self.strings[
-                "prefix_set" if entity.id == self.tg_id else "entity_prefix_set"
+                ("prefixes_set" if len(oldprefixes) > 1 else "prefix_set")
+                if entity.id == self.tg_id
+                else (
+                    "entity_prefixes_set"
+                    if len(oldprefixes) > 1
+                    else "entity_prefix_set"
+                )
             ].format(
                 "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji>",
                 entity_name=utils.escape_html(entity.first_name),
