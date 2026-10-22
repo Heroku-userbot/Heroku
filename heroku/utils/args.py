@@ -9,8 +9,6 @@ import logging
 import shlex
 import typing
 
-import herokutl
-import herokutl.extensions
 import herokutl.extensions.html
 from herokutl.tl.custom.message import Message
 
@@ -102,7 +100,7 @@ def get_args_html(message: Message) -> str:
 
     raw_text, entities = parser.parse(message)
 
-    raw_text = parser._add_surrogate(raw_text)
+    raw_text = herokutl.helpers.add_surrogate(raw_text)
 
     try:
         command = raw_text[:raw_text.index(" ")]
