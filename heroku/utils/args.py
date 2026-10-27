@@ -12,6 +12,7 @@ import typing
 import herokutl
 import herokutl.extensions
 import herokutl.extensions.html
+from herokutl.helpers import add_surrogate, del_surrogate
 from herokutl.tl.custom.message import Message
 
 from .entity import escape_html, relocate_entities
@@ -102,7 +103,7 @@ def get_args_html(message: Message) -> str:
 
     raw_text, entities = parser.parse(message)
 
-    raw_text = parser._add_surrogate(raw_text)
+    raw_text = add_surrogate(raw_text)
 
     try:
         command = raw_text[:raw_text.index(" ")]
@@ -112,7 +113,7 @@ def get_args_html(message: Message) -> str:
     command_len = len(command) + 1
 
     return parser.unparse(
-        parser._del_surrogate(raw_text[command_len:]),
+        del_surrogate(raw_text[command_len:]),
         relocate_entities(entities, -command_len, raw_text[command_len:]),
     )
 
