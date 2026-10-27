@@ -110,7 +110,7 @@ def get_args_html(message: Message) -> str:
     command_len = len(command) + 1
 
     return parser.unparse(
-        parser._del_surrogate(raw_text[command_len:]),
+        herokutl.helpers.del_surrogate(raw_text[command_len:]),
         relocate_entities(entities, -command_len, raw_text[command_len:]),
     )
 
