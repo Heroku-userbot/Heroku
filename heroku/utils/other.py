@@ -81,7 +81,7 @@ async def invite_inline_bot(
     """
 
     try:
-        await client(InviteToChannelRequest(peer, [client.loader.inline.bot_username]))
+        await client(InviteToChannelRequest(peer, [client.loader.inline.bot_id]))
     except Exception as e:
         raise RuntimeError(
             f"Can't invite inline bot to old asset chat, which is required by module: {e}"
@@ -91,7 +91,7 @@ async def invite_inline_bot(
         await client(
             EditAdminRequest(
                 channel=peer,
-                user_id=client.loader.inline.bot_username,
+                user_id=client.loader.inline.bot_id,
                 admin_rights=ChatAdminRights(ban_users=True),
                 rank="Heroku",
             )

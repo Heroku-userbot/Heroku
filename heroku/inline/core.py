@@ -53,6 +53,7 @@ from herokutl.tl.types import (
     UpdateChatParticipant,
     UpdateMessagePoll,
     UpdateMessagePollVote,
+    User,
 )
 from herokutl.utils import get_display_name
 
@@ -177,7 +178,7 @@ class InlineManager(
         self._cleaner_task: asyncio.Future = None
         self._bot: TelethonBot = None
         self.bot_id: int = None
-        self.bot_username: str = None
+        self.bot_username: str | None = None
 
         self._bot_update_handlers: dict[str, tuple[str, typing.Callable]] = {}
         self._bot_handler_refs: dict[str, tuple[typing.Callable, object]] = {}
@@ -297,13 +298,13 @@ class InlineManager(
             await self._bot_client.start(bot_token=self._token)
             self._bot = TelethonBot(self._bot_client)
             self._register_builtin_handlers()
-            bot_me = await self._bot_client.get_me()
+            bot_me: User = await self._bot_client.get_me()
             telegram_id = bot_me.id
             self._bot_client._tg_id = telegram_id
             self._bot_client.tg_id = telegram_id
             self._bot_client.hikka_me = bot_me
             self._bot_client.heroku_me = bot_me
-            self.bot_username = bot_me.username
+            self.bot_username = next((username for username in (bot_me.username, *(bot_me.usernames or [])) if username), None)
             self.bot_id = bot_me.id
         except (
             AccessTokenExpiredError,
