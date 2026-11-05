@@ -1545,9 +1545,34 @@ class LoaderMod(loader.Module):
         await self._answer_loaded_message(call, msg(), rich=rich)
         await call.answer(self.strings["subscribed"])
 
+    async def _get_reply(self, message: Message) -> Message | None:
+        if peer := getattr(message.reply_to, "reply_to_peer_id", None):
+            try:
+                return await self._client.get_messages(peer, ids=message.reply_to.reply_to_msg_id)
+            except Exception:
+                logger.debug("Can't get message replied from another chat", exc_info=True)
+                return None
+
+        return await message.get_reply_message()
+
+    async def _module_name_from_file(self, message: Message) -> str | None:
+        msg = message if message.file else await self._get_reply(message)
+        if not msg or not msg.file or msg.file.size > 1024 * 1024:
+            return None
+
+        try:
+            doc = (await msg.download_media(bytes)).decode()
+        except (UnicodeDecodeError, AttributeError):
+            return None
+
+        return self._extract_module_name(doc)
+
     @loader.command(alias="ulm")
     async def unloadmod(self, message: Message):
-        if not (raw_args := utils.get_args_raw(message)):
+        if not (
+            raw_args := utils.get_args_raw(message)
+            or await self._module_name_from_file(message)
+        ):
             await utils.answer(message, self.strings["no_class"])
             return
 
