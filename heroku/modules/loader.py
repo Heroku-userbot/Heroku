@@ -658,7 +658,7 @@ class LoaderMod(loader.Module):
         if await self._check_pass(message):
             return
 
-        msg = message if message.file else (await message.get_reply_message())
+        msg = message if message.file else (await self._get_reply(message))
 
         if msg is None or msg.media is None:
             await utils.answer(message, self.strings["provide_module"])
