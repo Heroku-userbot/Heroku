@@ -132,10 +132,12 @@ def deps():
         f.write(get_file_hash("requirements.txt"))
 
 
+HELP_REQUESTED = bool({"-h", "--help"} & set(sys.argv))
+
 if (
     getpass.getuser() == "root"
     and "--root" not in " ".join(sys.argv)
-    and not {"-h", "--help"} & set(sys.argv)
+    and not HELP_REQUESTED
     and all(trigger not in os.environ for trigger in {"DOCKER", "NO_SUDO"})
 ):
     print("\U0001f6ab" * 15)
@@ -176,9 +178,10 @@ else:
             if ver_ < (1, 7, 2):
                 raise ImportError
         except ImportError:
-            print("\U0001f504 Installing dependencies...")
-            deps()
-            restart()
+            if not HELP_REQUESTED:
+                print("\U0001f504 Installing dependencies...")
+                deps()
+                restart()
 
     try:
         from . import log
@@ -186,6 +189,9 @@ else:
         log.init()
         from . import main
     except ImportError as e:
+        if HELP_REQUESTED:
+            raise
+
         print(
             f"{str(e)}\n\U0001f504 Attempting dependencies installation... Just wait ⏱"
         )
@@ -202,7 +208,7 @@ else:
         with open(".requirements_hash") as f:
             prev_hash = f.read().strip()
 
-    if prev_hash != get_file_hash("requirements.txt"):
+    if not HELP_REQUESTED and prev_hash != get_file_hash("requirements.txt"):
         print(
             "\U0001f504 Detected changes in requirements.txt, updating dependencies..."
         )
