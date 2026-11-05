@@ -620,6 +620,8 @@ loader:
   module_update_yes: "Да"
   module_update_no: "Нет"
   module_update_always: "Всегда обновлять"
+  module_update_ignore: "Игнорировать"
+  module_update_ignored: "<b>Обновления этого модуля будут игнорироваться. Удали ссылку из конфига, чтобы включить их снова.</b>"
   module_update_installed: "<b>Обновление модуля установлено.</b>"
   module_update_declined: "<b>Обновление модуля отклонено.</b>"
   module_update_expired: "<b>Предложение обновления модуля устарело.</b>"
@@ -704,6 +706,7 @@ loader:
   dlm_all_from_repo_error_nomods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>В этом репозитории не найдено ни одного модуля!</b>"
   dlm_all_from_repo_error_somemods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Не удалось установить некоторые модули:</b>\n"
   rich_mode_doc: "Режим Rich для сообщений в загрузчике"
+  ignored_update_modules_doc: "Ссылки модулей, обновления которых игнорируются"
   show_banner_doc: "Показать мета-баннера как превью ?"
 
   name: Loader

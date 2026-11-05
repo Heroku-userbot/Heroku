@@ -123,6 +123,12 @@ class LoaderMod(loader.Module):
                 lambda: self.strings["show_banner_doc"],
                 validator=loader.validators.Boolean(),
             ),
+            loader.ConfigValue(
+                "ignored_update_modules",
+                [],
+                lambda: self.strings["ignored_update_modules_doc"],
+                validator=loader.validators.Series(validator=loader.validators.Link()),
+            ),
         )
 
     async def _async_init(self):
@@ -1958,10 +1964,29 @@ class LoaderMod(loader.Module):
         self._pending_module_updates.pop(token, None)
         await call.edit(self.strings["module_update_declined"])
 
-    async def _offer_module_update(self, url: str, doc: str) -> None:
+    async def _ignore_module_update(self, call: InlineCall, token: str):
+        pending = self._pending_module_updates.pop(token, None)
+        if pending is None:
+            await call.edit(self.strings["module_update_expired"])
+            return
+
+        url, _ = pending
+        self.config["ignored_update_modules"] = [
+            *self.config["ignored_update_modules"],
+            url,
+        ]
+        await call.edit(self.strings["module_update_ignored"])
+
+    async def _offer_module_update(
+        self,
+        url: str,
+        doc: str,
+        old_doc: str | None = None,
+    ) -> None:
         name = self._extract_module_name(doc) or url.rsplit("/", 1)[-1].removesuffix(
             ".py"
         )
+        name_plain = name
         name = f'<a href="{utils.escape_html(url)}">{utils.escape_html(name)}</a>'
         token = uuid.uuid4().hex
         self._pending_module_updates[token] = (url, doc)
@@ -1974,6 +1999,16 @@ class LoaderMod(loader.Module):
             self._pending_module_updates.pop(token, None)
             logger.error("Inline bot is not ready; module update prompt was not sent")
             return
+
+        diff = (
+            "\n".join(
+                difflib.unified_diff(
+                    old_doc.splitlines(), doc.splitlines(), "old", "new", lineterm="", n=2
+                )
+            )
+            if old_doc is not None
+            else ""
+        )
 
         unit_id = utils.rand(16)
         buttons = [
@@ -2000,12 +2035,23 @@ class LoaderMod(loader.Module):
                     "args": (token, True),
                     "emoji_id": "5879883461711367869",
                     "style": "primary",
-                }
+                },
+                {
+                    "text": self.strings["module_update_ignore"],
+                    "callback": self._ignore_module_update,
+                    "args": (token,),
+                    "emoji_id": "5872829476143894491",
+                    "style": "primary",
+                },
             ],
         ]
+        text = self.strings["module_update_prompt"].format(name)
+        if diff and len(diff) < 500:
+            text += f"\n<blockquote expandable>{utils.escape_html(diff)}</blockquote>"
+
         self.inline._units[unit_id] = {
             "type": "form",
-            "text": self.strings["module_update_prompt"].format(name),
+            "text": text,
             "buttons": buttons,
             "caller": None,
             "chat": int(self.tg_id),
@@ -2016,12 +2062,24 @@ class LoaderMod(loader.Module):
 
         try:
             markup = self.inline.generate_markup(unit_id)
-            sent = await self.inline.bot.send_message(
-                int(self.tg_id),
-                self.inline._units[unit_id]["text"],
-                reply_markup=markup,
-                disable_notification=True,
-            )
+            if len(diff) >= 500:
+                file = io.BytesIO(diff.encode())
+                file.name = f"{name_plain}.diff"
+                sent = await self.inline.bot.send_document(
+                    int(self.tg_id),
+                    file,
+                    caption=self.inline._units[unit_id]["text"],
+                    reply_markup=markup,
+                    disable_notification=True,
+                )
+            else:
+                sent = await self.inline.bot.send_message(
+                    int(self.tg_id),
+                    self.inline._units[unit_id]["text"],
+                    reply_markup=markup,
+                    disable_notification=True,
+                )
+
             self.inline._units[unit_id]["message_id"] = sent.id
         except Exception:
             self._pending_module_updates.pop(token, None)
@@ -2070,6 +2128,9 @@ class LoaderMod(loader.Module):
             self._write_module_cache(url, remote_doc)
             return True
 
+        if url in self.config["ignored_update_modules"]:
+            return False
+
         if url in self.get("always_update_modules", []):
             installed = await self.load_module(
                 remote_doc,
@@ -2088,7 +2149,7 @@ class LoaderMod(loader.Module):
             pending_url == url
             for pending_url, _ in self._pending_module_updates.values()
         ):
-            await self._offer_module_update(url, remote_doc)
+            await self._offer_module_update(url, remote_doc, cached_doc)
 
         return False
 

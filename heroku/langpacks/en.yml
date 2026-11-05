@@ -622,6 +622,8 @@ loader:
   module_update_yes: "Yes"
   module_update_no: "No"
   module_update_always: "Always update"
+  module_update_ignore: "Ignore"
+  module_update_ignored: "<b>Updates of this module will be ignored. Remove its link from the config to enable them again.</b>"
   module_update_installed: "<b>Module update installed.</b>"
   module_update_declined: "<b>Module update declined.</b>"
   module_update_expired: "<b>The module update offer has expired.</b>"
@@ -706,6 +708,7 @@ loader:
   dlm_all_from_repo_error_nomods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>No modules found in this repository!</b>"
   dlm_all_from_repo_error_somemods: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Some modules failed to install:</b>\n"
   rich_mode_doc: "Rich Mode for messages in loader"
+  ignored_update_modules_doc: "Links of modules whose updates are ignored"
   show_banner_doc: "Show # meta banner like preview?"
 
   '404': <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Module not found</b>
