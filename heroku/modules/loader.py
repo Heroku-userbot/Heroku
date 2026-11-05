@@ -1601,7 +1601,9 @@ class LoaderMod(loader.Module):
         modules = [m.strip() for m in raw_list if m.strip()]
 
         if len(modules) == 1:
-            if not self.lookup(modules[0]):
+            if not self.lookup(modules[0]) and not self._find_failed_module(
+                modules[0]
+            )[0]:
                 suggestions = self._get_unload_suggestions(modules[0])
                 if suggestions:
                     await self.inline.form(
@@ -1708,25 +1710,32 @@ class LoaderMod(loader.Module):
     ):
         await call.edit(await self.unload_module(module, force=force))
 
-    def _remove_failed_module(self, module: str) -> list[str]:
+    def _find_failed_module(self, module: str) -> tuple[set[str], list[str]]:
         def norm(name: str) -> str:
             return name.casefold().removesuffix("mod")
 
         query = norm(module)
-        removed = set()
+        names = set()
+        paths = []
         suffix = f"_{self.tg_id}.py"
-        for entry in (os.scandir(loader.LOADED_MODULES_DIR) if os.path.isdir(loader.LOADED_MODULES_DIR) else ()):
-            name = entry.name.removesuffix(suffix)
-            if name != entry.name and norm(name) == query:
-                os.remove(entry.path)
-                removed.add(name)
+        if os.path.isdir(loader.LOADED_MODULES_DIR):
+            for entry in os.scandir(loader.LOADED_MODULES_DIR):
+                name = entry.name.removesuffix(suffix)
+                if name != entry.name and norm(name) == query:
+                    names.add(name)
+                    paths.append(entry.path)
 
-        removed.update(
-            name
-            for name in self.get("loaded_modules", {})
-            if norm(name) == query
+        names.update(
+            name for name in self.get("loaded_modules", {}) if norm(name) == query
         )
-        return sorted(removed)
+        return names, paths
+
+    def _remove_failed_module(self, module: str) -> list[str]:
+        names, paths = self._find_failed_module(module)
+        for path in paths:
+            os.remove(path)
+
+        return sorted(names)
 
     async def unload_module(self, module: str, force: bool = False) -> str:
         instance = self.lookup(module)
