@@ -1708,6 +1708,26 @@ class LoaderMod(loader.Module):
     ):
         await call.edit(await self.unload_module(module, force=force))
 
+    def _remove_failed_module(self, module: str) -> list[str]:
+        def norm(name: str) -> str:
+            return name.casefold().removesuffix("mod")
+
+        query = norm(module)
+        removed = set()
+        suffix = f"_{self.tg_id}.py"
+        for entry in (os.scandir(loader.LOADED_MODULES_DIR) if os.path.isdir(loader.LOADED_MODULES_DIR) else ()):
+            name = entry.name.removesuffix(suffix)
+            if name != entry.name and norm(name) == query:
+                os.remove(entry.path)
+                removed.add(name)
+
+        removed.update(
+            name
+            for name in self.get("loaded_modules", {})
+            if norm(name) == query
+        )
+        return sorted(removed)
+
     async def unload_module(self, module: str, force: bool = False) -> str:
         instance = self.lookup(module)
 
@@ -1721,6 +1741,9 @@ class LoaderMod(loader.Module):
             worked = await self.allmodules.unload_module(module)
         except CoreUnloadError:
             return self.strings["unload_core"].format(module)
+
+        if not worked:
+            worked = self._remove_failed_module(module)
 
         if not self.allmodules.secure_boot:
             self.set(
