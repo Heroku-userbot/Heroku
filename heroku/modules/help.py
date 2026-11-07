@@ -146,27 +146,37 @@ class Help(loader.Module):
             )[1]:
                 module = method.__self__
             else:
-                module = self.lookup(
-                    next(
+                best, ratio = max(
+                    (
                         (
-                            reversed(
-                                sorted(
-                                    [
-                                        module.strings["name"]
-                                        for module in self.allmodules.modules
-                                    ],
-                                    key=lambda x: difflib.SequenceMatcher(
-                                        None,
-                                        args.lower(),
-                                        x,
-                                    ).ratio(),
-                                )
-                            )
-                        ),
-                        None,
-                    )
+                            module.strings["name"],
+                            difflib.SequenceMatcher(
+                                None,
+                                args.lower(),
+                                module.strings["name"].lower(),
+                            ).ratio(),
+                        )
+                        for module in self.allmodules.modules
+                    ),
+                    key=lambda x: x[1],
+                    default=(None, 0),
                 )
 
+                if ratio < 0.6:
+                    await utils.answer(
+                        message,
+                        self.strings["not_found"].format(utils.escape_html(args))
+                        + (
+                            self.strings["did_you_mean"].format(
+                                utils.escape_html(best)
+                            )
+                            if best and ratio >= 0.4
+                            else ""
+                        ),
+                    )
+                    return
+
+                module = self.lookup(best)
                 exact = False
 
         try:
@@ -338,22 +348,14 @@ class Help(loader.Module):
         if not self.config["banner_url"]:
             banner = None
 
-        force = False
-        if "-f" in args:
-            args = args.replace(" -f", "").replace("-f", "")
+        tokens = args.split()
+        force = "-f" in tokens
+        only_core = "-c" in tokens
+        only_loaded = "-l" in tokens
+        if only_core or only_loaded:
             force = True
 
-        only_core = False
-        if "-c" in args:
-            args = args.replace(" -c", "").replace("-c", "")
-            only_core = True
-            force = True
-
-        only_loaded = False
-        if "-l" in args:
-            args = args.replace(" -l", "").replace("-l", "")
-            only_loaded = True
-            force = True
+        args = " ".join(t for t in tokens if t not in {"-f", "-c", "-l"})
 
         if args:
             await self.modhelp(message, args)

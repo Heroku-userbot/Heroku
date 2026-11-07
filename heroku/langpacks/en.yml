@@ -571,12 +571,14 @@ help:
   hidden_shown: "<b>{} modules hidden, {} modules shown:</b>\n{}\n{}"
   offchats: "<tg-emoji emoji-id=6019130940012370273>❔</tg-emoji> <a href=\"https://t.me/heroku_talks\"><b>Support chat</b></a>\n\n<tg-emoji emoji-id=6019151079114021083>💬</tg-emoji> <a href=\"https://t.me/heroku_offtop\"><b>Offtop chat</b></a>\n\n<tg-emoji emoji-id=6019094432790354513>📢</tg-emoji> <a href=\"https://t.me/heroku_ub\"><b>Official channel</b></a>"
   partial_load: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>Userbot is not fully loaded, so not all modules are shown</b>"
-  not_exact: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>No exact match occured, so the closest result is shown instead</b>"
+  not_exact: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>No exact match occurred, so the closest module is shown instead. Check the name; use help without arguments to list all modules</b>"
+  not_found: "<tg-emoji emoji-id=5404553572727660202>❌</tg-emoji> <b>Module or command</b> <code>{}</code> <b>not found. Use help without arguments to list all modules</b>"
+  did_you_mean: "\n<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>Did you mean</b> <code>{}</code><b>?</b>"
   request_join: "You requested link for Heroku support chat"
   core_notice: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>This is a core module. You can't unload it nor replace</b>"
 
   _cls_doc: Shows help for modules and commands
-  _cmd_doc_help: '[module] - Show help for modules and commands'
+  _cmd_doc_help: '[module | command] [-f] [-c] [-l] - Show help. Without arguments, lists modules. -f shows everything, including hidden modules and modules without commands; -c shows only core modules; -l shows only installed modules (with -c and -l hidden modules are shown too). Write flags as separate words'
   _cmd_doc_helphide: <module ...> - Hide or show modules in help
   _cmd_doc_support: Show support chat link
   show_preview_in_help: 'Show # meta banner in help preview [module]'
@@ -604,7 +606,7 @@ heroku_info:
   _cfg_rich_mode: "Show info as a Rich message."
   desc: "<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <b>Userbot — what is it?</b>\n\n<tg-emoji emoji-id=5472238129849048175>😎</tg-emoji> A userbot refers to a <b>third-party program</b> that interacts with the Telegram API to perform <b>automated tasks on behalf of a user</b>. These userbots can be used to automate various tasks such as <b>sending messages, joining channels, downloading media, and much more</b>.\n\n<tg-emoji emoji-id=5474667187258006816>😎</tg-emoji> Userbots are different from regular Telegram bots as <b>they run on the user's account</b> rather than a bot account. This means that userbots can access more features and have greater flexibility in terms of the actions they can perform.\n\n<tg-emoji emoji-id=5472267631979405211>🚫</tg-emoji> However, it is important to note that <b>userbots are not officially supported by Telegram</b> and their use may violate the platform's terms of service. As such, <b>users should exercise caution when using userbots</b> and ensure that they are not being used for malicious purposes.\n\n"
   no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> Where is the link or reply to the font?"
-  no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>Nothing was found at the specified link </b><code>{link></code><b>.\n\nCheck the integrity of your file at the link, and also make sure that the link points directly to the file.</b>"
+  no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>Nothing was found at the specified link </b><code>{link}</code><b>.\n\nCheck the integrity of your file at the link, and also make sure that the link points directly to the file.</b>"
   font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Font installed successfully!</b>\n<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <i>You can now enjoy using it.</i>"
   incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>Invalid font format!</b>\n<blockquote>Supported formats -> otf, ttf</blockquote>"
   incorrect_img_format: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>Invalid image format</b>\n<blockquote>Supported formats -> jpg, jpeg, png, bmp, webp</blockquote>"
