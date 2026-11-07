@@ -617,7 +617,7 @@ translations:
   meme_langs: "🏴‍☠️ Community Locales"
   not_official: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Unofficial Locale</b>"
   requested_join: "💫 <b>Module</b> <code>{}</code> <b>requests join <a href='https://t.me/{}'>{}</a></b>\n\n<b>❓ Reason:</b> <i>{}</i>"
-  fw_error: "<tg-emoji emoji-id=5877458226823302157>🕒</tg-emoji> <b>FloodWait: {}s on</b> <code>{}</code>"
+  fw_error: "<tg-emoji emoji-id=5877458226823302157>🕒</tg-emoji> <b>FloodWait {1} on</b> <code>{0}</code>"
   rpc_error: "<tg-emoji emoji-id=5877477244938489129>🚫</tg-emoji> <b>RPCError:</b> <code>{}</code> <b>in</b> <code>{}</code>"
   _cmd_doc_dllangpack: "[link to pack] - add external translation pack (btw I use Arch)"
   _cmd_doc_setlang: "[language] - change default language"
