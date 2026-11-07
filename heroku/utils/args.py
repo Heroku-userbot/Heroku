@@ -54,7 +54,7 @@ def get_args(message: Message | str) -> list[str]:
     :return: List of arguments
     """
     if not (message := getattr(message, "message", message)):
-        return False
+        return []
 
     if len(message := message.split(maxsplit=1)) <= 1:
         return []
@@ -64,7 +64,7 @@ def get_args(message: Message | str) -> list[str]:
     try:
         split = shlex.split(message)
     except ValueError:
-        return message  # Cannot split, let's assume that it's just one long message
+        split = message.split()  # Unbalanced quotes, fall back to plain split
 
     return list(filter(lambda x: len(x) > 0, split))
 

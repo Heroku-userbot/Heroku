@@ -816,7 +816,7 @@ translate:
   language: "ru"
   translated_text: "<tg-emoji emoji-id=5787344001862471785>🔁</tg-emoji> Переведённый текст:\n<blockquote>{tr_text} </blockquote>"
   _cls_doc: "Переводит текст (очевидно)"
-  _cmd_doc_tr: "[язык] [текст] - Перевести текст"
+  _cmd_doc_tr: "[код языка, напр. en/ru] [текст|реплай] - Перевести"
 
   name: Translator
   _cfg_only_text: "Только переведённый текст в .tr"

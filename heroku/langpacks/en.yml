@@ -816,7 +816,7 @@ translate:
   error: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Unable to translate text</b>"
   language: "en"
   translated_text: "<tg-emoji emoji-id=5787344001862471785>🔁</tg-emoji> Translated text:\n<blockquote>{tr_text}</blockquote>"
-  _cmd_doc_tr: "[language] [text] - Translate text"
+  _cmd_doc_tr: "[lang code, e.g. en/ru] [text|reply] - Translate"
   _cls_doc: "Translates text (obviously)"
   _cfg_only_text: "only translated text in .tr"
 
