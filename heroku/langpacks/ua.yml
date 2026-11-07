@@ -604,7 +604,6 @@ loader:
   add_repo_config_doc: "Додаткові репозиторії"
   avail_header: "<tg-emoji emoji-id=5440551785284510215>🎢</tg-emoji> <b>Офіційні модулі з репозиторію</b>"
   no_module: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Модуль недоступний у репозиторії.</b>"
-  no_file: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Файл не знайдено</b>"
   provide_module: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Вкажи модуль для завантаження</b>"
   bad_unicode: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Неправильне кодування модуля</b>"
   load_failed: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Завантаження не увінчалося успіхом. Дивись логи.</b>"
@@ -627,12 +626,6 @@ loader:
   developer: "\n\n<tg-emoji emoji-id=5287454910059654880>🫶</tg-emoji> <b>Розробник:</b> {}"
   depends_from: "\n\n<tg-emoji emoji-id=5341492148468465410>📦</tg-emoji> <b>Залежності:</b> \n{}"
   by: "від"
-  module_fs: "💿 <b>Ти хочеш зберегти модуль на жорсткий диск, щоб він не вивантажувався під час перезавантаження?</b>"
-  save: "💿 Зберегти"
-  no_save: "🚫 Не зберігати"
-  save_for_all: "💽 Завжди зберігати"
-  never_save: "🚫 Ніколи не зберігати"
-  will_save_fs: "💽 Тепер усі модулі, завантажені з файлу, зберігатимуться на жорсткий диск"
   inline_init_failed: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>Цьому модулю потрібен HerokuInline, а ініціалізація менеджера інлайну невдала</b>\n<i>Спробуй видалити одного зі старих ботів в @BotFather і перезавантажити юзербота</i>"
   _cmd_doc_dlmod: "Завантажує і встановлює модуль з репозиторію"
   _cmd_doc_loadmod: "Завантажує і встановлює модуль із файлу"
@@ -642,12 +635,10 @@ loader:
   share_link_doc: "Вказувати посилання на модуль після завантаження через .dlm"
   modlink: "\n\n<tg-emoji emoji-id=6037284117505116849>🌐</tg-emoji> <b>Посилання:</b> <code>{}</code>"
   blob_link: "\n\n<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Не використовуй `blob` посилання для завантаження модулів. Краще завантажувати з `raw`</b>"
-  raw_link: "\n<tg-emoji emoji-id=6037284117505116849>🌐</tg-emoji> <b>Посилання:</b> <code>{}</code>"
   suggest_subscribe: "\n\n<tg-emoji emoji-id=5435957248314579621>⭐️</tg-emoji> <b>Цей модуль зроблений {}. Підписатися на нього, щоб підтримати розробника?</b>"
   subscribe: "💬 Підписатися"
   no_subscribe: "🚫 Не підписуватись"
   subscribed: "💬 Підписався!"
-  unsubscribed: "🚫 Я більше не буду пропонувати підписатися на цей канал"
   confirm_clearmodules: "⚠️ <b>Ви впевнені, що хочете вивантажити всі модулі?</b>"
   clearmodules: "🗑 Вивантажити модулі"
   cancel: "🚫 Скасування"
@@ -678,7 +669,6 @@ loader:
   '404': <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Модуль не знайдено</b>
   _cmd_doc_dlmall: Встановити всі модулі з вибраного репозиторію
   _cmd_doc_ml: <module> - Надіслати модуль файлом
-  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Результат пошуку за</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> від <b>{dev}</b>\n<tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Команди:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
   args: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Недостатньо аргументів</b>
   not_subscribed: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Спочатку потрібно підписатися на канал модуля</b>
   verify_required: "<tg-emoji emoji-id=5188463524568926712>⚠️</tg-emoji> <b>Щоб розблокувати можливість встановлення сторонніх модулів, пройдіть тест у <a href=\"https://t.me/{}?start=lm_verify\">своєму боті</a></b>"

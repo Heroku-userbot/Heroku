@@ -603,7 +603,6 @@ loader:
   add_repo_config_doc: "Доп. репозитории"
   avail_header: "<tg-emoji emoji-id=5440551785284510215>🎢</tg-emoji> <b>Офф. модули</b>"
   no_module: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Нет такого в репо.</b>"
-  no_file: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Файл потерялся</b>"
   provide_module: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Че качать то?</b>"
   bad_unicode: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Кодировка кривая</b>"
   load_failed: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Не загрузилось (F). Чекни логи.</b>"
@@ -626,12 +625,6 @@ loader:
   developer: "\n\n<tg-emoji emoji-id=5287454910059654880>🫶</tg-emoji> <b>Кодер:</b> {}"
   depends_from: "\n\n<tg-emoji emoji-id=5341492148468465410>📦</tg-emoji> <b>Надо еще:</b> \n{}"
   by: "от"
-  module_fs: "💿 <b>Сейвим модуль на диск, чтоб не слетал?</b>"
-  save: "💿 Сейви"
-  no_save: "🚫 Не надо"
-  save_for_all: "💽 Всегда сейви"
-  never_save: "🚫 Никогда не сейви"
-  will_save_fs: "💽 Терь все .loadmod сейвятся"
   inline_init_failed: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>Надо HerokuInline, а он сломался</b>\n<i>Снеси старых ботов в @BotFather и ребутнись</i>"
   _cmd_doc_dlmod: "Качает из репо"
   _cmd_doc_loadmod: "Качает из файла"
@@ -641,12 +634,10 @@ loader:
   share_link_doc: "Давать ссылку после .dlmod"
   modlink: "\n\n<tg-emoji emoji-id=6037284117505116849>🌐</tg-emoji> <b>Ссылка:</b> <code>{}</code>"
   blob_link: "\n\n<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Не юзай `blob`, юзай `raw`</b>"
-  raw_link: "\n<tg-emoji emoji-id=6037284117505116849>🌐</tg-emoji> <b>Ссылка:</b> <code>{}</code>"
   suggest_subscribe: "\n\n<tg-emoji emoji-id=5435957248314579621>⭐️</tg-emoji> <b>Модуль от {}. Подпишись на него, не будь крысой?</b>"
   subscribe: "💬 Подписка"
   no_subscribe: "🚫 Не хочу"
   subscribed: "💬 Красава!"
-  unsubscribed: "🚫 Ок, не буду предлагать"
   confirm_clearmodules: "⚠️ <b>Точно сносим ВСЕ модули?</b>"
   clearmodules: "🗑 Снести всё"
   cancel: "🚫 Отмена"
@@ -677,7 +668,6 @@ loader:
   '404': <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Модуль не найден, лол</b>
   _cmd_doc_dlmall: Поставить все модули из выбранного репо
   _cmd_doc_ml: <module> - Скинуть модуль файлом
-  result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Нашёл по</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> от <b>{dev}</b>\n<tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Команды:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
   not_subscribed: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Сначала подпишись на канал модуля</b>
   verify_required: '<tg-emoji emoji-id=5188463524568926712>⚠️</tg-emoji> <b>Чтобы разлочить установку сторонних модулей, пройди тест в <a href="https://t.me/{}?start=lm_verify">своём боте</a>, го</b>'
 translations:
