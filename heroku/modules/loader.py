@@ -627,6 +627,20 @@ class LoaderMod(loader.Module):
                     await utils.answer(message, self.strings["no_module"])
 
                 return MODULE_LOADING_FAILED
+            except Exception:
+                logger.exception(
+                    "Failed to download module %s from %s", module_name, url
+                )
+                if message is not None:
+                    await utils.answer(
+                        message,
+                        self.strings["download_failed"].format(
+                            utils.escape_html(module_name),
+                            prefix=utils.escape_html(self.get_prefix()),
+                        ),
+                    )
+
+                return MODULE_LOADING_FAILED
 
             installed = await self.load_module(
                 r,
@@ -667,7 +681,12 @@ class LoaderMod(loader.Module):
         msg = message if message.file else (await self._get_reply(message))
 
         if msg is None or msg.media is None:
-            await utils.answer(message, self.strings["provide_module"])
+            await utils.answer(
+                message,
+                self.strings["provide_module"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
         await utils.answer(message, self.strings["loading_module_via_file"])
@@ -1684,6 +1703,8 @@ class LoaderMod(loader.Module):
                 for name in names
                 if name
             )
+            if score < 0.6:
+                continue
             label = public_name
             scored.append((score, classname.lower(), classname, label))
 
@@ -1772,7 +1793,10 @@ class LoaderMod(loader.Module):
                 ),
             )
             if worked
-            else self.strings["not_unloaded"]
+            else self.strings["not_unloaded"].format(
+                utils.escape_html(module),
+                prefix=utils.escape_html(self.get_prefix()),
+            )
         )
         for mod_name in worked:
             utils.unregister_placeholders(mod_name)
@@ -1831,7 +1855,12 @@ class LoaderMod(loader.Module):
         if not (args := utils.get_args_raw(message)) or (
             not utils.check_url(args) and not utils.check_url(f"https://{args}")
         ):
-            await utils.answer(message, self.strings["no_repo"])
+            await utils.answer(
+                message,
+                self.strings["no_repo"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
         if args.endswith("/"):
@@ -1850,7 +1879,9 @@ class LoaderMod(loader.Module):
             if not content.strip():
                 raise ValueError
         except Exception:
-            await utils.answer(message, self.strings["no_repo"])
+            await utils.answer(
+                message, self.strings["repo_invalid"].format(utils.escape_html(args))
+            )
             return
 
         if args in self.config["ADDITIONAL_REPOS"]:
@@ -1863,12 +1894,22 @@ class LoaderMod(loader.Module):
 
     @loader.command()
     async def delrepo(self, message: Message):
-        if not (args := utils.get_args_raw(message)) or not utils.check_url(args):
-            await utils.answer(message, self.strings["no_repo"])
+        if not (args := utils.get_args_raw(message)) or (
+            not utils.check_url(args) and not utils.check_url(f"https://{args}")
+        ):
+            await utils.answer(
+                message,
+                self.strings["no_repo_del"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
         if args.endswith("/"):
             args = args[:-1]
+
+        if not args.startswith("https://") and not args.startswith("http://"):
+            args = f"https://{args}"
 
         if args not in self.config["ADDITIONAL_REPOS"]:
             await utils.answer(message, self.strings["repo_not_exists"])
