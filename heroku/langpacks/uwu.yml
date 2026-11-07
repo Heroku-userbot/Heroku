@@ -179,7 +179,6 @@ heroku_web:
   btn_yes: "🚸 Confiwm anyway"
   btn_no: "🔻 Cwose"
   invalid_target: "Wepwy to da message of da pewson you want to add, ow specify deiw cowwect @username/id."
-  cant_add_self: "You can't add youwsewf. Baka."
   add_user_confirm: "Do you weawwy want to add an account {} ({})?"
   add_user_insecure: "Do you weawwy want to add an account {} ({})? Use da <code>{}addacc {} force_insecure</code> command to confiwm."
   enter_number: "Entew da nyumbew"
@@ -207,11 +206,8 @@ heroku_web:
   name: HerokuAccounts
   _cls_doc: Inwine account management
   _cmd_doc_addacc: '[usew/id/wepwy] - Add anyothew account thwough inwine wogin'
-  no_beta: "<tg-emoji emoji-id=5240241223632954241>🚫</tg-emoji><b> | UwU oops... u don't hav da beta vewsion! >w< To avoid fowced switching to mastew branch, u need to buy da beta vewsion fow an account dat wequiwes binding UwU</b>"
   donate: "<b><tg-emoji emoji-id=5985416365861768868>➡️</tg-emoji></b> <b>How to buy da beta vewsion :3</b>"
   feedback_me: "Contact me OwO"
-  get_beta: "Get beta UwU"
-  close_addacc: "Close >w<"
 heroku_backup:
   period: "⌚️ <b>Da unit «AWPHA»</b> cweates weguwaw backups. Dese settings can be changed watew.\n\nPwease sewect da backup fwequency\n\n<b>🚫 It is dus impossibwe to westowe moduwes downwoaded fwom fiwes with da .lm command! Be cawefuw and do .backupmods befowe westowing.</b>"
   saved: "✅ Da pewiodicity is saved! It can be changed with <code>{prefix}set_backup_period</code>"

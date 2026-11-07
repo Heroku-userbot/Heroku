@@ -181,7 +181,6 @@ heroku_web:
   btn_yes: "🚸 Trotzdem öffnen"
   btn_no: "🔻 Schließen"
   invalid_target: "Antworten Sie auf die Nachricht der Person, die Sie hinzufügen möchten, oder geben Sie eine gültige @username/ID an."
-  cant_add_self: "Du kannst dich nicht selbst hinzufügen."
   add_user_confirm: "Möchten Sie das Konto {} ({}) wirklich hinzufügen?"
   add_user_insecure: "Möchten Sie das Konto {} ({}) wirklich hinzufügen? Verwenden Sie zur Bestätigung den Befehl <code>{}addacc {} force_insecure</code>."
   enter_number: "Nummer eingeben"
@@ -209,11 +208,8 @@ heroku_web:
   name: HerokuAccounts
   _cls_doc: Inline-Kontoverwaltung
   _cmd_doc_addacc: '[user/id/reply] - Weiteres Konto über Inline-Login hinzufügen'
-  no_beta: "<tg-emoji emoji-id=5240241223632954241>🚫</tg-emoji><b> | Ups... Sie haben keine Beta-Version. Um einen erzwungenen Wechsel zur Master-Version zu vermeiden, müssen Sie eine Beta-Version für ein Konto kaufen, das eine Verbindung erfordert.</b>"
   donate: "<b><tg-emoji emoji-id=5985416365861768868>➡️</tg-emoji></b> <b>So kaufen Sie die Beta-Version:</b>"
   feedback_me: "Kontaktieren Sie mich"
-  get_beta: "Beta kaufen"
-  close_addacc: "Schließen"
 heroku_backup:
   period: "⌚️ <b>Die Unit «ALPHA»</b> erstellt regelmäßig Backups. Diese Einstellungen können später geändert werden.\n\nBitte wählen Sie die Backup-Häufigkeit\n\n<b>🚫 Es ist daher nicht möglich, Module, die mit dem Befehl .lm aus Dateien heruntergeladen wurden, wiederherzustellen! Seien Sie vorsichtig und führen Sie vor der Wiederherstellung .backupmods aus.</b>"
   saved: "✅ Die Periodizität ist gespeichert! Sie kann mit <code>{prefix}set_backup_period</code> geändert werden."

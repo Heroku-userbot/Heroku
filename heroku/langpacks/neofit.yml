@@ -179,7 +179,6 @@ heroku_web:
   btn_yes: "🚸 Connect"
   btn_no: "🔻 Close"
   invalid_target: "TargetError: Expected @username/id."
-  cant_add_self: "RecursionError: Cannot target self."
   add_user_confirm: "Confirm add user {} ({})?"
   add_user_insecure: "Confirm add user {} ({})? Use <code>{}addacc {} force_insecure</code> to override."
   enter_number: "cin >> phone_number"
@@ -207,11 +206,8 @@ heroku_web:
   name: HerokuAccounts
   _cls_doc: Inline account manager
   _cmd_doc_addacc: '[user/id/reply] - Attach another account via inline auth'
-  no_beta: "<tg-emoji emoji-id=5240241223632954241>🚫</tg-emoji><b> | Error: Beta version missing. To prevent forced checkout to master, purchase beta for binding account.</b>"
   donate: "<b><tg-emoji emoji-id=5985416365861768868>➡️</tg-emoji></b> <b>Purchase beta:</b>"
   feedback_me: "Contact me"
-  get_beta: "Get beta"
-  close_addacc: "Close"
 heroku_backup:
   period: "⌚️ <b>Backup Crontab.</b>\n\nSet interval.\n\n<b>🚫 Warning: .lm modules omitted from SQL dump. Run .backupmods first.</b>"
   saved: "✅ Crontab updated! Modify with <code>{prefix}set_backup_period</code>"

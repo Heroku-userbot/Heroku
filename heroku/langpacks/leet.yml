@@ -179,7 +179,6 @@ heroku_web:
   btn_yes: "🚸 C0nf1rm 4nyw4y"
   btn_no: "🔻 Cl053"
   invalid_target: "R3ply 2 7h3 m5g 0f 7h3 p3r50n u w4n7 2 4dd, 0r sp3c1fy 7h31r c0rr3c7 @username/id."
-  cant_add_self: "U c4n'7 4dd ur53lf."
   add_user_confirm: "D0 u r34lly w4n7 2 4dd 4n 4cc {} ({})?"
   add_user_insecure: "D0 u r34lly w4n7 2 4dd 4n 4cc {} ({})? U53 7h3 <code>{}addacc {} force_insecure</code> cmd 2 c0nf1rm."
   enter_number: "3n73r 7h3 numb3r"
@@ -207,11 +206,8 @@ heroku_web:
   name: HerokuAccounts
   _cls_doc: 1nl1n3 4cc0un7 m4n4g3m3n7
   _cmd_doc_addacc: '[u53r/1d/r3ply] - 4dd 4n07h3r 4cc0un7 7hr0ugh 1nl1n3 l0g1n'
-  no_beta: "<tg-emoji emoji-id=5240241223632954241>🚫</tg-emoji><b> | 0ps... u d0n'7 hav37h3 b374 v3r510n! 70 4v01d f0rc3d 5w17ch1ng 2 7h3 4a573r br4nch, u n33d 2 buy 7h3 b374 v3r510n f0r 4n 4cc0un7 7h47 r3qu1r35 b1nd1ng</b>"
   donate: "<b><tg-emoji emoji-id=5985416365861768868>➡️</tg-emoji></b> <b>5p3c1fy h0w 2 buy 7h3 b374 v3r510n:</b>"
   feedback_me: "C0n74c7 m3"
-  get_beta: "G37 b374"
-  close_addacc: "Cl053"
 heroku_backup:
   period: "⌚️ <b>7h3 un17 «ALPHA»</b> cr34735 r3gul4r b4ckup5. 7h353 s3771ng5 c4n b3 ch4ng3d l473r.\n\nPlz s3l3c7 7h3 b4ckup fr3qu3ncy\n\n<b>🚫 17 15 7hu5 1mp0551bl3 2 r3570r3 m0d5 d0wnl04d3d fr0m f1l35 w17h .lm cmd! B3 c4r3ful & d0 .backupmods b4 r3570r1ng.</b>"
   saved: "✅ 7h3 p3r10d1c17y 15 s4v3d! 17 c4n b3 ch4ng3d w17h <code>{prefix}set_backup_period</code>"

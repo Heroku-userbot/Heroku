@@ -181,7 +181,6 @@ heroku_web:
   btn_yes: "🚸 Пофиг, давай"
   btn_no: "🔻 Не надо"
   invalid_target: "Реплайни на чела или тегни его нормально."
-  cant_add_self: "Себя добавить нельзя, шиз."
   add_user_confirm: "Добавляем аккаунт {} ({})?"
   add_user_insecure: "Добавляем аккаунт {} ({})? Юзай <code>{}addacc {} force_insecure</code> чтоб подтвердить."
   enter_number: "Вводи номер"
@@ -209,11 +208,8 @@ heroku_web:
   name: HerokuAccounts
   _cls_doc: Inline-менеджер аккаунтов
   _cmd_doc_addacc: '[user/id/reply] - Добавить еще один акк через inline-вход'
-  no_beta: "<tg-emoji emoji-id=5240241223632954241>🚫</tg-emoji><b> | Капец, нет беты. Чтоб не кинуло на мастер — купи бету на акк, который надо привязать.</b>"
   donate: "<b><tg-emoji emoji-id=5985416365861768868>➡️</tg-emoji></b> <b>Как купить бету:</b>"
   feedback_me: "Пиши мне"
-  get_beta: "Купить бету"
-  close_addacc: "Закрыть"
 heroku_backup:
   period: "⌚️ <b>Юнит «ALPHA»</b> делает бэкапы (сейвы). Можно настроить.\n\nВыбери как часто сейвиться\n\n<b>🚫 Модули из файлов (.lm) так не восстановятся! Делай .backupmods перед этим.</b>"
   saved: "✅ Запомнил! Поменять можно через <code>{prefix}set_backup_period</code>"
