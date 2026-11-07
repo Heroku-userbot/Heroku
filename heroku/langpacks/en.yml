@@ -890,11 +890,12 @@ $inline:
   command: "🪐 Command «{}»"
   button403: "You are not allowed to press this button!"
   keep_id: "⚠️ Do not remove ID! {}"
-  no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>Failed to create form</b>\n\nPossible ways to fix the error:\n\n1. Restart Heroku: <code>{prefix}restart</code>\n\n2. Enable inline mode for the bot: go to @BotFather, send /mybots, click Bot Settings -> Inline Mode -> On\n\n3. Create a new bot: send the command <code>{prefix}ch_heroku_bot</code> <@botname>"
+  no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>Failed to create form</b>\n\nPossible ways to fix the error:\n\n1. Restart Heroku: <code>{prefix}restart</code>\n\n2. Enable inline mode for the bot: go to @BotFather, send /mybots, click Bot Settings -> Inline Mode -> On\n\n3. Create a new bot: send the command <code>{prefix}ch_heroku_bot &lt;bot_username&gt;</code>"
 
 command_conflicts:
-  choose: "<tg-emoji emoji-id=5870982283724328568>⚙</tg-emoji> Choose a module for <code>{}</code>:"
+  choose: "<tg-emoji emoji-id=5870982283724328568>⚙</tg-emoji> Several modules provide <code>{prefix}{}</code>. Choose the one to run it. To stop being asked, disable the extra one: <code>{prefix}togglecmd &lt;module&gt; {}</code>"
   denied: "Only the command author can choose."
   used: "This command has already been selected."
   unavailable: "<tg-emoji emoji-id=5870657884844462243>❌</tg-emoji> The command is no longer available."
   failed: "<tg-emoji emoji-id=5870931487146119264>❗</tg-emoji> Cannot show module selection. Check the inline bot."
+  disabled: "<tg-emoji emoji-id=5870657884844462243>❌</tg-emoji> <b>Command</b> <code>{prefix}{0}</code> <b>is disabled. Enable it:</b> <code>{prefix}togglecmd {0}</code>"

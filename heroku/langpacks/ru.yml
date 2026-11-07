@@ -888,11 +888,12 @@ $inline:
   command: "🪐 Команда «{}»"
   button403: "Вы не можете нажать на эту кнопку!"
   keep_id: "⚠️ Не удаляйте ID! {}"
-  no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>Не удалось создать форму</b>\n\nВозможные способы исправления ошибки:\n\n1. Перезагрузите Heroku: <code>{prefix}restart</code>\n\n2. Включите inline-режим для бота: перейдите в @BotFather, отправьте /mybots, нажмите Bot Settings -> Inline Mode -> On\n\n3. Создайте нового бота: отправьте команду <code>{prefix}ch_heroku_bot</code> <@имя_бота>"
+  no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>Не удалось создать форму</b>\n\nВозможные способы исправления ошибки:\n\n1. Перезагрузите Heroku: <code>{prefix}restart</code>\n\n2. Включите inline-режим для бота: перейдите в @BotFather, отправьте /mybots, нажмите Bot Settings -> Inline Mode -> On\n\n3. Создайте нового бота: отправьте команду <code>{prefix}ch_heroku_bot &lt;юзернейм_бота&gt;</code>"
 
 command_conflicts:
-  choose: "<tg-emoji emoji-id=5870982283724328568>⚙</tg-emoji> Выбери модуль для <code>{}</code>:"
+  choose: "<tg-emoji emoji-id=5870982283724328568>⚙</tg-emoji> Команду <code>{prefix}{}</code> предоставляют несколько модулей. Выберите, какой из них её выполнит. Чтобы не спрашивать снова, отключите лишнюю: <code>{prefix}togglecmd &lt;модуль&gt; {}</code>"
   denied: "Выбирать может только автор команды."
   used: "Команда уже выбрана."
   unavailable: "<tg-emoji emoji-id=5870657884844462243>❌</tg-emoji> Команда больше недоступна."
-  failed: "<tg-emoji emoji-id=5870931487146119264>❗</tg-emoji> Не удалось показать выбор модуля. Проверь инлайн-бота."
+  failed: "<tg-emoji emoji-id=5870931487146119264>❗</tg-emoji> Не удалось показать выбор модуля. Проверьте инлайн-бота."
+  disabled: "<tg-emoji emoji-id=5870657884844462243>❌</tg-emoji> <b>Команда</b> <code>{prefix}{0}</code> <b>отключена. Включить:</b> <code>{prefix}togglecmd {0}</code>"

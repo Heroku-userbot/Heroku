@@ -1116,7 +1116,17 @@ class Modules:
             available = []
             for handler in handlers:
                 module_name = handler.__self__.__class__.__name__
-                if module_name in disabled or name in {
+                # Core togglemod stays reachable, so a disabled core module
+                # can always be enabled back
+                if (
+                    module_name in disabled
+                    and not (
+                        name == "togglemod"
+                        and str(getattr(handler.__self__, "__origin__", "")).startswith(
+                            "<core"
+                        )
+                    )
+                ) or name in {
                     item.lower() for item in disabled_commands.get(module_name, [])
                 }:
                     continue

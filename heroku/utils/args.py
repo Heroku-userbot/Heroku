@@ -6,6 +6,7 @@
 
 import inspect
 import logging
+import re
 import shlex
 import typing
 
@@ -102,10 +103,10 @@ def get_args_html(message: Message) -> str:
 
     raw_text = herokutl.helpers.add_surrogate(raw_text)
 
-    try:
-        command = raw_text[:raw_text.index(" ")]
-    except ValueError:
+    if not (match := re.search(r"\s", raw_text)):
         return ""
+
+    command = raw_text[: match.start()]
 
     command_len = len(command) + 1
 
