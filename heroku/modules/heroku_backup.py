@@ -312,7 +312,12 @@ class HerokuBackupMod(loader.Module):
         backup_topic_id = await utils.get_topic_id(self._db, "Backups")
         if not backup_topic_id:
             logger.error("Backups topic not found in database")
-            await utils.answer(message, self.strings["backup_sent"])
+            await utils.answer(
+                message,
+                self.strings["backup_topic_missing"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
         await self._assert_backup_destination()
@@ -486,7 +491,12 @@ class HerokuBackupMod(loader.Module):
                             path.write_bytes(module.read())
             except Exception:
                 logger.exception("Unable to restore modules")
-                await utils.answer(message, self.strings["reply_to_file"])
+                await utils.answer(
+                    message,
+                    self.strings["restore_failed"].format(
+                        prefix=utils.escape_html(self.get_prefix())
+                    ),
+                )
                 return
         else:
             if not isinstance(decoded_text, dict) or not all(
@@ -535,9 +545,12 @@ class HerokuBackupMod(loader.Module):
         backup_topic_id = await utils.get_topic_id(self._db, "Backups")
         if not backup_topic_id:
             logger.error("Backups topic not found in database")
+            logger.error("Backups topic not found in database")
             await utils.answer(
                 message,
-                "<b>Backups topic not found in database. Please run quickstart to create it.</b>",
+                self.strings["backup_topic_missing"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
             )
             return
 
@@ -610,7 +623,12 @@ class HerokuBackupMod(loader.Module):
                                 path.write_bytes(module.read())
         except Exception:
             logger.exception("Restore all failed")
-            await utils.answer(status_message, self.strings["reply_to_file"])
+            await utils.answer(
+                status_message,
+                self.strings["restore_failed"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
         await utils.answer(status_message, self.strings["all_restored"])

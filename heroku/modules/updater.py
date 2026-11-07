@@ -621,8 +621,15 @@ class UpdaterMod(loader.Module):
             if await self.download_common():
                 await asyncio.to_thread(self.req_common)
             await self.restart_common(msg_obj)
-        except Exception:
+        except Exception as e:
             logger.exception("Update failed")
+            with contextlib.suppress(Exception):
+                await utils.answer(
+                    msg_obj,
+                    self.strings["update_failed"].format(
+                        utils.escape_html(str(e) or type(e).__name__)
+                    ),
+                )
 
     @loader.command()
     async def source(self, message: Message):
