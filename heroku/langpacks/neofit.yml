@@ -367,8 +367,6 @@ heroku_config:
   configuring_category: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Config mod</b> <code>{}</code> <b>in cat</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Params:</b>\n{}"
   configuring_category_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Config lib</b> <code>{}</code> <b>in cat</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Params:</b>\n{}"
   category_header: "\n<b>📂 {}</b>"
-  category_header_doc: "\n<b>📂 {}</b>\n<i>{}</i>"
-  category_uncategorized: "\n<b><tg-emoji emoji-id=5253713110111365241>▫️</tg-emoji> /etc</b>"
   configuring_option: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Edit param</b> <code>{}</code> <b>in</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Default: {}</b>\n\n<b>Value: {}</b>\n\n{}"
   configuring_option_lib: "<tg-emoji emoji-id=5431736674147114227>📦</tg-emoji> <b>Edit param</b> <code>{}</code> <b>in</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Default: {}</b>\n\n<b>Value: {}</b>\n\n{}"
   option_saved: "<tg-emoji emoji-id=5318933532825888187>⚙️</tg-emoji> <b>Written</b> <code>{}</code> <b>in</b> <code>{}</code><b>!</b>\n<b>Value: {}</b>"
@@ -397,7 +395,6 @@ heroku_config:
   external: "🛸 External"
   libraries: "📦 Libs"
   _cmd_doc_config: "Open Configurator"
-  _cmd_doc_fconfig: "<mod> <key> <val> - Set config key"
   _cls_doc: "Interactive Configurator"
   _cfg_emoji: "Change emoji when opening config (cosmetic, like a custom PS1)"
 

@@ -366,8 +366,6 @@ heroku_config:
   configuring_category: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Choose config option fow mod</b> <code>{}</code> <b>in categowy</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Cuwwent options:</b>\n{}"
   configuring_category_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Choose config option fow wibwawy</b> <code>{}</code> <b>in categowy</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Cuwwent options:</b>\n{}"
   category_header: "\n<b>📂 {}</b>"
-  category_header_doc: "\n<b>📂 {}</b>\n<i>{}</i>"
-  category_uncategorized: "\n<b><tg-emoji emoji-id=5253713110111365241>▫️</tg-emoji> Othew</b>"
   configuring_option: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Configuwing option</b> <code>{}</code> <b>of mod</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Defauwt: {}</b>\n\n<b>Cuwwent: {}</b>\n\n{}"
   configuring_option_lib: "<tg-emoji emoji-id=5431736674147114227>📦</tg-emoji> <b>Configuwing option</b> <code>{}</code> <b>of wibwawy</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Defauwt: {}</b>\n\n<b>Cuwwent: {}</b>\n\n{}"
   option_saved: "<tg-emoji emoji-id=5318933532825888187>⚙️</tg-emoji> <b>Option</b> <code>{}</code> <b>of moduwe</b> <code>{}</code><b> saved!</b>\n<b>Cuwwent: {}</b>"
@@ -396,7 +394,6 @@ heroku_config:
   external: "🛸 Extewnaw"
   libraries: "📦 Wibwawies"
   _cmd_doc_config: "Configuwe moduwes"
-  _cmd_doc_fconfig: "<module_name> <property_name> <config_value> - set da config vawue fow da moduwe"
   _cls_doc: "Intewactive configuwatow fow Heroku Usewbot"
   _cfg_emoji: "Change emoji when openying config"
 

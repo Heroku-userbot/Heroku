@@ -367,8 +367,6 @@ heroku_config:
   configuring_category: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>モジュール</b> <code>{}</code> <b>のカテゴリ</b> <code>{}</code> <b>の設定オプションを選択してください</b>\n<i>ℹ️ {}</i>\n\n<b>現在のオプション:</b>\n{}"
   configuring_category_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>ライブラリ</b> <code>{}</code> <b>のカテゴリ</b> <code>{}</code> <b>の設定オプションを選択してください</b>\n<i>ℹ️ {}</i>\n\n<b>現在のオプション:</b>\n{}"
   category_header: "\n<b>📂 {}</b>"
-  category_header_doc: "\n<b>📂 {}</b>\n<i>{}</i>"
-  category_uncategorized: "\n<b><tg-emoji emoji-id=5253713110111365241>▫️</tg-emoji> その他</b>"
   configuring_option: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>モジュール</b> <code>{}</code> <b>のオプション</b> <code>{}</code> <b>を設定中</b>\n<i>ℹ️ {}</i>\n\n<b>デフォルト: {}</b>\n\n<b>現在: {}</b>\n\n{}"
   configuring_option_lib: "<tg-emoji emoji-id=5431736674147114227>📦</tg-emoji> <b>ライブラリ</b> <code>{}</code> <b>のオプション</b> <code>{}</code> <b>を設定中</b>\n<i>ℹ️ {}</i>\n\n<b>デフォルト: {}</b>\n\n<b>現在: {}</b>\n\n{}"
   option_saved: "<tg-emoji emoji-id=5318933532825888187>⚙️</tg-emoji> <b>モジュール</b> <code>{}</code> <b>のオプション</b> <code>{}</code> <b>が保存されました！</b>\n<b>現在: {}</b>"
@@ -397,7 +395,6 @@ heroku_config:
   external: "🛸 外部"
   libraries: "📦 ライブラリ"
   _cmd_doc_config: "モジュールを設定します"
-  _cmd_doc_fconfig: "<module_name> <property_name> <config_value> - モジュールの設定値を設定します"
   _cls_doc: "Heroku Userbot 用のインタラクティブな設定ツール"
   _cfg_emoji: "設定を開くときの絵文字を変更"
 

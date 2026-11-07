@@ -367,8 +367,6 @@ heroku_config:
   configuring_category: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Ch0053 c0nf1g 0p710n 4 m0d</b> <code>{}</code> <b>1n c473g0ry</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Curr3n7 0p75:</b>\n{}"
   configuring_category_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Ch0053 c0nf1g 0p710n 4 l1b</b> <code>{}</code> <b>1n c473g0ry</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Curr3n7 0p75:</b>\n{}"
   category_header: "\n<b>📂 {}</b>"
-  category_header_doc: "\n<b>📂 {}</b>\n<i>{}</i>"
-  category_uncategorized: "\n<b><tg-emoji emoji-id=5253713110111365241>▫️</tg-emoji> 07h3r</b>"
   configuring_option: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>C0nf1gur1ng 0p710n</b> <code>{}</code> <b>0f m0d</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>D3f4ul7: {}</b>\n\n<b>Curr3n7: {}</b>\n\n{}"
   configuring_option_lib: "<tg-emoji emoji-id=5431736674147114227>📦</tg-emoji> <b>C0nf1gur1ng 0p710n</b> <code>{}</code> <b>0f l1b</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>D3f4ul7: {}</b>\n\n<b>Curr3n7: {}</b>\n\n{}"
   option_saved: "<tg-emoji emoji-id=5318933532825888187>⚙️</tg-emoji> <b>0p710n</b> <code>{}</code> <b>0f m0d</b> <code>{}</code><b> s4v3d!</b>\n<b>Curr3n7: {}</b>"
@@ -397,7 +395,6 @@ heroku_config:
   external: "🛸 3x73rn4l"
   libraries: "📦 L1b5"
   _cmd_doc_config: "C0nf1g m0dul35"
-  _cmd_doc_fconfig: "<module_name> <property_name> <config_value> - s37 7h3 c0nf1g v4lu3 4 7h3 m0dul3"
   _cls_doc: "1n73r4c71v3 c0nf1gur470r 4 H3r0ku Us3rb07"
   _cfg_emoji: "Ch4ng3 3m0j1 wh3n 0p3n1ng c0nf1g"
 

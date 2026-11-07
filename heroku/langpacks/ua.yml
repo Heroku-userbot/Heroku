@@ -368,8 +368,6 @@ heroku_config:
   configuring_category: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Обери параметр для модуля</b> <code>{}</code> <b>у категорії</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Поточні налаштування:</b>\n{}"
   configuring_category_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Обери параметр для бібліотеки</b> <code>{}</code> <b>у категорії</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Поточні налаштування:</b>\n{}"
   category_header: "\n<b>📂 {}</b>"
-  category_header_doc: "\n<b>📂 {}</b>\n<i>{}</i>"
-  category_uncategorized: "\n<b><tg-emoji emoji-id=5253713110111365241>▫️</tg-emoji> Інше</b>"
   configuring_option: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Керування параметром</b> <code>{}</code> <b>модуля</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Стандартне: {}</b>\n\n<b>Поточне: {}</b>\n\n{}"
   configuring_option_lib: "<tg-emoji emoji-id=5431736674147114227>📦</tg-emoji> <b>Керування параметром</b> <code>{}</code> <b>бібліотеки</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Стандартне: {}</b>\n\n<b>Поточне: {}</b>\n\n{}"
   option_saved: "<tg-emoji emoji-id=5318933532825888187>⚙️</tg-emoji> <b>Параметр</b> <code>{}</code> <b>модуля</b> <code>{}</code><b> збережено!</b>\n<b>Поточне: {}</b>"
@@ -399,7 +397,6 @@ heroku_config:
   external: "🛸 Зовнішні"
   libraries: "📦 Бібліотеки"
   _cmd_doc_config: "Налаштувати модулі"
-  _cmd_doc_fconfig: "<модуль> <налаштування> <значення> - встановити значення конфігу для модуля"
 
   name: HerokuConfig
   _cfg_emoji: "Змінювати емодзі під час відкриття конфігу"

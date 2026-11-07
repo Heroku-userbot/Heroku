@@ -368,8 +368,6 @@ heroku_config:
   configuring_category: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Wähle eine Einstellung für das Modul</b> <code>{}</code> <b>in Kategorie</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Aktuelle Einstellungen:</b>\n{}"
   configuring_category_lib: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Wähle eine Einstellung für die Bibliothek</b> <code>{}</code> <b>in Kategorie</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Aktuelle Einstellungen:</b>\n{}"
   category_header: "\n<b>📂 {}</b>"
-  category_header_doc: "\n<b>📂 {}</b>\n<i>{}</i>"
-  category_uncategorized: "\n<b><tg-emoji emoji-id=5253713110111365241>▫️</tg-emoji> Sonstige</b>"
   configuring_option: "<tg-emoji emoji-id=5341715473882955310>⚙️</tg-emoji> <b>Parameterverwaltung</b> <code>{}</code> <b>des Moduls</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Standard: {}</b>\n\n<b>Aktuell: {}</b>\n\n{}"
   configuring_option_lib: "<tg-emoji emoji-id=5431736674147114227>📦</tg-emoji> <b>Parameterverwaltung</b> <code>{}</code> <b>der Bibliothek</b> <code>{}</code>\n<i>ℹ️ {}</i>\n\n<b>Standard: {}</b>\n\n<b>Aktuell: {}</b>\n\n{}"
   option_saved: "<tg-emoji emoji-id=5318933532825888187>⚙️</tg-emoji> <b>Parameter</b> <code>{}</code> <b>des Moduls</b> <code>{}</code><b> gespeichert!</b>\n<b>Aktuell: {}</b>"
@@ -399,7 +397,6 @@ heroku_config:
   external: "🛸 Extern"
   libraries: "📦 Bibliotheken"
   _cmd_doc_config: "Module konfigurieren"
-  _cmd_doc_fconfig: "<Modul> <Einstellung> <Wert> - Setzt den Konfigurationswert für ein Modul"
 
   name: HerokuConfig
   _cfg_emoji: "Emoji beim Öffnen der Konfiguration ändern"
