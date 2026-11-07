@@ -8,7 +8,6 @@ heroku_security:
   permissions: "🔐 <b>Hier können die Berechtigungen für den Befehl</b> <code>{}{}</code> <b>konfiguriert werden</b>"
   close_menu: "🙈 Dieses Menü schließen"
   global: "🔐 <b>Hier können Sie eine globale Ausschlussmaske konfigurieren. Wenn der Schalter hier deaktiviert ist, ist er für alle Befehle deaktiviert</b>"
-  owner: "😎 Besitzer"
   group_owner: "🧛‍♂️ Gruppenbesitzer"
   group_admin_add_admins: "🧑‍⚖️ Admin (Mitglieder hinzufügen)"
   group_admin_change_info: "🧑‍⚖️ Admin (Info ändern)"
@@ -794,40 +793,6 @@ $inline:
   button403: "Sie können diesen Button nicht drücken!"
   keep_id: "⚠️ Löschen Sie die ID nicht! {}"
   no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>Formular konnte nicht erstellt werden</b>\n\nMögliche Lösungen für den Fehler:\n\n1. Starten Sie Heroku neu: <code>{prefix}restart</code>\n\n2. Aktivieren Sie den Inline-Modus für den Bot: gehen Sie zu @BotFather, senden Sie /mybots, klicken Sie auf Bot Settings -> Inline Mode -> On\n\n3. Erstellen Sie einen neuen Bot: senden Sie den Befehl <code>{prefix}ch_heroku_bot</code> <@botname>"
-heroku_plugin_security:
-  name: HikkaPluginSecurity
-  _cls_doc: Sicherheitsausnahmen externer Module verwalten
-  _cmd_doc_external: <module> - Vollzugriff des Moduls auf den Userbot sperren
-  _cmd_doc_unexternal: <module> - Vollzugriff des Moduls auf den Userbot erlauben
-  no_hash: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Du musst einen Modulnamen angeben</b>
-  hash_not_found: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Modul mit diesem Namen nicht gefunden</b>
-  hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Keine Treffer. Nächstes:</b> <code>{}</code>
-  hash_list: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Modul-Hashes:</b>\n\n<blockquote expandable>{}</blockquote>"
-  no_hashes: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Keine Modul-Hashes gefunden</b>"
-  external_removed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>is_external entfernt für</b> <code>{}</code>"
-  external_restored: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>is_external wiederhergestellt für</b> <code>{}</code>"
-  already_internal: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Das Modul</b> <code>{}</code> <b>ist bereits intern</b>"
-  already_external: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Das Modul</b> <code>{}</code> <b>ist bereits extern</b>"
-  session_allowed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.session-Zugriff erlaubt für</b> <code>{}</code>"
-  session_denied: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.session-Zugriff verweigert für</b> <code>{}</code>"
-  already_allowed: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session-Zugriff bereits erlaubt für</b> <code>{}</code>"
-  already_denied: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session-Zugriff bereits verweigert für</b> <code>{}</code>"
-  no_permissions: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>Keine Berechtigungen</b>"
-  permissions_list: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>Berechtigungen:</b>\n{}\n"
-  sgroup_li: "<tg-emoji emoji-id=4974264756668990388>▫️</tg-emoji> <code>{}</code> · <b>{} Benutzer</b> · <b>{} Regel(n)</b>"
-  sgroups_list: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Sicherheitsgruppen:</b>\n\n{}"
-  deleted_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Sicherheitsgruppe</b> <code>{}</code> <b>gelöscht</b>"
-  user_already_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Benutzer</b> <code>{}</code> <b>ist bereits in der Sicherheitsgruppe</b> <code>{}</code>"
-  user_added_to_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Benutzer</b> <code>{}</code> <b>wurde zur Sicherheitsgruppe</b> <code>{}</code> hinzugefügt"
-  user_not_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Benutzer</b> <code>{}</code> <b>ist nicht in der Sicherheitsgruppe</b> <code>{}</code>"
-  user_removed_from_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Benutzer</b> <code>{}</code> <b>wurde aus der Sicherheitsgruppe</b> <code>{}</code> entfernt"
-  _cmd_doc_delsgroup: "<Name> - Sicherheitsgruppe löschen"
-  _cmd_doc_sgroup: "<Name> - Informationen zur Sicherheitsgruppe anzeigen"
-  _cmd_doc_sgroups: "Sicherheitsgruppen auflisten"
-  _cmd_doc_newsgroup: "<Name> - Neue Sicherheitsgruppe erstellen"
-  _cmd_doc_sgroupadd: "<Name> [Benutzer oder Antwort] - Benutzer zur Sicherheitsgruppe hinzufügen"
-  _cmd_doc_sgroupdel: "<Name> [Benutzer oder Antwort] - Benutzer aus der Sicherheitsgruppe entfernen"
-
 loader_restrictor:
   q1: "Was kann jedes von Ihnen installierte Modul tatsächlich tun?"
   q1_ans1: "Genau das, was in der Beschreibung steht – mehr nicht"

@@ -8,7 +8,6 @@ heroku_security:
   permissions: "🔐 <b>Тут кароче права для</b> <code>{}{}</code>"
   close_menu: "🙈 Ливнуть из меню"
   global: "🔐 <b>Тут глобал настройки. Если вырубишь — то гг для всех команд</b>"
-  owner: "😎 Папочка (Сигма)"
   group_owner: "🧛‍♂️ Админ чата"
   group_admin_add_admins: "🧑‍⚖️ Админ (инвайтит кентов)"
   group_admin_change_info: "🧑‍⚖️ Админ (меняет аву)"
@@ -792,39 +791,6 @@ $inline:
   button403: "Не тыкай сюда!"
   keep_id: "⚠️ ID не трогай! {}"
   no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>Не удалось создать форму</b>\n\nВозможные способы исправления ошибки:\n\n1. Перезагрузите Heroku: <code>{prefix}restart</code>\n\n2. Включите inline-режим для бота: перейдите в @BotFather, отправьте /mybots, нажмите Bot Settings -> Inline Mode -> On\n\n3. Создайте нового бота: отправьте команду <code>{prefix}ch_heroku_bot</code> <@имя_бота>"
-heroku_plugin_security:
-  name: HikkaPluginSecurity
-  _cls_doc: Рулит безопасностью внешних модулей
-  _cmd_doc_external: <module> - Отрезать модулю полный доступ к юзерботу
-  _cmd_doc_unexternal: <module> - Вернуть модулю полный доступ к юзерботу
-  no_hash: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Назови модуль</b>
-  hash_not_found: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Такого модуля нет, лол</b>
-  hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Точного нет. Похоже на:</b> <code>{}</code>
-  hash_list: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Хеши модулей, чекай:</b>\n\n<blockquote expandable>{}</blockquote>"
-  no_hashes: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Хешей модулей нет, пусто</b>"
-  external_removed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Флаг is_external снят для</b> <code>{}</code>"
-  external_restored: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Флаг is_external вернул для</b> <code>{}</code>"
-  already_internal: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Модуль</b> <code>{}</code> <b>и так внутренний, алло</b>"
-  already_external: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Модуль</b> <code>{}</code> <b>и так внешний, алло</b>"
-  session_allowed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Доступ к .session открыл для</b> <code>{}</code>"
-  session_denied: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Доступ к .session закрыл для</b> <code>{}</code>"
-  already_allowed: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Доступ к .session уже открыт для</b> <code>{}</code>"
-  already_denied: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Доступ к .session уже закрыт для</b> <code>{}</code>"
-  no_permissions: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>Прав нет (как у школьника)</b>"
-  permissions_list: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>Доступы:</b>\n{}\n"
-  sgroup_li: "<tg-emoji emoji-id=4974264756668990388>▫️</tg-emoji> <code>{}</code> · <b>{} челов</b> · <b>{} правил</b>"
-  sgroups_list: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Сквады безопасности:</b>\n\n{}"
-  deleted_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Сквад</b> <code>{}</code> <b>рипнулся (удален)</b>"
-  user_already_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Чел</b> <code>{}</code> <b>уже в скваде</b> <code>{}</code>"
-  user_added_to_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Закинул чела</b> <code>{}</code> <b>в сквад</b> <code>{}</code>"
-  user_not_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Чел</b> <code>{}</code> <b>не в этом скваде</b> <code>{}</code>"
-  user_removed_from_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Кикнул чела</b> <code>{}</code> <b>из сквада</b> <code>{}</code>"
-  _cmd_doc_delsgroup: "<имя> - Делитнуть сквад"
-  _cmd_doc_sgroup: "<имя> - Чекнуть инфу сквада"
-  _cmd_doc_sgroups: "Список сквадов"
-  _cmd_doc_newsgroup: "<имя> - Скрафтить новый сквад"
-  _cmd_doc_sgroupadd: "<имя> [юзер/реплай] - Инвайтнуть в сквад"
-  _cmd_doc_sgroupdel: "<имя> [юзер/реплай] - Кикнуть из сквада"
 loader_restrictor:
   q1: "Модуль, который ты ставишь. Че он умеет по факту?"
   q1_ans1: "Только то, что в описании написано, не больше"

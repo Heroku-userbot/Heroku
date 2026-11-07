@@ -9,7 +9,6 @@ heroku_security:
   permissions: "🔐 <b>ここでは</b> <code>{}{}</code> <b>の権限を設定できます</b>"
   close_menu: "🙈 メニューを閉じる"
   global: "🔐 <b>ここではグローバルバウンディングマスクを設定できます。ここで除外された権限は、すべての場所で除外されます！</b>"
-  owner: "😎 所有者 (Owner)"
   group_owner: "🧛‍♂️ グループ所有者"
   group_admin_add_admins: "🧑‍⚖️ 管理者 (メンバー追加)"
   group_admin_change_info: "🧑‍⚖️ 管理者 (情報変更)"
@@ -790,39 +789,6 @@ $inline:
   button403: "このボタンを押すことは許可されていません！"
   keep_id: "⚠️ ID を削除しないでください！ {}"
   no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>フォームの作成に失敗しました</b>\n\nエラー修正の可能な方法:\n\n1. Herokuを再起動: <code>{prefix}restart</code>\n\n2. ボットのインラインモードを有効化: @BotFatherに移動、/mybotsを送信、Bot Settings -> Inline Mode -> Onをクリック\n\n3. 新しいボットを作成: コマンド <code>{prefix}ch_heroku_bot</code> <@ボット名> を送信"
-heroku_plugin_security:
-  name: HikkaPluginSecurity
-  _cls_doc: 外部モジュールのセキュリティ上書きを管理します
-  _cmd_doc_external: <module> - モジュールのユーザーボット完全アクセスを拒否
-  _cmd_doc_unexternal: <module> - モジュールのユーザーボット完全アクセスを許可
-  no_hash: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>モジュール名を指定してください</b>
-  hash_not_found: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>この名前のモジュールは見つかりません</b>
-  hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>一致なし。最も近い候補:</b> <code>{}</code>
-  hash_list: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>モジュールハッシュ:</b>\n\n<blockquote expandable>{}</blockquote>"
-  no_hashes: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>モジュール ハッシュが見つかりません</b>"
-  external_removed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>is_external は </b> <code>{}</code> のために削除されました"
-  external_restored: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>is_external が </b> <code>{}</code> 用に復元されました"
-  already_internal: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Module</b> <code>{}</code> <b> はすでに内部です</b>"
-  already_external: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Module</b> <code>{}</code> <b> はすでに外部です </b>"
-  session_allowed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.session へのアクセスが </b> <code>{}</code> に許可されました"
-  session_denied: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.session のアクセスが拒否されました。</b> <code>{}</code>"
-  already_allowed: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session へのアクセスはすでに </b> <code>{}</code> に許可されています"
-  already_denied: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session へのアクセスはすでに拒否されました </b> <code>{}</code>"
-  no_permissions: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>権限がありません</b>"
-  permissions_list: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>権限:</b>\n{}\n"
-  sgroup_li: "<tg-emoji emoji-id=4974264756668990388>▫️</tg-emoji> <code>{}</code> · <b>{} ユーザー(-s)</b> · <b>{} ルール(-s)</b>"
-  sgroups_list: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>セキュリティ グループ:</b>\n\n{}"
-  deleted_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>セキュリティグループ</b> <code>{}</code> <b>削除</b>"
-  user_already_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>User</b> <code>{}</code> <b>すでにセキュリティ グループに属しています</b> <code>{}</code>"
-  user_added_to_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>User</b> <code>{}</code> <b>セキュリティグループに追加されました</b> <code>{}</code>"
-  user_not_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>User</b> <code>{}</code> <b>はセキュリティ グループに属していません</b> <code>{}</code>"
-  user_removed_from_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>User</b> <code>{}</code> <b>セキュリティ グループから削除されました</b> <code>{}</code>"
-  _cmd_doc_delsgroup: "<name> - セキュリティグループの削除"
-  _cmd_doc_sgroup: "<name> - セキュリティグループ情報を表示"
-  _cmd_doc_sgroups: "セキュリティグループの一覧表示"
-  _cmd_doc_newsgroup: "<name> - 新しいセキュリティ グループの作成"
-  _cmd_doc_sgroupadd: "<name> [ユーザーまたは返信] - ユーザーをセキュリティ グループに追加します"
-  _cmd_doc_sgroupdel: "<name> [ユーザーまたは返信] - セキュリティ グループからユーザーを削除します"
 loader_restrictor:
   q1: "インストールしたモジュールは実際に何ができるのでしょうか?"
   q1_ans1: "まさにその説明どおりです - それ以上のことはありません"

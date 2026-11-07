@@ -9,7 +9,6 @@ heroku_security:
   permissions: "🔐 <b>H3r3 u c4n c0nf1g p3rm15510nz 4</b> <code>{}{}</code>"
   close_menu: "🙈 Cl053 7h15 m3nu"
   global: "🔐 <b>H3r3 u c4n c0nf1g gl0b4l b0und1ng m45k. 1f p3rm 15 3xclud3d h3r3, 17 15 3xclud3d 3v3rywh3r3!</b>"
-  owner: "😎 0wn3r"
   group_owner: "🧛‍♂️ Gr0up 0wn3r"
   group_admin_add_admins: "🧑‍⚖️ 4dm1n (4dd m3mb3rz)"
   group_admin_change_info: "🧑‍⚖️ 4dm1n (ch4ng3 1nf0)"
@@ -787,39 +786,6 @@ $inline:
   button403: "U r n07 4ll0w3d 2 pr355 7h15 bu770n!"
   keep_id: "⚠️ D0 n07 r3m0v3 ID! {}"
   no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>F41L3D 70 CR34T3 F0RM</b>\n\nP0551BL3 W4Y5 70 F1X 7H3 3RR0R:\n\n1. R3574RT H3R0KU: <code>{prefix}restart</code>\n\n2. 3N4BL3 1NL1N3 M0D3 F0R 7H3 B07: G0 70 @B07F47H3R, 53ND /MYB075, CL1CK B07 53771N65 -> 1NL1N3 M0D3 -> 0N\n\n3. CR34T3 4 N3W B07: 53ND 7H3 C0MM4ND <code>{prefix}ch_heroku_bot</code> <@B07N4M3>"
-heroku_plugin_security:
-  name: HikkaPluginSecurity
-  _cls_doc: M4n4g3 3x73rn4l m0dul3 53cur17y 0v3rr1d35
-  _cmd_doc_external: <m0dul3> - D3ny full u53rb07 4cc355 f0r m0dul3
-  _cmd_doc_unexternal: <m0dul3> - Gr4n7 full u53rb07 4cc355 f0r m0dul3
-  no_hash: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Y0u mu57 5p3c1fy 4 m0dul3 n4m3</b>
-  hash_not_found: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>M0dul3 w17h 7h15 n4m3 n07 f0und</b>
-  hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>N0 m47ch35. Cl05357:</b> <code>{}</code>
-  hash_list: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>M0dul3 h45h35:</b>\n\n<blockquote expandable>{}</blockquote>"
-  no_hashes: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>N0 m0dul3 h45h35 f0und</b>"
-  external_removed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>15_3x73rn4l r3m0v3d f0r</b> <code>{}</code>"
-  external_restored: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>15_3x73rn4l r3570r3d f0r</b> <code>{}</code>"
-  already_internal: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>M0dul3</b> <code>{}</code> <b>15 4lr34dy 1n73rn4l</b>"
-  already_external: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>M0dul3</b> <code>{}</code> <b>15 4lr34dy 3x73rn4l</b>"
-  session_allowed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.535510n 4cc355 4ll0w3d f0r</b> <code>{}</code>"
-  session_denied: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>.535510n 4cc355 d3n13d f0r</b> <code>{}</code>"
-  already_allowed: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.535510n 4cc355 4lr34dy 4ll0w3d f0r</b> <code>{}</code>"
-  already_denied: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.535510n 4cc355 4lr34dy d3n13d f0r</b> <code>{}</code>"
-  no_permissions: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>N0 p3rm15510n5</b>"
-  permissions_list: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>P3rm15510n5:</b>\n{}\n"
-  sgroup_li: "<tg-emoji emoji-id=4974264756668990388>▫️</tg-emoji> <code>{}</code> · <b>{} u53r(-5)</b> · <b>{} rul3(-5)</b>"
-  sgroups_list: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>53cur17y gr0up5:</b>\n\n{}"
-  deleted_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>53cur17y gr0up</b> <code>{}</code> <b>d3l373d</b>"
-  user_already_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>U53r</b> <code>{}</code> <b>4lr34dy 15 1n 53cur17y gr0up</b> <code>{}</code>"
-  user_added_to_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>U53r</b> <code>{}</code> <b>4dd3d 70 53cur17y gr0up</b> <code>{}</code>"
-  user_not_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>U53r</b> <code>{}</code> <b>15 n07 1n 53cur17y gr0up</b> <code>{}</code>"
-  user_removed_from_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>U53r</b> <code>{}</code> <b>r3m0v3d fr0m 53cur17y gr0up</b> <code>{}</code>"
-  _cmd_doc_delsgroup: "<name> - D3l373 53cur17y gr0up"
-  _cmd_doc_sgroup: "<name> - 5h0w 53cur17y gr0up 1nf0"
-  _cmd_doc_sgroups: "L157 53cur17y gr0up5"
-  _cmd_doc_newsgroup: "<name> - Cr3473 n3w 53cur17y gr0up"
-  _cmd_doc_sgroupadd: "<name> [u53r 0r r3ply] - 4dd u53r 70 53cur17y gr0up"
-  _cmd_doc_sgroupdel: "<name> [u53r 0r r3ply] - R3m0v3 u53r fr0m 53cur17y gr0up"
 loader_restrictor:
   q1: "Wh47 c4n 4ny m0dul3 y0u 1n574ll 4c7u4lly d0?"
   q1_ans1: "3x4c7ly wh47 175 d35cr1p710n 54y5 - n07h1ng m0r3"

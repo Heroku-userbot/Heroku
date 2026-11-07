@@ -94,14 +94,14 @@ class HerokuSecurityMod(loader.Module):
             and level
         ):
             await call.answer(
-                (
-                    "Security value set but not applied. Consider enabling this value"
-                    f" in .{'inlinesec' if is_inline else 'security'}"
+                self.strings["perm_set_not_applied"].format(
+                    prefix=self.get_prefix(),
+                    cmd="inlinesec" if is_inline else "security",
                 ),
                 show_alert=True,
             )
         else:
-            await call.answer("Security value set!")
+            await call.answer(self.strings["perm_set"])
 
         await call.edit(
             self.strings["permissions"].format(
@@ -130,7 +130,7 @@ class HerokuSecurityMod(loader.Module):
 
         self._db.set(security.__name__, "bounding_mask", mask)
 
-        await call.answer("Bounding mask value set!")
+        await call.answer(self.strings["bm_set"])
         await call.edit(
             self.strings["global"],
             reply_markup=self._build_markup_global(is_inline),
@@ -140,11 +140,11 @@ class HerokuSecurityMod(loader.Module):
         query = self._db.get(security.__name__, "allow_inline_query", False)
         self._db.set(security.__name__, "allow_inline_query", not query)
 
-        await call.answer("Inline query permission set!")
+        await call.answer(self.strings["query_set"])
         await call.edit(
             self.strings["querysec_info"],
             reply_markup={
-                "text": "❌" if query else "✅",
+                "text": self.strings["query_denied" if query else "query_allowed"],
                 "callback": self.inline__switch_perm_inline_query,
             },
         )
@@ -280,6 +280,15 @@ class HerokuSecurityMod(loader.Module):
 
     @loader.command()
     async def sgroups(self, message: Message):
+        if not self._sgroups:
+            await utils.answer(
+                message,
+                self.strings["no_sgroups"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
+            return
+
         await utils.answer(
             message,
             self.strings["sgroups_list"].format(
@@ -299,31 +308,36 @@ class HerokuSecurityMod(loader.Module):
             return
 
         if not (group := self._sgroups.get(args)):
-            await utils.answer(message, self.strings["sgroup_not_found"].format(args))
+            await utils.answer(
+                message,
+                self.strings["sgroup_not_found"].format(
+                    utils.escape_html(args),
+                    prefix=utils.escape_html(self.get_prefix()),
+                ),
+            )
             return
+
+        users = []
+        for user in group.users:
+            try:
+                entity = await self._client.get_entity(user, exp=0)
+            except Exception:
+                users.append(self.strings["li"].format(f"tg://user?id={user}", user))
+                continue
+
+            users.append(
+                self.strings["li"].format(
+                    utils.get_entity_url(entity),
+                    utils.escape_html(get_display_name(entity)),
+                )
+            )
 
         await utils.answer(
             message,
             self.strings["sgroup_info"].format(
                 group.name,
                 (
-                    self.strings["users_list"].format(
-                        "\n".join(
-                            [
-                                self.strings["li"].format(
-                                    utils.get_entity_url(
-                                        await self._client.get_entity(user, exp=0)
-                                    ),
-                                    utils.escape_html(
-                                        get_display_name(
-                                            await self._client.get_entity(user, exp=0)
-                                        )
-                                    ),
-                                )
-                                for user in group.users
-                            ]
-                        )
-                    )
+                    self.strings["users_list"].format("\n".join(users))
                     if group.users
                     else self.strings["no_users"]
                 ),
@@ -360,7 +374,13 @@ class HerokuSecurityMod(loader.Module):
             return
 
         if not self._sgroups.get(args):
-            await utils.answer(message, self.strings["sgroup_not_found"].format(args))
+            await utils.answer(
+                message,
+                self.strings["sgroup_not_found"].format(
+                    utils.escape_html(args),
+                    prefix=utils.escape_html(self.get_prefix()),
+                ),
+            )
             return
 
         del self._sgroups[args]
@@ -368,33 +388,51 @@ class HerokuSecurityMod(loader.Module):
 
         await utils.answer(message, self.strings["deleted_sgroup"].format(args))
 
+    async def _sgroup_user_target(self, message: Message, cmd: str):
+        args = utils.get_args_raw(message).split()
+        prefix = utils.escape_html(self.get_prefix())
+
+        if not args or len(args) > 2 or (len(args) == 1 and not message.is_reply):
+            await utils.answer(
+                message,
+                self.strings["sgroup_user_usage"].format(prefix=prefix, cmd=cmd),
+            )
+            return None
+
+        if not (group := self._sgroups.get(args[0])):
+            await utils.answer(
+                message,
+                self.strings["sgroup_not_found"].format(
+                    utils.escape_html(args[0]),
+                    prefix=prefix,
+                ),
+            )
+            return None
+
+        if len(args) == 2:
+            try:
+                user = await self._client.get_entity(
+                    self._entity_arg(args[1]), exp=0
+                )
+            except (ValueError, TypeError):
+                await utils.answer(
+                    message,
+                    self.strings["target_not_found"].format(
+                        utils.escape_html(args[1])
+                    ),
+                )
+                return None
+        else:
+            user = await (await message.get_reply_message()).get_sender()
+
+        return group, user
+
     @loader.command()
     async def sgroupadd(self, message: Message):
-        if not (args := utils.get_args_raw(message)):
-            await utils.answer(message, self.strings["no_args"])
+        if not (target := await self._sgroup_user_target(message, "sgroupadd")):
             return
 
-        if len(args.split()) >= 2:
-            group, user = args.split()
-
-            if user.isdigit():
-                user = int(user)
-
-            try:
-                user = await self._client.get_entity(user, exp=0)
-            except ValueError:
-                await utils.answer(message, self.strings["no_args"])
-                return
-        else:
-            if not message.is_reply:
-                await utils.answer(message, self.strings["no_args"])
-                return
-
-            group, user = args, await (await message.get_reply_message()).get_sender()
-
-        if not (group := self._sgroups.get(group)):
-            await utils.answer(message, self.strings["sgroup_not_found"].format(group))
-            return
+        group, user = target
 
         if user.id in group.users:
             await utils.answer(
@@ -420,31 +458,10 @@ class HerokuSecurityMod(loader.Module):
 
     @loader.command()
     async def sgroupdel(self, message: Message):
-        if not (args := utils.get_args_raw(message)):
-            await utils.answer(message, self.strings["no_args"])
+        if not (target := await self._sgroup_user_target(message, "sgroupdel")):
             return
 
-        if len(args.split()) >= 2:
-            group, user = args.split()
-
-            if user.isdigit():
-                user = int(user)
-
-            try:
-                user = await self._client.get_entity(user, exp=0)
-            except ValueError:
-                await utils.answer(message, self.strings["no_args"])
-                return
-        else:
-            if not message.is_reply:
-                await utils.answer(message, self.strings["no_args"])
-                return
-
-            group, user = args, await (await message.get_reply_message()).get_sender()
-
-        if not (group := self._sgroups.get(group)):
-            await utils.answer(message, self.strings["sgroup_not_found"].format(group))
-            return
+        group, user = target
 
         if user.id not in group.users:
             await utils.answer(
@@ -523,7 +540,7 @@ class HerokuSecurityMod(loader.Module):
         await self.inline.form(
             self.strings["querysec_info"],
             reply_markup={
-                "text": "✅" if query else "❌",
+                "text": self.strings["query_allowed" if query else "query_denied"],
                 "callback": self.inline__switch_perm_inline_query,
             },
             message=message,
@@ -600,7 +617,9 @@ class HerokuSecurityMod(loader.Module):
             return await utils.answer(
                 message,
                 self.strings["owner_exists"].format(
-                    user.id, utils.escape_html(get_display_name(user))
+                    user.id,
+                    utils.escape_html(get_display_name(user)),
+                    prefix=utils.escape_html(self.get_prefix()),
                 ),
             )
 
@@ -678,7 +697,7 @@ class HerokuSecurityMod(loader.Module):
             ),
             reply_markup=[
                 {
-                    "text": self.strings["cancel"],
+                    "text": self.strings["nonick_skip_btn"],
                     "action": "close",
                 },
                 {
@@ -707,7 +726,7 @@ class HerokuSecurityMod(loader.Module):
 
     @loader.command()
     async def owneradd(self, message: Message):
-        """[-f|--force] [-n|--nonick] [-p <prefix>]... <user or reply> — Add owner."""
+        """[-f|--force] [-n|--nonick] [-p <prefix>]... <user or reply> - Add owner."""
         args = utils.get_args(message)
         if not isinstance(args, list):
             return await utils.answer(message, self.strings["owneradd_usage"])
@@ -757,9 +776,18 @@ class HerokuSecurityMod(loader.Module):
         if not (user := await self._resolve_user(message)):
             return
 
-        if user.id in self._client.dispatcher.security.owner:
-            self._client.dispatcher.security.owner.remove(user.id)
-            self._client.dispatcher.security._reload_rights(force=True)
+        if user.id not in self._client.dispatcher.security.owner:
+            await utils.answer(
+                message,
+                self.strings["not_owner"].format(
+                    user.id,
+                    utils.escape_html(get_display_name(user)),
+                ),
+            )
+            return
+
+        self._client.dispatcher.security.owner.remove(user.id)
+        self._client.dispatcher.security._reload_rights(force=True)
 
         await utils.answer(
             message,
@@ -794,7 +822,15 @@ class HerokuSecurityMod(loader.Module):
                         self.strings["li"].format(
                             utils.get_entity_url(i), utils.escape_html(get_display_name(i))
                         )
-                        + (f" (<code>{utils.escape_html(p)}</code>)" if p else "")
+                        + (
+                            " ("
+                            + self.strings["list_prefix"].format(
+                                f"<code>{utils.escape_html(p)}</code>"
+                            )
+                            + ")"
+                            if p
+                            else ""
+                        )
                         for i, p in zip(_resolved_users, _and_prefixes)
                     ]
                 )
@@ -1059,6 +1095,14 @@ class HerokuSecurityMod(loader.Module):
             await utils.answer(message, self.strings["no_rule"])
             return
 
+        if not (
+            possible_rules := [
+                rule for rule in possible_rules if not rule.startswith("inline")
+            ]
+        ):
+            await utils.answer(message, self.strings["chat_inline"])
+            return
+
         if len(possible_rules) > 1:
             await self.inline.form(
                 message=message,
@@ -1092,11 +1136,17 @@ class HerokuSecurityMod(loader.Module):
 
     async def _tsec_sgroup(self, message: Message, args: list):
         if len(args) <= 1:
-            await utils.answer(message, self.strings["no_target"])
+            await utils.answer(message, self.strings["no_sgroup_name"])
             return
 
         if (target := args[1]) not in self._sgroups:
-            await utils.answer(message, self.strings["sgroup_not_found"].format(target))
+            await utils.answer(
+                message,
+                self.strings["sgroup_not_found"].format(
+                    utils.escape_html(target),
+                    prefix=utils.escape_html(self.get_prefix()),
+                ),
+            )
             return
 
         duration, bad_time = self._extract_time(args[2:])
@@ -1233,7 +1283,7 @@ class HerokuSecurityMod(loader.Module):
             "chat",
             "sgroup",
         ]:
-            await utils.answer(message, self.strings["no_target"])
+            await utils.answer(message, self.strings["what"])
             return
 
         if args[0] == "user":
@@ -1286,7 +1336,10 @@ class HerokuSecurityMod(loader.Module):
             if args[1] not in self._sgroups:
                 await utils.answer(
                     message,
-                    self.strings["sgroup_not_found"].format(utils.escape_html(args[1])),
+                    self.strings["sgroup_not_found"].format(
+                        utils.escape_html(args[1]),
+                        prefix=utils.escape_html(self.get_prefix()),
+                    ),
                 )
                 return
 
@@ -1367,7 +1420,7 @@ class HerokuSecurityMod(loader.Module):
             "chat",
             "sgroup",
         }:
-            await utils.answer(message, self.strings["no_target"])
+            await utils.answer(message, self.strings["what"])
             return
 
         if args[0] == "user":
@@ -1399,7 +1452,10 @@ class HerokuSecurityMod(loader.Module):
             if not (group := self._sgroups.get(args[1])):
                 await utils.answer(
                     message,
-                    self.strings["sgroup_not_found"].format(utils.escape_html(args[1])),
+                    self.strings["sgroup_not_found"].format(
+                        utils.escape_html(args[1]),
+                        prefix=utils.escape_html(self.get_prefix()),
+                    ),
                 )
                 return
 
@@ -1437,55 +1493,59 @@ class HerokuSecurityMod(loader.Module):
     @loader.command()
     async def tsec(self, message: Message):
         if not (args := utils.get_args(message)):
+            def _li(emoji: str, url: str, name: str, rule: dict) -> str:
+                return emoji + " " + self.strings["tsec_rule"].format(
+                    url,
+                    utils.escape_html(name),
+                    self.strings[rule["rule_type"]],
+                    rule["rule"],
+                    (
+                        self.strings["remaining"].format(
+                            self._convert_time(int(rule["expires"] - time.time()))
+                        )
+                        if rule["expires"]
+                        else self.strings["forever"]
+                    ),
+                )
+
+            rules = (
+                [
+                    _li(
+                        "<tg-emoji emoji-id=6037355667365300960>👥</tg-emoji>",
+                        rule["entity_url"],
+                        rule["entity_name"],
+                        rule,
+                    )
+                    for rule in self._client.dispatcher.security.tsec_chat
+                ]
+                + [
+                    _li(
+                        "<tg-emoji emoji-id=6037122016849432064>👤</tg-emoji>",
+                        rule["entity_url"],
+                        rule["entity_name"],
+                        rule,
+                    )
+                    for rule in self._client.dispatcher.security.tsec_user
+                ]
+                + [
+                    _li(
+                        "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji>",
+                        "",
+                        group.name,
+                        rule,
+                    )
+                    for group in self._sgroups.values()
+                    for rule in group.permissions
+                ]
+            )
+
+            if not rules:
+                await utils.answer(message, self.strings["no_rules"])
+                return
 
             await utils.answer(
                 message,
-                self.strings["rules"].format(
-                    "\n".join(
-                        [
-                            "<tg-emoji emoji-id=6037355667365300960>👥</tg-emoji> <b><a"
-                            " href='{}'>{}</a> {} {} {}</b> <code>{}</code>".format(
-                                rule["entity_url"],
-                                utils.escape_html(rule["entity_name"]),
-                                self._convert_time(int(rule["expires"] - time.time())),
-                                self.strings["for"],
-                                self.strings[rule["rule_type"]],
-                                rule["rule"],
-                            )
-                            for rule in self._client.dispatcher.security.tsec_chat
-                        ]
-                        + [
-                            "<tg-emoji emoji-id=6037122016849432064>👤</tg-emoji> <b><a"
-                            " href='{}'>{}</a> {} {} {}</b> <code>{}</code>".format(
-                                rule["entity_url"],
-                                utils.escape_html(rule["entity_name"]),
-                                self._convert_time(int(rule["expires"] - time.time())),
-                                self.strings["for"],
-                                self.strings[rule["rule_type"]],
-                                rule["rule"],
-                            )
-                            for rule in self._client.dispatcher.security.tsec_user
-                        ]
-                        + [
-                            "\n".join(
-                                [
-                                    "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji>"
-                                    " <code>{}</code> <b>{} {} {}</b> <code>{}</code>".format(
-                                        utils.escape_html(group.name),
-                                        self._convert_time(
-                                            int(rule["expires"] - time.time())
-                                        ),
-                                        self.strings["for"],
-                                        self.strings[rule["rule_type"]],
-                                        rule["rule"],
-                                    )
-                                    for rule in group.permissions
-                                ]
-                            )
-                            for group in self._sgroups.values()
-                        ]
-                    )
-                ),
+                self.strings["rules"].format("\n".join(rules)),
             )
             return
 

@@ -9,7 +9,6 @@ heroku_security:
   permissions: "🔐 <b>chmod +x for</b> <code>{}{}</code>"
   close_menu: "🙈 exit(0)"
   global: "🔐 <b>iptables -P INPUT DROP (0.0.0.0/0)!</b>"
-  owner: "😎 Root (UID 0)"
   group_owner: "🧛‍♂️ chown root:root"
   group_admin_add_admins: "🧑‍⚖️ sudo usermod -aG sudo"
   group_admin_change_info: "🧑‍⚖️ vim /etc/group"
@@ -790,39 +789,6 @@ $inline:
   button403: "Access Denied"
   keep_id: "⚠️ Don't delete ID! {}"
   no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>Failed to create form</b>\n\nPossible ways to fix the error:\n\n1. Restart Heroku: <code>{prefix}restart</code>\n\n2. Enable inline mode for the bot: go to @BotFather, send /mybots, click Bot Settings -> Inline Mode -> On\n\n3. Create a new bot: send the command <code>{prefix}ch_heroku_bot</code> <@botname>"
-heroku_plugin_security:
-  name: HikkaPluginSecurity
-  _cls_doc: Manage external module security flags
-  _cmd_doc_external: <module> - Revoke full userbot access from module
-  _cmd_doc_unexternal: <module> - Restore full userbot access for module
-  no_hash: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Module name required</b>
-  hash_not_found: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Module lookup returned null</b>
-  hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>No exact hit. Closest symbol:</b> <code>{}</code>
-  hash_list: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>sha256sum *.py:</b>\n\n<blockquote expandable>{}</blockquote>"
-  no_hashes: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>sha256sum: no module hashes found</b>"
-  external_removed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>chmod -x: is_external removed for</b> <code>{}</code>"
-  external_restored: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>chmod +x: is_external restored for</b> <code>{}</code>"
-  already_internal: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Module</b> <code>{}</code> <b>is already internal (nothing to do)</b>"
-  already_external: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Module</b> <code>{}</code> <b>is already external (nothing to do)</b>"
-  session_allowed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>chmod +r: .session access allowed for</b> <code>{}</code>"
-  session_denied: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>chmod -r: .session access denied for</b> <code>{}</code>"
-  already_allowed: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session access already allowed for</b> <code>{}</code>"
-  already_denied: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>.session access already denied for</b> <code>{}</code>"
-  no_permissions: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>ls -l: no permissions</b>"
-  permissions_list: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>ls -l:</b>\n{}\n"
-  sgroup_li: "<tg-emoji emoji-id=4974264756668990388>▫️</tg-emoji> <code>{}</code> · <b>{} uids</b> · <b>{} rules</b>"
-  sgroups_list: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>cat /etc/group:</b>\n\n{}"
-  deleted_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>groupdel</b> <code>{}</code> <b>executed</b>"
-  user_already_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>UID</b> <code>{}</code> <b>already member of</b> <code>{}</code>"
-  user_added_to_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>usermod -aG</b> <code>{}</code> <b>to</b> <code>{}</code>"
-  user_not_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>UID</b> <code>{}</code> <b>grep failed in</b> <code>{}</code>"
-  user_removed_from_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>gpasswd -d</b> <code>{}</code> <b>from</b> <code>{}</code>"
-  _cmd_doc_delsgroup: "<name> - groupdel"
-  _cmd_doc_sgroup: "<name> - stat group"
-  _cmd_doc_sgroups: "cat /etc/group"
-  _cmd_doc_newsgroup: "<name> - groupadd"
-  _cmd_doc_sgroupadd: "<name> [uid] - usermod -aG"
-  _cmd_doc_sgroupdel: "<name> [uid] - gpasswd -d"
 loader_restrictor:
   name: "LoaderRestrictor"
   q1: "What's the actual permission scope of any module you install?"

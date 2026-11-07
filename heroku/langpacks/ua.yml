@@ -8,7 +8,6 @@ heroku_security:
   permissions: "🔐 <b>Тут можна налаштувати дозволи для команди</b> <code>{}{}</code>"
   close_menu: "🙈 Закрити це меню"
   global: "🔐 <b>Тут можна налаштувати глобальну маску виключення. Якщо тумблер вимкнений тут, він вимкнений для всіх команд</b>"
-  owner: "😎 Власник"
   group_owner: "🧛‍♂️ Власник групи"
   group_admin_add_admins: "🧑‍⚖️ Адмін (додавати учасників)"
   group_admin_change_info: "🧑‍⚖️ Адмін (змінювати інфо)"
@@ -794,40 +793,6 @@ $inline:
   button403: "Ви не можете натиснути на цю кнопку!"
   keep_id: "⚠️ Не видаляйте ID! {}"
   no_query_results: "<tg-emoji emoji-id=5440660757194744323>‼️</tg-emoji> <b>Не вдалося створити форму</b>\n\nМожливі способи виправлення помилки:\n\n1. Перезавантажте Heroku: <code>{prefix}restart</code>\n\n2. Увімкніть inline-режим для бота: перейдіть до @BotFather, відправте /mybots, натисніть Bot Settings -> Inline Mode -> On\n\n3. Створіть нового бота: відправте команду <code>{prefix}ch_heroku_bot</code> <@ім'я_бота>"
-heroku_plugin_security:
-  name: HikkaPluginSecurity
-  _cls_doc: Керування обмеженнями безпеки зовнішніх модулів
-  _cmd_doc_external: <module> - Заборонити модулю повний доступ до юзербота
-  _cmd_doc_unexternal: <module> - Дозволити модулю повний доступ до юзербота
-  no_hash: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Вкажи назву модуля</b>
-  hash_not_found: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Модуль із такою назвою не знайдено</b>
-  hash_not_found_suggest: <tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Збігів немає. Найближче:</b> <code>{}</code>
-  hash_list: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Хеші модулів:</b>\n\n<blockquote expandable>{}</blockquote>"
-  no_hashes: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Хеші модулів не знайдено</b>"
-  external_removed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Прапорець is_external знято для</b> <code>{}</code>"
-  external_restored: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Прапорець is_external повернуто для</b> <code>{}</code>"
-  already_internal: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Модуль</b> <code>{}</code> <b>уже внутрішній</b>"
-  already_external: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Модуль</b> <code>{}</code> <b>уже зовнішній</b>"
-  session_allowed: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Доступ до .session дозволено для</b> <code>{}</code>"
-  session_denied: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> <b>Доступ до .session заборонено для</b> <code>{}</code>"
-  already_allowed: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Доступ до .session уже дозволено для</b> <code>{}</code>"
-  already_denied: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Доступ до .session уже заборонено для</b> <code>{}</code>"
-  no_permissions: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>Немає дозволів</b>"
-  permissions_list: "<tg-emoji emoji-id=5870450390679425417>🗒</tg-emoji> <b>Права доступу:</b>\n{}\n"
-  sgroup_li: "<tg-emoji emoji-id=4974264756668990388>▫️</tg-emoji> <code>{}</code> · <b>{} користувач(-ів)</b> · <b>{} правил(-о)</b>"
-  sgroups_list: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Групи безпеки:</b>\n\n{}"
-  deleted_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Групу безпеки</b> <code>{}</code> <b>видалено</b>"
-  user_already_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Користувач</b> <code>{}</code> <b>вже знаходиться в групі безпеки</b> <code>{}</code>"
-  user_added_to_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Користувача</b> <code>{}</code> <b>додано до групи безпеки</b> <code>{}</code>"
-  user_not_in_sgroup: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Користувач</b> <code>{}</code> <b>не знаходиться в цій групі безпеки</b> <code>{}</code>"
-  user_removed_from_sgroup: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> <b>Користувача</b> <code>{}</code> <b>видалено з групи безпеки</b> <code>{}</code>"
-  _cmd_doc_delsgroup: "<ім'я> - Видалити групи безпеки"
-  _cmd_doc_sgroup: "<ім'я> - Показати інформацію про групу безпеки"
-  _cmd_doc_sgroups: "Список груп безпеки"
-  _cmd_doc_newsgroup: "<ім'я> - Створити нову групу безпеки"
-  _cmd_doc_sgroupadd: "<ім'я> [користувач або відповідь] - Додати користувача до групи безпеки"
-  _cmd_doc_sgroupdel: "<ім'я> [користувач або відповідь] - Видалити користувача з групи безпеки"
-
 loader_restrictor:
   q1: "Що насправді може зробити будь-який встановлений вами модуль?"
   q1_ans1: "Саме те, що сказано в його описі - нічого більше"
