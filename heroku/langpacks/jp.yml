@@ -564,7 +564,7 @@ heroku_info:
   _cfg_rich_mode: "infoをRichメッセージで表示"
   desc: "<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <b>ユーザーボットとは？</b>\n\n<tg-emoji emoji-id=5472238129849048175>😎</tg-emoji> ユーザーボットとは、Telegram API と対話して<b>ユーザーに代わって自動化されたタスクを実行するサードパーティのプログラム</b>のことです。これらのユーザーボットは、<b>メッセージの送信、チャンネルへの参加、メディアのダウンロードなど</b>、さまざまなタスクを自動化するために使用できます。\n\n<tg-emoji emoji-id=5474667187258006816>😎</tg-emoji> ユーザーボットは、ボットアカウントではなく<b>ユーザーのアカウントで実行される</b>ため、通常の Telegram ボットとは異なります。つまり、ユーザーボットはより多くの機能にアクセスでき、実行できるアクションの柔軟性が高くなります。\n\n<tg-emoji emoji-id=5472267631979405211>🚫</tg-emoji> ただし、<b>ユーザーボットは Telegram によって公式にサポートされていない</b>ことに注意してください。使用するとプラットフォームの利用規約に違反する可能性があります。そのため、<b>ユーザーはユーザーボットを使用する際に注意が必要であり</b>、悪意のある目的で使用されていないことを確認する必要があります。\n\n"
   no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> フォントへのリンクまたは返信はどこですか？"
-  no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>指定されたリンク </b><code>{link></code><b> には何も見つかりませんでした。\n\nリンク先のファイルの整合性を確認し、リンクがファイルを直接指していることも確認してください。</b>"
+  no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>指定されたリンク </b><code>{link}</code><b> には何も見つかりませんでした。\n\nリンク先のファイルの整合性を確認し、リンクがファイルを直接指していることも確認してください。</b>"
   font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>フォントが正常にインストールされました！</b>\n<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <i>これでお楽しみいただけます。</i>"
   incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>無効なフォント形式です！</b>\n<blockquote>サポートされている形式 -> otf, ttf</blockquote>"
   incorrect_img_format: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>無効な画像形式です</b>\n<blockquote>サポートされている形式 -> jpg, jpeg, png, bmp, webp</blockquote>"

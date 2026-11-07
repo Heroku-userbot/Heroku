@@ -564,7 +564,7 @@ heroku_info:
   _cfg_rich_mode: "Render info as a Rich message."
   desc: "<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <b>What is Userbot?</b>\n\n<tg-emoji emoji-id=5472238129849048175>😎</tg-emoji> A userbot is an automation script running on a user account (Client API).\n\n<tg-emoji emoji-id=5474667187258006816>😎</tg-emoji> Unlike Bots (Bot API), userbots have full access to User methods.\n\n<tg-emoji emoji-id=5472267631979405211>🚫</tg-emoji> <b>Warning: Violates ToS? Use at own risk.</b>\n\n"
   no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> Font not found in reply/link."
-  no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>404: Link </b><code>{link></code> <b>unreachable.</b>"
+  no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>404: Link </b><code>{link}</code> <b>unreachable.</b>"
   font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Font installed.</b>"
   incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>FormatError (support: otf, ttf)</b>"
   incorrect_img_format: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>FormatError (support: jpg, png, bmp, webp)</b>"
