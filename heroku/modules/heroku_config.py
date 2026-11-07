@@ -1278,7 +1278,7 @@ class HerokuConfigMod(loader.Module):
             ],
         )
 
-    def _fuzzy_lookup_configurable(self, query: str) -> tuple[str | None, bool]:
+    def _fuzzy_lookup_configurable(self, query: str) -> tuple[str | None, float]:
         query_lower = query.lower()
         best_score = -1.0
         best_name: str | None = None
@@ -1302,7 +1302,7 @@ class HerokuConfigMod(loader.Module):
 
             for name in names:
                 if name.lower() == query_lower:
-                    return mod_name, True
+                    return mod_name, 1.0
                 score = difflib.SequenceMatcher(None, query_lower, name.lower()).ratio()
                 if score > best_score:
                     best_score = score
@@ -1313,13 +1313,13 @@ class HerokuConfigMod(loader.Module):
                 continue
             lib_name = getattr(lib, "name", lib.__class__.__name__)
             if lib_name.lower() == query_lower:
-                return lib_name, True
+                return lib_name, 1.0
             score = difflib.SequenceMatcher(None, query_lower, lib_name.lower()).ratio()
             if score > best_score:
                 best_score = score
                 best_name = lib_name
 
-        return best_name, False
+        return best_name, best_score
 
     def _get_all_folders(self) -> dict:
         folders = {}
@@ -1591,7 +1591,10 @@ class HerokuConfigMod(loader.Module):
         if (instance := self.lookup(query)) and hasattr(instance, "config"):
             return query, instance, self._get_config_obj_type(instance)
 
-        fuzzy_name, _ = self._fuzzy_lookup_configurable(query)
+        fuzzy_name, score = self._fuzzy_lookup_configurable(query)
+        if score < 0.6:
+            return None, None, None
+
         if fuzzy_name and (instance := self.lookup(fuzzy_name)):
             if hasattr(instance, "config") and instance.config:
                 return fuzzy_name, instance, self._get_config_obj_type(instance)
@@ -1644,6 +1647,16 @@ class HerokuConfigMod(loader.Module):
 
         return None
 
+    def _no_option_text(self, mod: str, instance: typing.Any, option: str) -> str:
+        return self.strings["no_option"].format(
+            mod=utils.escape_html(mod),
+            opt=utils.escape_html(option),
+            options=", ".join(
+                f"<code>{utils.escape_html(key)}</code>"
+                for key in instance.config.keys()
+            ),
+        )
+
     async def _apply_config_updates(
         self,
         message: Message,
@@ -1656,7 +1669,9 @@ class HerokuConfigMod(loader.Module):
 
         for option, value in [first_update]:
             if option not in instance.config:
-                await utils.answer(message, self.strings["no_option"])
+                await utils.answer(
+                    message, self._no_option_text(mod, instance, option)
+                )
                 return
 
             try:
@@ -1677,7 +1692,9 @@ class HerokuConfigMod(loader.Module):
 
             option, value = update
             if option not in instance.config:
-                await utils.answer(message, self.strings["no_option"])
+                await utils.answer(
+                    message, self._no_option_text(mod, instance, option)
+                )
                 return
 
             try:
@@ -1714,7 +1731,18 @@ class HerokuConfigMod(loader.Module):
 
         mod_name, instance, obj_type = self._resolve_configurable(args_s[0])
         if not mod_name or not instance or obj_type is None:
-            await self.inline__choose_category(message)
+            fuzzy_name, _ = self._fuzzy_lookup_configurable(args_s[0])
+            if not fuzzy_name:
+                await self.inline__choose_category(message)
+                return
+
+            await utils.answer(
+                message,
+                self.strings["no_mod"].format(
+                    utils.escape_html(args_s[0]),
+                    utils.escape_html(fuzzy_name),
+                ),
+            )
             return
 
         parts = [part.strip() for part in raw.split("&&") if part.strip()]
@@ -1778,7 +1806,9 @@ class HerokuConfigMod(loader.Module):
             )
             return
 
-        await self.inline__choose_category(message)
+        await utils.answer(
+            message, self._no_option_text(mod_name, instance, args_s[1])
+        )
 
     @loader.command(aliases=["cfg", "fcfg"])
     async def configcmd(self, message: Message):
