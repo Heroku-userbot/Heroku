@@ -71,20 +71,33 @@ class CoreMod(loader.Module):
             2,
         )
 
-    async def blacklistcommon(self, message: Message):
+    async def blacklistcommon(self, message: Message, cmd: str):
         args = utils.get_args(message)
 
         if len(args) > 2:
-            await utils.answer(message, self.strings["too_many_args"])
-            return
+            await utils.answer(
+                message,
+                self.strings["too_many_args"].format(
+                    prefix=utils.escape_html(self.get_prefix()), cmd=cmd
+                ),
+            )
+            return None
 
         chatid = None
         module = None
 
         if args:
             try:
-                chatid = int(args[0])
+                chatid = herokutl.utils.resolve_id(int(args[0]))[0]
             except ValueError:
+                if len(args) == 2:
+                    await utils.answer(
+                        message,
+                        self.strings["too_many_args"].format(
+                            prefix=utils.escape_html(self.get_prefix()), cmd=cmd
+                        ),
+                    )
+                    return None
                 module = args[0]
 
         if len(args) == 2:
@@ -93,8 +106,21 @@ class CoreMod(loader.Module):
         if chatid is None:
             chatid = utils.get_chat_id(message)
 
-        module = self.allmodules.get_classname(module)
-        return f"{str(chatid)}.{module}" if module else chatid
+        if not module:
+            return chatid, chatid, None
+
+        mod_inst = self.allmodules.lookup(module)
+        if not isinstance(mod_inst, loader.Module):
+            await utils.answer(
+                message, self.strings["mod404"].format(utils.escape_html(module))
+            )
+            return None
+
+        return (
+            f"{chatid}.{mod_inst.__class__.__module__}",
+            chatid,
+            mod_inst.__class__.__name__,
+        )
 
     @loader.command(
         ru_doc="Информация о Хероку",
@@ -154,40 +180,57 @@ class CoreMod(loader.Module):
 
     @loader.command()
     async def blacklist(self, message: Message):
-        chatid = await self.blacklistcommon(message)
-        chatid_str = str(chatid)
+        if not (result := await self.blacklistcommon(message, "blacklist")):
+            return
 
-        if chatid_str.startswith("-100"):
-            chatid = chatid_str[4:]
+        key, chatid, module = result
 
         self._db.set(
             main.__name__,
             "blacklist_chats",
-            self._db.get(main.__name__, "blacklist_chats", []) + [chatid],
+            self._db.get(main.__name__, "blacklist_chats", []) + [key],
         )
 
-        await utils.answer(message, self.strings["blacklisted"].format(chatid))
+        await utils.answer(
+            message,
+            (
+                self.strings["blacklisted_module"].format(module=module, chat=chatid)
+                if module
+                else self.strings["blacklisted"].format(chatid)
+            ),
+        )
 
     @loader.command()
     async def unblacklist(self, message: Message):
-        chatid = await self.blacklistcommon(message)
-        chatid_str = str(chatid)
+        if not (result := await self.blacklistcommon(message, "unblacklist")):
+            return
 
-        if chatid_str.startswith("-100"):
-            chatid = chatid_str[4:]
+        key, chatid, module = result
 
         self._db.set(
             main.__name__,
             "blacklist_chats",
-            list(set(self._db.get(main.__name__, "blacklist_chats", [])) - {chatid}),
+            list(
+                set(self._db.get(main.__name__, "blacklist_chats", []))
+                - {key, str(key)}
+            ),
         )
 
-        await utils.answer(message, self.strings["unblacklisted"].format(chatid))
+        await utils.answer(
+            message,
+            (
+                self.strings["unblacklisted_module"].format(module=module, chat=chatid)
+                if module
+                else self.strings["unblacklisted"].format(chatid)
+            ),
+        )
 
     async def getuser(self, message: Message):
         try:
             return int(utils.get_args(message)[0])
-        except (ValueError, IndexError):
+        except ValueError:
+            return False
+        except IndexError:
             if reply := await message.get_reply_message():
                 return reply.sender_id
 
@@ -332,8 +375,11 @@ class CoreMod(loader.Module):
     async def addalias(self, message: Message):
 
         args_raw = utils.get_args_raw(message)
+        alias_args = self.strings["alias_args"].format(
+            prefix=utils.escape_html(self.get_prefix())
+        )
         if not args_raw:
-            await utils.answer(message, self.strings["alias_args"])
+            await utils.answer(message, alias_args)
             return
 
         import keyword
@@ -397,7 +443,7 @@ class CoreMod(loader.Module):
             if line_idx == 0:
                 parsed = parse_alias_line(line)
                 if not parsed:
-                    await utils.answer(message, self.strings["alias_args"])
+                    await utils.answer(message, alias_args)
                     return
                 aliases, command = parsed
                 command_parts = command.split(maxsplit=1)
@@ -425,7 +471,7 @@ class CoreMod(loader.Module):
                         alias_lines[-1] = (aliases, cmd, new_rest)
 
         if not alias_lines:
-            await utils.answer(message, self.strings["alias_args"])
+            await utils.answer(message, alias_args)
             return
 
         added_lines = []
@@ -599,14 +645,48 @@ class CoreMod(loader.Module):
     async def togglecmdcmd(self, message: Message):
         """Toggle disable specific command of a module: togglecmd <module> <command> or togglecmd <command>"""
         args = utils.get_args(message)
-        if not args:
-            await utils.answer(message, self.strings["wrong_usage_tcc"])
+        if not args or len(args) > 2:
+            await utils.answer(
+                message,
+                self.strings["wrong_usage_tcc"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
+            return
 
-        if args and len(args) >= 2:
+        if len(args) == 2:
             mod_arg, cmd = args[0], args[1]
             mod_inst = self.allmodules.lookup(mod_arg)
-            if not mod_inst:
-                await utils.answer(message, self.strings["mod404"].format(mod_arg))
+        else:
+            mod_arg = cmd = args[0]
+            handler = self.allmodules.commands.get(cmd.lower())
+            mod_inst = getattr(handler, "__self__", None)
+            if mod_inst is None:
+                disabled = self._db.get(main.__name__, "disabled_commands", {})
+                owner = next(
+                    (
+                        name
+                        for name, cmds in disabled.items()
+                        if cmd.lower() in (c.lower() for c in cmds)
+                    ),
+                    None,
+                )
+                mod_inst = next(
+                    (
+                        m
+                        for m in self.allmodules.modules
+                        if m.__class__.__name__ == owner
+                    ),
+                    None,
+                )
+            if mod_inst is None:
+                await utils.answer(message, self.strings["cmd404"])
+                return
+        if not isinstance(mod_inst, loader.Module):
+            await utils.answer(
+                message, self.strings["mod404"].format(utils.escape_html(mod_arg))
+            )
+            return
 
         module_key = mod_inst.__class__.__name__
 
@@ -615,6 +695,7 @@ class CoreMod(loader.Module):
 
         if cmd.lower() not in [c.lower() for c in mod_inst.heroku_commands.keys()]:
             await utils.answer(message, self.strings["cmd404"])
+            return
 
         if any(c.lower() == cmd.lower() for c in current):
             current = [c for c in current if c.lower() != cmd.lower()]
@@ -655,15 +736,28 @@ class CoreMod(loader.Module):
         """Toggle disable entire module: togglemod <module>"""
         args = utils.get_args(message)
         if not args:
-            await utils.answer(message, self.strings["wrong_usage_tmc"])
+            await utils.answer(
+                message,
+                self.strings["wrong_usage_tmc"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
+            return
 
         mod_arg = args[0]
         mod_inst = self.allmodules.lookup(mod_arg)
-        if not mod_inst:
-            await utils.answer(message, self.strings["mod404"].format(mod_arg))
+        if not isinstance(mod_inst, loader.Module):
+            await utils.answer(
+                message, self.strings["mod404"].format(utils.escape_html(mod_arg))
+            )
+            return
 
         module_key = mod_inst.__class__.__name__
         disabled = self._db.get(main.__name__, "disabled_modules", [])
+
+        if mod_inst is self and module_key not in disabled:
+            await utils.answer(message, self.strings["cant_disable_settings"])
+            return
 
         if module_key in disabled:
             disabled = [m for m in disabled if m != module_key]
@@ -693,7 +787,12 @@ class CoreMod(loader.Module):
         """Clear all DB entries for module: clearmodule <module>"""
         args = utils.get_args(message)
         if not args:
-            return await utils.answer(message, self.strings["wrong_usage_cmc"])
+            return await utils.answer(
+                message,
+                self.strings["wrong_usage_cmc"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
 
         mod_arg = args[0]
         mod_inst = self.allmodules.lookup(mod_arg)
