@@ -123,7 +123,7 @@ class CoreMod(loader.Module):
         )
 
     @loader.command(
-        ru_doc="Информация о Хероку",
+        ru_doc="Информация о Heroku",
         en_doc="Information of Heroku",
         ua_doc="Інформація про Хероку",
         de_doc="Informationen über Heroku",
@@ -242,6 +242,10 @@ class CoreMod(loader.Module):
             await utils.answer(message, self.strings["who_to_blacklist"])
             return
 
+        if user in self._client.dispatcher.security.owner:
+            await utils.answer(message, self.strings["owner_blacklist"])
+            return
+
         self._db.set(
             main.__name__,
             "blacklist_users",
@@ -318,7 +322,12 @@ class CoreMod(loader.Module):
         try:
             entity = await self.client.get_entity(target)
         except Exception:
-            return await utils.answer(message, self.strings["invalid_id_or_username"])
+            return await utils.answer(
+                message,
+                self.strings["invalid_id_or_username"].format(
+                    utils.escape_html(str(target))
+                ),
+            )
         if not isinstance(entity, User):
             return await utils.answer(message, self.strings["not_a_user"].format(target))
         oldprefixes = utils.user_prefixes(
@@ -351,13 +360,24 @@ class CoreMod(loader.Module):
                 "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji>",
                 entity_name=utils.escape_html(entity.first_name),
                 entity_id=entity.id,
-                newprefix=utils.escape_html(utils.format_prefixes(prefixes)),
+                newprefix=utils.escape_html(
+                    self.get_prefix(getattr(message, "sender_id", None))
+                ),
                 oldprefix=utils.escape_html(" ".join(oldprefixes)),
             ),
         )
 
     @loader.command()
     async def aliases(self, message: Message):
+        if not self.allmodules.aliases:
+            await utils.answer(
+                message,
+                self.strings["no_aliases"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
+            return
+
         await utils.answer(
             message,
             self.strings["aliases"]
@@ -554,7 +574,12 @@ class CoreMod(loader.Module):
         args_raw = utils.get_args_raw(message)
 
         if not args_raw:
-            await utils.answer(message, self.strings["delalias_args"])
+            await utils.answer(
+                message,
+                self.strings["delalias_args"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
         if args_raw.strip() in {"-c", "--clear"}:
@@ -573,7 +598,12 @@ class CoreMod(loader.Module):
                     seen_aliases.add(alias)
 
         if not aliases:
-            await utils.answer(message, self.strings["delalias_args"])
+            await utils.answer(
+                message,
+                self.strings["delalias_args"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
         current = self.get("aliases", {})
@@ -711,7 +741,8 @@ class CoreMod(loader.Module):
                 pass
 
             await utils.answer(
-                message, self.strings["cmd_enabled"].format(cmd, module_key)
+                message,
+                self.strings["cmd_enabled"].format(utils.escape_html(cmd), module_key),
             )
         else:
             current.append(cmd)
@@ -723,12 +754,16 @@ class CoreMod(loader.Module):
             except Exception:
                 pass
 
+            aliases_off = False
             for alias, target in list(self.allmodules.aliases.items()):
                 if target.split()[0].lower() == cmd.lower():
                     self.allmodules.aliases.pop(alias, None)
+                    aliases_off = True
 
             await utils.answer(
-                message, self.strings["cmd_disabled"].format(cmd, module_key)
+                message,
+                self.strings["cmd_disabled"].format(utils.escape_html(cmd), module_key)
+                + (self.strings["aliases_disabled"] if aliases_off else ""),
             )
 
     @loader.command()
@@ -773,6 +808,7 @@ class CoreMod(loader.Module):
         else:
             disabled += [module_key]
             self._db.set(main.__name__, "disabled_modules", disabled)
+            aliases_before = len(self.allmodules.aliases)
             try:
                 self.allmodules.unregister_commands(mod_inst, "disable")
                 self.allmodules.unregister_watchers(mod_inst, "disable")
@@ -780,7 +816,15 @@ class CoreMod(loader.Module):
                 self.allmodules.unregister_inline_stuff(mod_inst, "disable")
             except Exception:
                 pass
-            await utils.answer(message, self.strings["mod_disabled"].format(module_key))
+            await utils.answer(
+                message,
+                self.strings["mod_disabled"].format(module_key)
+                + (
+                    self.strings["aliases_disabled"]
+                    if len(self.allmodules.aliases) < aliases_before
+                    else ""
+                ),
+            )
 
     @loader.command()
     async def clearmodule(self, message: Message):
@@ -801,23 +845,32 @@ class CoreMod(loader.Module):
         else:
             module_key = mod_arg
 
+        cleared = False
         if module_key in self._db:
             try:
                 del self._db[module_key]
                 self._db.save()
+                cleared = True
             except Exception:
                 pass
 
         disabled_commands = self._db.get(main.__name__, "disabled_commands", {})
-        disabled_commands.pop(module_key, None)
+        if disabled_commands.pop(module_key, None) is not None:
+            cleared = True
         self._db.set(main.__name__, "disabled_commands", disabled_commands)
 
         disabled_modules = self._db.get(main.__name__, "disabled_modules", [])
         if module_key in disabled_modules:
             disabled_modules = [m for m in disabled_modules if m != module_key]
             self._db.set(main.__name__, "disabled_modules", disabled_modules)
+            cleared = True
 
-        await utils.answer(message, self.strings["cmc_done"].format(mod_arg))
+        await utils.answer(
+            message,
+            self.strings["cmc_done" if cleared else "cmc_nothing"].format(
+                utils.escape_html(mod_arg)
+            ),
+        )
 
     async def installationcmd(self, message: Message):
         """| Guide of installation"""
@@ -825,7 +878,7 @@ class CoreMod(loader.Module):
         args = utils.get_args_raw(message)
 
         if (
-            not args or args not in {"-vds", "-wsl", "-ul", "-jh", "-hh", "-lh", "-uni"}
+            not args or args not in {"-vds", "-wsl", "-ul", "-hh", "-uni"}
         ) and not (
             await self.inline.form(
                 self.strings["choose_installation"],
