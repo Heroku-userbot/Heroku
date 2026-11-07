@@ -538,24 +538,30 @@ api_protection:
   _cls_doc: Помогает юзерботу не спамить Telegram API
 help:
   undoc: "<tg-emoji emoji-id=5469741319330996757>💫</tg-emoji> Нет описания"
-  all_header: "<b>{} модулей доступно, {} скрыто:</b>"
-  no_mod: "🚫 <b>Укажи модуль(-и), которые нужно скрыть</b>"
+  all_header: "<b>Модулей: {}, скрыто: {}</b>"
+  no_mod: "🚫 <b>Укажите модуль(-и), которые нужно скрыть или вернуть, например:</b> <code>{prefix}helphide Loader Help</code>"
   help_lib: "<tg-emoji emoji-id=5404553572727660202>❌</tg-emoji> <b>Пакет</b> <code>{}</code> <b>является библиотекой.</b>\n<tg-emoji emoji-id=5404553572727660202>❌</tg-emoji> <b>У библиотек нет описания...</b>"
   developer: "<tg-emoji emoji-id=5287454910059654880>🫶</tg-emoji> Разработчик: {}"
-  hidden_shown: "<b>{} модулей скрыто, {} модулей показано:</b>\n{}\n{}"
+  hidden_shown: "<b>Скрыто: {}, снова показано: {}</b>\n{}\n{}"
+  mods_not_found: "\n🚫 <b>Не найдены модули:</b> {}"
   offchats: "<tg-emoji emoji-id=6019130940012370273>❔</tg-emoji> <a href=\"https://t.me/heroku_talks\"><b>Чат поддержки</b></a>\n\n<tg-emoji emoji-id=6019151079114021083>💬</tg-emoji> <a href=\"https://t.me/heroku_offtop\"><b>Оффтоп чат</b></a>\n\n<tg-emoji emoji-id=6019094432790354513>📢</tg-emoji> <a href=\"https://t.me/heroku_ub\"><b>Официальный канал</b></a>"
   _cls_doc: "Показывает помощь по модулям"
   partial_load: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>Юзербот еще не загрузился полностью, поэтому показаны не все модули</b>"
   not_exact: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>Точного совпадения не найдено, поэтому показан самый похожий модуль. Проверьте название; список всех модулей — команда help без аргументов</b>"
   not_found: "<tg-emoji emoji-id=5404553572727660202>❌</tg-emoji> <b>Модуль или команда</b> <code>{}</code> <b>не найдены. Список всех модулей — команда help без аргументов</b>"
   did_you_mean: "\n<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>Возможно, вы имели в виду</b> <code>{}</code><b>?</b>"
-  request_join: "Вы запросили ссылку на чат помощи Heroku"
   core_notice: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>Это встроенный модуль. Вы не можете его выгрузить или заменить</b>"
-  _cmd_doc_help: "[модуль | команда] [-f] [-c] [-l] - Показать помощь. Без аргументов — список модулей. -f — показать всё, включая скрытые модули и модули без команд; -c — только встроенные модули; -l — только установленные (с -c и -l скрытые модули тоже видны). Флаги пишутся отдельным словом"
-  _cmd_doc_helphide: "<модуль или модули> - Спрятать модуль(-и) из помощи\n*Разделяй модули пробелами"
-  _cmd_doc_support: "Показать ссылку на чат помощи Heroku"
-  show_preview_in_help: "Показать # meta banner в превью help [module] ?"
-  _cfg_rich_mode: "Показывать help как Rich-сообщение."
+  only_permitted: "<i>Показаны только команды, которые вам разрешено выполнять</i>"
+  no_permitted_cmds: "<i>Нет команд этого модуля, которые вам разрешено выполнять</i>"
+  legend: "<i>&lt;арг&gt; — обязательно, [арг] — необязательно, a|b — одно из, ... — можно несколько. Скобки не вводите.</i>"
+  _cmd_doc_help: "[модуль|команда] [-f] [-c] [-l] - Показать помощь. Без аргументов — список модулей.\nФлаги (только для общего списка, каждый отдельным словом): -f — всё, включая скрытые модули и модули без команд; -c — только встроенные модули; -l — только установленные (с -c и -l скрытые модули тоже видны)"
+  _cmd_doc_helphide: "<модуль> [модуль ...] - Скрыть модуль(-и) из help или вернуть обратно, если уже скрыт. Модули через пробел. Скрытые модули видны в help -f"
+  _cmd_doc_support: "Ссылки на чат поддержки, оффтоп-чат и канал Heroku"
+  show_preview_in_help: "Показывать баннер модуля (строка # meta banner в его коде) в help по модулю"
+  _cfg_banner_url: "Ссылка на баннер для help"
+  _cfg_media_quote: "Отправлять баннер help как превью ссылки, а не как вложение (без Premium всегда превью)"
+  _cfg_invert_media: "Поменять местами баннер и текст в help"
+  _cfg_rich_mode: "Показывать help в расширенном виде: сворачиваемые разделы и картинка баннера"
   rich_core: "Встроенные модули"
   rich_modules: "Модули"
   rich_placeholders: "Плейсхолдеры"
@@ -563,38 +569,26 @@ help:
 
   name: Help
 heroku_info:
-  missing_placeholder: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> Отсутствует плейсхолдер {placeholder}"
-  info_message: "{}\n<blockquote>┌\n├  【<tg-emoji emoji-id=5883964170268840032>👤</tg-emoji>】 <b>𝙾𝚠𝚗𝚎𝚛</b>: {me}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>𝚅𝚎𝚛𝚜𝚒𝚘𝚗</b>: {version}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5778335621491723621>📷</tg-emoji>】 <b>𝙿𝚛𝚎𝚏𝚒𝚡</b>: {prefix}⠀ ⠀ \n├  【<tg-emoji emoji-id=5843799474362652262>🔄</tg-emoji>】 <b>𝚄𝚙𝚝𝚒𝚖𝚎</b>: {uptime}\n├  【<tg-emoji emoji-id=5879770735999717115>👤</tg-emoji>】 <b>𝙱𝚛𝚊𝚗𝚌𝚑</b>: {branch}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5775887550262546277>❗️</tg-emoji>】 <b>𝙲𝙿𝚄</b>: {cpu_usage}\n├  【<tg-emoji emoji-id=5931409969613116639>🛡</tg-emoji>】 <b>𝚁𝙰𝙼</b>: {ram_usage}\n├  【<tg-emoji emoji-id=5931472654660800739>📊</tg-emoji>】 <b>𝙿𝚒𝚗𝚐</b>: {ping}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>】 <b>𝚄𝚙𝚍𝚊𝚝𝚎</b>: {upd}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>𝙷𝚘𝚜𝚝</b>: {platform}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>𝙾𝚂</b>: {os}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>𝙿𝚢𝚝𝚑𝚘𝚗 𝚅𝚎𝚛𝚜𝚒𝚘𝚗</b>: {python_ver}\n└</blockquote>"
-  rich_info_message: '<figure><img src="{banner_url}"/></figure><details><summary>Общее</summary><table><tr><th>Общее</th><th>Владелец</th></tr><tr><td>【<tg-emoji emoji-id=5883964170268840032>👤</tg-emoji>】 <b>Владелец</b></td><td>{me}</td></tr><tr><td>【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>Версия</b></td><td>{version}</td></tr><tr><td>【<tg-emoji emoji-id=5778335621491723621>📷</tg-emoji>】 <b>Префикс</b></td><td>{prefix}</td></tr><tr><td>【<tg-emoji emoji-id=5843799474362652262>🔄</tg-emoji>】 <b>Время работы</b></td><td>{uptime}</td></tr><tr><td>【<tg-emoji emoji-id=5879770735999717115>👤</tg-emoji>】 <b>Ветка</b></td><td>{branch}</td></tr></table></details><details><summary>Состояние</summary><table><tr><th>Состояние</th><th>Обновление</th></tr><tr><td>【<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>】 <b>Обновление</b></td><td>{upd}</td></tr><tr><td>【<tg-emoji emoji-id=5775887550262546277>❗️</tg-emoji>】 <b>CPU</b></td><td>{cpu_usage}</td></tr><tr><td>【<tg-emoji emoji-id=5931409969613116639>🛡</tg-emoji>】 <b>RAM</b></td><td>{ram_usage}</td></tr><tr><td>【<tg-emoji emoji-id=5931472654660800739>📊</tg-emoji>】 <b>Пинг</b></td><td>{ping}</td></tr></table></details><details><summary>Окружение</summary><table><tr><th>Окружение</th><th>ОС</th></tr><tr><td>【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>Хост</b></td><td>{platform}</td></tr><tr><td>【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>ОС</b></td><td>{os}</td></tr><tr><td>【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>Python</b></td><td>{python_ver}</td></tr></table></details>'
-  non_detectable: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Этот компонент невозможно обнаружить на вашем сервере!</b>"
-  ping_emoji: "Эмодзи для пинга в инфо"
-  send_info: "Отправить информацию о юзерботе"
-  description: "ℹ Это не раскроет никакой личной информации"
-  _ihandle_doc_info: "Отправить информацию о юзерботе"
+  missing_placeholder: "<tg-emoji emoji-id=5210952531676504517>🚫</tg-emoji> Неизвестный плейсхолдер {placeholder} (список — в <code>{prefix}config HerokuInfo</code>)"
+  info_message: "{}\n<blockquote>┌\n├  【<tg-emoji emoji-id=5883964170268840032>👤</tg-emoji>】 <b>𝙾𝚠𝚗𝚎𝚛</b>: {me}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>𝚅𝚎𝚛𝚜𝚒𝚘𝚗</b>: {version}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5778335621491723621>📷</tg-emoji>】 <b>𝙿𝚛𝚎𝚏𝚒𝚡</b>: {prefix}⠀ ⠀ \n├  【<tg-emoji emoji-id=5843799474362652262>🔄</tg-emoji>】 <b>𝚄𝚙𝚝𝚒𝚖𝚎</b>: {uptime}\n├  【<tg-emoji emoji-id=5879770735999717115>👤</tg-emoji>】 <b>𝙱𝚛𝚊𝚗𝚌𝚑</b>: {branch}\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5775887550262546277>❗️</tg-emoji>】 <b>𝙲𝙿𝚄</b>: {cpu_usage}%\n├  【<tg-emoji emoji-id=5931409969613116639>🛡</tg-emoji>】 <b>𝚁𝙰𝙼</b>: {ram_usage}\n├  【<tg-emoji emoji-id=5931472654660800739>📊</tg-emoji>】 <b>𝙿𝚒𝚗𝚐</b>: {ping} мс\n└</blockquote>\n<blockquote>┌\n├  【<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>】 <b>𝚄𝚙𝚍𝚊𝚝𝚎</b>: {upd}\n├  【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>𝙷𝚘𝚜𝚝</b>: {platform}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>𝙾𝚂</b>: {os}\n├  【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>𝙿𝚢𝚝𝚑𝚘𝚗 𝚅𝚎𝚛𝚜𝚒𝚘𝚗</b>: {python_ver}\n└</blockquote>"
+  rich_info_message: '<figure><img src="{banner_url}"/></figure><details><summary>Общее</summary><table><tr><th>Параметр</th><th>Значение</th></tr><tr><td>【<tg-emoji emoji-id=5883964170268840032>👤</tg-emoji>】 <b>Владелец</b></td><td>{me}</td></tr><tr><td>【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>Версия</b></td><td>{version}</td></tr><tr><td>【<tg-emoji emoji-id=5778335621491723621>📷</tg-emoji>】 <b>Префикс</b></td><td>{prefix}</td></tr><tr><td>【<tg-emoji emoji-id=5843799474362652262>🔄</tg-emoji>】 <b>Время работы</b></td><td>{uptime}</td></tr><tr><td>【<tg-emoji emoji-id=5879770735999717115>👤</tg-emoji>】 <b>Ветка</b></td><td>{branch}</td></tr></table></details><details><summary>Состояние</summary><table><tr><th>Параметр</th><th>Значение</th></tr><tr><td>【<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>】 <b>Обновление</b></td><td>{upd}</td></tr><tr><td>【<tg-emoji emoji-id=5775887550262546277>❗️</tg-emoji>】 <b>CPU</b></td><td>{cpu_usage}%</td></tr><tr><td>【<tg-emoji emoji-id=5931409969613116639>🛡</tg-emoji>】 <b>RAM</b></td><td>{ram_usage}</td></tr><tr><td>【<tg-emoji emoji-id=5931472654660800739>📊</tg-emoji>】 <b>Отклик</b></td><td>{ping} мс</td></tr></table></details><details><summary>Окружение</summary><table><tr><th>Параметр</th><th>Значение</th></tr><tr><td>【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>Хост</b></td><td>{platform}</td></tr><tr><td>【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>ОС</b></td><td>{os}</td></tr><tr><td>【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>Python</b></td><td>{python_ver}</td></tr></table></details>'
+  non_detectable: "<i>не определено</i>"
+  ping_emoji: "Эмодзи, которое показывается, пока меряется пинг (если в custom_message есть {ping})"
   up-to-date: "<b>Актуальная версия</b>"
   update_required: "<b>Требуется обновление</b> <code>{prefix}update</code>"
-  _cfg_cst_msg: "Кастомный текст сообщения в info. Может содержать ключевые слова {me}, {version}, {build}, {prefix}, {platform}, {upd}, {uptime}, {cpu_usage}, {ram_usage}, {branch}, {hostname}, {user}, {os}, {kernel}, {cpu}, {ping}, {python_ver}, {htl_ver}, {git_status}, {img}"
+  _cfg_cst_msg: "Кастомный текст сообщения в info. Может содержать ключевые слова {me}, {version}, {build}, {prefix}, {platform}, {platform_emoji}, {upd}, {uptime}, {cpu_usage}, {ram_usage}, {branch}, {hostname}, {user}, {os}, {kernel}, {cpu}, {ping}, {python_ver}, {htl_ver}, {git_status}, {banner_url}, {img} (только в rich_mode)"
   _cfg_cst_ph: "🤖Кастомные плейсхолдеры: {}"
-  _cfg_cst_btn: "Кастомная кнопка в сообщении в info. Оставь пустым, чтобы убрать кнопку"
   _cfg_banner: "Ссылка на баннер-картинку"
-  _cfg_rich_mode: "Показывать info как Rich-сообщение."
-  switchinfo_on: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> Информация об изображении успешно включена"
-  switchinfo_off: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> Информация об изображении успешно отключена"
+  _cfg_rich_mode: "Показывать info в расширенном виде: таблицы и картинка баннера"
   desc: "<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <b>Что такое Userbot?</b>\n\n<tg-emoji emoji-id=5472238129849048175>😎</tg-emoji> Userbot - это <b>сторонняя программа</b>, которая взаимодействует с Telegram API для выполнения <b>автоматизированных задач от имени пользователя</b>. Юзерботы могут использоваться для автоматизации различных задач, таких как <b>отправка сообщений, присоединение к каналам, загрузка медиафайлов и многое другое</b>.\n\n<tg-emoji emoji-id=5474667187258006816>😎</tg-emoji> Юзерботы отличаются от обычных ботов в Telegram тем, что <b>они работают на аккаунте пользователя</b>, а не на бот-аккаунте. Это означает, что они могут иметь доступ к большему количеству функций и обладают большей гибкостью в плане выполнения действий.\n\n<tg-emoji emoji-id=5472267631979405211>🚫</tg-emoji> Однако важно отметить, что <b>юзерботы официально не поддерживаются Telegram</b> и их использование может нарушать условия использования платформы. Поэтому <b>пользователи должны быть осторожны при их использовании</b> и убедиться, что на их аккаунте не выполняется вредоносный код.\n\n"
-  no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> Где ссылка или реплай на шрифт?"
   no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>По указанной ссылке </b><code>{link}</code><b> ничего не найдено.\n\nПроверьте целостность вашего файла по ссылке, а так же удостоверьтесь, что ссылка указывает прямо на файл.</b>"
-  font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Шрифт установлен!</b>\n<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <i>Теперь вы с удовольствием можете пользоваться им.</i>"
-  incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>Неверный формат шрифта!</b>\n<blockquote>Поддерживаемые форматы -> otf, ttf</blockquote>"
-  incorrect_img_format: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>Неверный формат изображения</b>\n<blockquote>Поддерживаемые форматы -> jpg, jpeg, png, bmp, webp</blockquote>"
-  _cmd_doc_ubinfo: "Отправить информацию по типу 'Что такое Хероку?'"
-  _cmd_doc_info: "Отправляет информацию о боте"
-  _cmd_doc_setinfo: "<текст> - Изменить текст в .info"
+  _cmd_doc_ubinfo: "Рассказать, что такое юзербот"
+  _cmd_doc_info: "Отправить информацию о юзерботе (можно ответом на сообщение). Текст меняется командой config HerokuInfo (опция custom_message)"
 
   name: HerokuInfo
   _cls_doc: Показать информацию о юзерботе
-  _cfg_quote_media: "Переключить превью медиа на цитату"
-  _cfg_invert_media: "Инвертировать превью медиа"
-  show_preview_in_help: "Показывать превью из # meta banner в help [модуль] ?"
+  _cfg_quote_media: "Отправлять баннер как превью ссылки, а не как вложение"
+  _cfg_invert_media: "Поменять местами баннер и текст в info"
 
 loader:
   loaded_placeholders: "Плейсхолдеры"
@@ -804,10 +798,11 @@ translate:
   _cfg_provider: "Используемый провайдер перевода"
 
 quickstart:
-  base: "<tg-emoji emoji-id=5463379725441341739>🪐</tg-emoji> <b>Привет.</b> Твой юзербот <b>{}</b> теперь установлен.\n\n<tg-emoji emoji-id=5134202243486057363>💫</tg-emoji> <b>Нужна помощь?</b> Заходи в <a href=\"https://t.me/heroku_talks\">наш чат поддержки</a>. Мы помогаем <b>всем</b>.\n\n<tg-emoji emoji-id=4940480187436369099>💁‍♀️</tg-emoji> <b>Краткое руководство:</b>\n\n<tg-emoji emoji-id=5456197350416486261>1️⃣</tg-emoji> <b>Напиши</b> <code>.help</code><b>, чтобы увидеть список модулей</b>\n<tg-emoji emoji-id=5456261689026581678>2️⃣</tg-emoji> <b>Напиши</b> <code>.help &lt;Имя модуля/команда&gt;</code><b>, чтобы увидеть описание модуля</b>\n<tg-emoji emoji-id=5458366235886522404>3️⃣</tg-emoji> <b>Напиши</b> <code>.dlmod &lt;ссылка&gt;</code><b>, чтобы загрузить модуль по ссылке</b>\n<tg-emoji emoji-id=5456207331920483861>4️⃣</tg-emoji> <b>Напиши</b> <code>.loadmod</code> <b>в ответ на файл, чтобы загрузить из него модуль</b>\n<tg-emoji emoji-id=5456185418997340146>5️⃣</tg-emoji> <b>Напиши</b> <code>.unloadmod &lt;Имя модуля&gt;</code><b>, чтобы выгрузить модуль</b>\n\n<tg-emoji emoji-id=5456178297941561360>💡</tg-emoji> <b>Heroku поддерживает модули от Hikka, Friendly-Telegram и GeekTG, а также свои собственные.</b>\n"
+  base: "<tg-emoji emoji-id=5463379725441341739>🪐</tg-emoji> <b>Привет.</b> Ваш юзербот <b>{}</b> теперь установлен.\n\n<tg-emoji emoji-id=5134202243486057363>💫</tg-emoji> <b>Нужна помощь?</b> Заходите в <a href=\"https://t.me/heroku_talks\">наш чат поддержки</a>. Мы помогаем <b>всем</b>.\n\n<tg-emoji emoji-id=4940480187436369099>💁‍♀️</tg-emoji> <b>Краткое руководство:</b>\n\n<tg-emoji emoji-id=5456197350416486261>1️⃣</tg-emoji> <b>Напишите</b> <code>.help</code><b>, чтобы увидеть список модулей</b>\n<tg-emoji emoji-id=5456261689026581678>2️⃣</tg-emoji> <b>Напишите</b> <code>.help &lt;Имя модуля/команда&gt;</code><b>, чтобы увидеть описание модуля</b>\n<tg-emoji emoji-id=5458366235886522404>3️⃣</tg-emoji> <b>Напишите</b> <code>.dlmod &lt;ссылка&gt;</code><b>, чтобы загрузить модуль по ссылке</b>\n<tg-emoji emoji-id=5456207331920483861>4️⃣</tg-emoji> <b>Напишите</b> <code>.loadmod</code> <b>в ответ на файл, чтобы загрузить из него модуль</b>\n<tg-emoji emoji-id=5456185418997340146>5️⃣</tg-emoji> <b>Напишите</b> <code>.unloadmod &lt;Имя модуля&gt;</code><b>, чтобы выгрузить модуль</b>\n\n<tg-emoji emoji-id=5456178297941561360>💡</tg-emoji> <b>Heroku поддерживает модули от Hikka, Friendly-Telegram и GeekTG, а также свои собственные.</b>\n"
   language_saved: "🇷🇺 Язык сохранен!"
   language: "🇷🇺 Русский"
   btn_support: "🥷 Чат поддержки"
+  join_reason: "Помощь по Heroku оказывается только в этом чате. Вступая в него, вы соглашаетесь с правилами федерации Heroku; за их нарушение — перманентный бан."
 
   name: Quickstart
   _cls_doc: Уведомляет пользователя об установке юзербота

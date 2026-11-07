@@ -498,7 +498,6 @@ help:
   offchats: "<tg-emoji emoji-id=6019130940012370273>❔</tg-emoji> <a href=\"https://t.me/heroku_talks\"><b>Support</b></a>\n\n<tg-emoji emoji-id=6019151079114021083>💬</tg-emoji> <a href=\"https://t.me/heroku_offtop\"><b>Offtop</b></a>\n\n<tg-emoji emoji-id=6019094432790354513>📢</tg-emoji> <a href=\"https://t.me/heroku_ub\"><b>Channel</b></a>"
   partial_load: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>Partial boot detected. Module list incomplete.</b>"
   not_exact: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>Fuzzy match result.</b>"
-  request_join: "Link requested"
   core_notice: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>Kernel module. Cannot unload/replace.</b>"
 
   _cls_doc: Prints module and command manuals
@@ -517,29 +516,17 @@ heroku_info:
   rich_info_message: '<figure><img src="{banner_url}"/></figure><details><summary>Overview</summary><table><tr><th>Overview</th><th>Owner</th></tr><tr><td>【<tg-emoji emoji-id=5883964170268840032>👤</tg-emoji>】 <b>Owner</b></td><td>{me}</td></tr><tr><td>【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>Version</b></td><td>{version}</td></tr><tr><td>【<tg-emoji emoji-id=5778335621491723621>📷</tg-emoji>】 <b>Prefix</b></td><td>{prefix}</td></tr><tr><td>【<tg-emoji emoji-id=5843799474362652262>🔄</tg-emoji>】 <b>Uptime</b></td><td>{uptime}</td></tr><tr><td>【<tg-emoji emoji-id=5879770735999717115>👤</tg-emoji>】 <b>Branch</b></td><td>{branch}</td></tr></table></details><details><summary>Status</summary><table><tr><th>Status</th><th>Updates</th></tr><tr><td>【<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>】 <b>Updates</b></td><td>{upd}</td></tr><tr><td>【<tg-emoji emoji-id=5775887550262546277>❗️</tg-emoji>】 <b>CPU</b></td><td>{cpu_usage}</td></tr><tr><td>【<tg-emoji emoji-id=5931409969613116639>🛡</tg-emoji>】 <b>RAM</b></td><td>{ram_usage}</td></tr><tr><td>【<tg-emoji emoji-id=5931472654660800739>📊</tg-emoji>】 <b>Ping</b></td><td>{ping}</td></tr></table></details><details><summary>Environment</summary><table><tr><th>Environment</th><th>OS</th></tr><tr><td>【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>Host</b></td><td>{platform}</td></tr><tr><td>【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>OS</b></td><td>{os}</td></tr><tr><td>【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>Python</b></td><td>{python_ver}</td></tr></table></details>'
   non_detectable: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Hardware detection failed!</b>"
   ping_emoji: "Ping emoji"
-  send_info: "Cat info"
-  description: "ℹ Confidential info safe."
   up-to-date: "<b>Latest</b>"
   update_required: "<b>Update Req</b> <code>{prefix}update</code>"
-  switchinfo_on: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> Img Info = True"
-  switchinfo_off: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> Img Info = False"
   _cfg_cst_msg: "Info template"
   _cfg_cst_ph: "🤖Vars: {}"
-  _cfg_cst_btn: "Custom Button"
   _cfg_banner: "Banner URL"
   _cfg_rich_mode: "Render info as a Rich message."
   desc: "<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <b>What is Userbot?</b>\n\n<tg-emoji emoji-id=5472238129849048175>😎</tg-emoji> A userbot is an automation script running on a user account (Client API).\n\n<tg-emoji emoji-id=5474667187258006816>😎</tg-emoji> Unlike Bots (Bot API), userbots have full access to User methods.\n\n<tg-emoji emoji-id=5472267631979405211>🚫</tg-emoji> <b>Warning: Violates ToS? Use at own risk.</b>\n\n"
-  no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> Font not found in reply/link."
   no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>404: Link </b><code>{link}</code> <b>unreachable.</b>"
-  font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>Font installed.</b>"
-  incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>FormatError (support: otf, ttf)</b>"
-  incorrect_img_format: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>FormatError (support: jpg, png, bmp, webp)</b>"
   _cmd_doc_ubinfo: "About"
   _cmd_doc_info: "SystemInfo"
-  _cmd_doc_setinfo: "<text> - Edit Info Template"
-  _ihandle_doc_info: "SystemInfo"
   _cls_doc: "System Stats"
-  show_preview_in_help: "Show # meta banner in help preview [module] (btw I use Arch)"
 
   name: HerokuInfo
   _cfg_quote_media: "Switch preview media to quote"

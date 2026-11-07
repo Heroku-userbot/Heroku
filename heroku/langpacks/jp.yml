@@ -498,7 +498,6 @@ help:
   offchats: "<tg-emoji emoji-id=6019130940012370273>❔</tg-emoji> <a href=\"https://t.me/heroku_talks\"><b>サポートチャット</b></a>\n\n<tg-emoji emoji-id=6019151079114021083>💬</tg-emoji> <a href=\"https://t.me/heroku_offtop\"><b>オフトピックチャット</b></a>\n\n<tg-emoji emoji-id=6019094432790354513>📢</tg-emoji> <a href=\"https://t.me/heroku_ub\"><b>公式チャンネル</b></a>"
   partial_load: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>ユーザーボットが完全に読み込まれていないため、一部のモジュールは表示されません</b>"
   not_exact: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>完全一致が発生しなかったため、最も近い結果が表示されています</b>"
-  request_join: "Heroku サポートチャットへのリンクをリクエストしました"
   core_notice: "<tg-emoji emoji-id=5355133243773435190>☝️</tg-emoji> <b>これはコアモジュールです。アンロードや置換はできません</b>"
 
   _cls_doc: モジュールとコマンドのヘルプを表示します
@@ -517,29 +516,17 @@ heroku_info:
   rich_info_message: '<figure><img src="{banner_url}"/></figure><details><summary>概要</summary><table><tr><th>概要</th><th>所有者</th></tr><tr><td>【<tg-emoji emoji-id=5883964170268840032>👤</tg-emoji>】 <b>所有者</b></td><td>{me}</td></tr><tr><td>【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>バージョン</b></td><td>{version}</td></tr><tr><td>【<tg-emoji emoji-id=5778335621491723621>📷</tg-emoji>】 <b>プレフィックス</b></td><td>{prefix}</td></tr><tr><td>【<tg-emoji emoji-id=5843799474362652262>🔄</tg-emoji>】 <b>稼働時間</b></td><td>{uptime}</td></tr><tr><td>【<tg-emoji emoji-id=5879770735999717115>👤</tg-emoji>】 <b>ブランチ</b></td><td>{branch}</td></tr></table></details><details><summary>状態</summary><table><tr><th>状態</th><th>更新</th></tr><tr><td>【<tg-emoji emoji-id=5926783847453692661>🛡</tg-emoji>】 <b>更新</b></td><td>{upd}</td></tr><tr><td>【<tg-emoji emoji-id=5775887550262546277>❗️</tg-emoji>】 <b>CPU</b></td><td>{cpu_usage}</td></tr><tr><td>【<tg-emoji emoji-id=5931409969613116639>🛡</tg-emoji>】 <b>RAM</b></td><td>{ram_usage}</td></tr><tr><td>【<tg-emoji emoji-id=5931472654660800739>📊</tg-emoji>】 <b>Ping</b></td><td>{ping}</td></tr></table></details><details><summary>環境</summary><table><tr><th>環境</th><th>OS</th></tr><tr><td>【<tg-emoji emoji-id=5931415565955503486>🤖</tg-emoji>】 <b>ホスト</b></td><td>{platform}</td></tr><tr><td>【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>OS</b></td><td>{os}</td></tr><tr><td>【<tg-emoji emoji-id=5819078828017849357>🤖</tg-emoji>】 <b>Python</b></td><td>{python_ver}</td></tr></table></details>'
   non_detectable: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>このコンポーネントはお使いのサーバーでは検出できません！</b>"
   ping_emoji: "情報内の Ping 用絵文字"
-  send_info: "ユーザーボット情報を送信"
-  description: "ℹ これにより機密情報が侵害されることはありません"
   up-to-date: "<b>最新</b>"
   update_required: "<b>更新が必要です</b> <code>{prefix}update</code>"
-  switchinfo_on: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> 画像情報をオンにしました"
-  switchinfo_off: "<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji> 画像情報をオフにしました"
   _cfg_cst_msg: "情報のカスタムメッセージ。{me}, {version}, {build}, {prefix}, {platform}, {upd}, {uptime}, {cpu_usage}, {ram_usage}, {branch}, {hostname}, {user}, {os}, {kernel}, {cpu}, {ping}, {python_ver}, {htl_ver}, {git_status}, {img} キーワードを含めることができます"
   _cfg_cst_ph: "🤖カスタムプレースホルダー: {}"
-  _cfg_cst_btn: "情報のカスタムボタン。ボタンを削除するには空のままにしてください"
   _cfg_banner: "画像バナーのURL"
   _cfg_rich_mode: "infoをRichメッセージで表示"
   desc: "<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <b>ユーザーボットとは？</b>\n\n<tg-emoji emoji-id=5472238129849048175>😎</tg-emoji> ユーザーボットとは、Telegram API と対話して<b>ユーザーに代わって自動化されたタスクを実行するサードパーティのプログラム</b>のことです。これらのユーザーボットは、<b>メッセージの送信、チャンネルへの参加、メディアのダウンロードなど</b>、さまざまなタスクを自動化するために使用できます。\n\n<tg-emoji emoji-id=5474667187258006816>😎</tg-emoji> ユーザーボットは、ボットアカウントではなく<b>ユーザーのアカウントで実行される</b>ため、通常の Telegram ボットとは異なります。つまり、ユーザーボットはより多くの機能にアクセスでき、実行できるアクションの柔軟性が高くなります。\n\n<tg-emoji emoji-id=5472267631979405211>🚫</tg-emoji> ただし、<b>ユーザーボットは Telegram によって公式にサポートされていない</b>ことに注意してください。使用するとプラットフォームの利用規約に違反する可能性があります。そのため、<b>ユーザーはユーザーボットを使用する際に注意が必要であり</b>、悪意のある目的で使用されていないことを確認する必要があります。\n\n"
-  no_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> フォントへのリンクまたは返信はどこですか？"
   no_banner: "<tg-emoji emoji-id=6010394680179562842>😶</tg-emoji> <b>指定されたリンク </b><code>{link}</code><b> には何も見つかりませんでした。\n\nリンク先のファイルの整合性を確認し、リンクがファイルを直接指していることも確認してください。</b>"
-  font_installed: "<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <b>フォントが正常にインストールされました！</b>\n<tg-emoji emoji-id=5436040291507247633>🎉</tg-emoji> <i>これでお楽しみいただけます。</i>"
-  incorrect_format_font: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>無効なフォント形式です！</b>\n<blockquote>サポートされている形式 -> otf, ttf</blockquote>"
-  incorrect_img_format: "<tg-emoji emoji-id=5465665476971471368>❌</tg-emoji> <b>無効な画像形式です</b>\n<blockquote>サポートされている形式 -> jpg, jpeg, png, bmp, webp</blockquote>"
   _cmd_doc_ubinfo: "'Heroku とは？'という情報を送信します"
   _cmd_doc_info: "ユーザーボット情報を送信します"
-  _cmd_doc_setinfo: "<text> - .info のテキストを変更します"
-  _ihandle_doc_info: "ユーザーボット情報を送信します"
   _cls_doc: "ユーザーボット情報を表示します"
-  show_preview_in_help: "helpコマンドのプレビューに # meta banner を表示 [module]"
 
   name: HerokuInfo
   _cfg_quote_media: "プレビューメディアを引用に切り替え"
