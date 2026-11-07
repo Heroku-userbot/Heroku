@@ -852,7 +852,7 @@ class EntityLike(RegExp):
         value = RegExp._validate(value, regex=regex, flags=flags)
 
         if value.lstrip("-").isdigit():
-            if value.startswith("-100"):
+            if value.startswith("-100") and len(value) > 4:
                 value = value[4:]
 
             return int(value)
