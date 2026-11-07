@@ -545,7 +545,6 @@ class HerokuBackupMod(loader.Module):
         backup_topic_id = await utils.get_topic_id(self._db, "Backups")
         if not backup_topic_id:
             logger.error("Backups topic not found in database")
-            logger.error("Backups topic not found in database")
             await utils.answer(
                 message,
                 self.strings["backup_topic_missing"].format(
