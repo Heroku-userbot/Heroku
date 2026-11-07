@@ -225,7 +225,9 @@ class Evaluator(loader.Module):
                 result = "Compilation timeout"
                 error = True
 
-            if not result:
+            warnings = "" if error else result.strip()
+
+            if not error:
                 try:
                     result = subprocess.check_output(
                         ["./code"],
@@ -249,6 +251,14 @@ class Evaluator(loader.Module):
                     utils.escape_html(code),
                     "error" if error else "output",
                     utils.escape_html(result),
+                )
+                + (
+                    self.strings["compiler_warnings"].format(
+                        "output",
+                        utils.escape_html(warnings),
+                    )
+                    if warnings and not error
+                    else ""
                 ),
             )
 
@@ -310,7 +320,9 @@ class Evaluator(loader.Module):
                 result = "Compilation timeout"
                 error = True
 
-            if not result:
+            warnings = "" if error else result.strip()
+
+            if not error:
                 try:
                     result = subprocess.check_output(
                         ["./code"],
@@ -334,6 +346,14 @@ class Evaluator(loader.Module):
                     utils.escape_html(code),
                     "error" if error else "output",
                     utils.escape_html(result),
+                )
+                + (
+                    self.strings["compiler_warnings"].format(
+                        "output",
+                        utils.escape_html(warnings),
+                    )
+                    if warnings and not error
+                    else ""
                 ),
             )
 

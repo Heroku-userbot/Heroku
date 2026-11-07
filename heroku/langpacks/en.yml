@@ -791,6 +791,7 @@ eval:
   eval_py: "<tg-emoji emoji-id={}>💻</tg-emoji><b> Code:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   err: "<tg-emoji emoji-id={}>💻</tg-emoji><b> Code:</b>\n<pre><code class=\"language-{}\">{}</code></pre>\n\n<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Error:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   compiling: "<tg-emoji emoji-id=5325787248363314644>🫥</tg-emoji> <b>Compiling code...</b>"
+  compiler_warnings: "\n\n⚠️ <b>Compiler warnings:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   no_compiler: "<tg-emoji emoji-id={}>💻</tg-emoji> <b>{} compiler is not installed on the system.</b>"
   time_exec: "\n<tg-emoji emoji-id=5134202243486057363>💫</tg-emoji> <b>Execution time: {}s</b>"
   eval_result: "\n\n<tg-emoji emoji-id=5197688912457245639>✅</tg-emoji><b> Result:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"

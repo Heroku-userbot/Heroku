@@ -791,6 +791,7 @@ eval:
   eval_py: "<tg-emoji emoji-id={}>💻</tg-emoji><b> Код:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   _cls_doc: "Выполняет код на различных языках программирования"
   compiling: "<tg-emoji emoji-id=5325787248363314644>🫥</tg-emoji> <b>Компиляция кода...</b>"
+  compiler_warnings: "\n\n⚠️ <b>Предупреждения компилятора:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   time_exec: "\n<tg-emoji emoji-id=5134202243486057363>💫</tg-emoji> <b>Время выполнения: {}s</b>"
   no_compiler: "<tg-emoji emoji-id={}>💻</tg-emoji> <b>Компилятор {} не установлен на системе.</b>"
   eval_result: "\n\n<tg-emoji emoji-id=5197688912457245639>✅</tg-emoji><b> Результат:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
