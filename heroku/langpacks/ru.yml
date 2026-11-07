@@ -44,6 +44,10 @@ heroku_security:
   owner_target: "<tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji> <b>Этот пользователь - владелец, его права не могут управляться таргетированной безопасностью</b>"
   rules_removed: '<tg-emoji emoji-id=5472308992514464048>🔐</tg-emoji> <b>Правила таргетированной безопасности для <a href="{}">{}</a> удалены</b>'
   rule_removed: '<tg-emoji emoji-id=5472308992514464048>🔐</tg-emoji> <b>Удалено правило безопасности для <a href="{}">{}</a> (</b><code>{}</code><b>)</b>'
+  rule_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Правило</b> <code>{}</code> <b>для этой цели не найдено. Список правил:</b> <code>{prefix}tsec</code>"
+  target_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Не удалось найти</b> <code>{}</code><b>. Проверьте @юзернейм или ID</b>"
+  invalid_time: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Не понял время</b> <code>{}</code><b>. Формат: 30s, 10m, 2h, 1d, 1w, можно сочетать: 1d12h; без времени — навсегда</b>"
+  no_sgroup_name: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Укажите имя группы безопасности</b>"
   chat_inline: "⚠️ <b>Вы не можете создать правило inline-команды для чатов!</b>"
   for: "на"
   forever: "навсегда"
@@ -66,9 +70,9 @@ heroku_security:
   _cmd_doc_ownerlist: "Показать список пользователей в группе `owner`"
   _cmd_doc_ownerrm: "<пользователь> - Удалить пользователя из группы `owner`"
   _cmd_doc_security: "[команда] - Настроить разрешения для команды"
-  _cmd_doc_tsec: "<\"user\"/\"chat\"/\"sgroup\"> [цель пользователя или чата] [правило (команда/модуль)] [время] - Добавить новое правило таргетированной безопасности\nНапример: .tsec user ban 1d, .tsec chat weather 1h, .tsec user HikariChat"
-  _cmd_doc_tsecclr: "<\"user\"/\"chat\"/\"sgroup\"> - Очистить правила таргетированной безопасности\nНапример: .tsecclr user, .tsecclr chat"
-  _cmd_doc_tsecrm: "<\"user\"/\"chat\"/\"sgroup\"> <правило - модуль или команда> - Удалить правило таргетированной безопасности\nНапример: .tsecrm user ban, .tsecrm chat HikariChat"
+  _cmd_doc_tsec: "<\"user\"/\"chat\"/\"sgroup\"> [цель пользователя или чата] [правило (команда/модуль)] [время] - Добавить новое правило таргетированной безопасности\nЦель-чат: @юзернейм или ID (отрицательные ID вида -100… тоже подходят)\nВремя: 30s, 10m, 2h, 1d, 1w, можно сочетать: 1d12h или 1d 12h; без времени — навсегда\nНапример: .tsec user ban 1d, .tsec chat weather 1d12h, .tsec user HikariChat"
+  _cmd_doc_tsecclr: "<\"user\"/\"chat\"/\"sgroup\"> [пользователь | имя группы] - Удалить все таргетированные правила цели\nuser: укажите @юзернейм/ID, ответьте на сообщение или выполните в ЛС; chat: выполните в нужном чате; sgroup: укажите имя группы безопасности\nНапример: .tsecclr user @vasya, .tsecclr chat, .tsecclr sgroup friends"
+  _cmd_doc_tsecrm: "<\"user\"/\"chat\"/\"sgroup\"> [цель] <правило> - Удалить правило таргетированной безопасности. Имя правила пишите так, как оно показано в .tsec (подойдёт и имя модуля или команды)\nuser: @юзернейм/ID, ответ на сообщение или ЛС; chat: выполните в самом чате (не в ЛС); sgroup: имя группы безопасности\nНапример: .tsecrm user @vasya ban, .tsecrm chat HikariChat, .tsecrm sgroup friends ban"
   querysec_info: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> Здесь вы можете переключить возможность использования инлайн запросов для всех сторонних пользователей"
   until: "до"
   sgroup: "группа безопасности"

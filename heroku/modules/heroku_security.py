@@ -12,6 +12,7 @@
 
 import contextlib
 import datetime
+import re
 import time
 import typing
 from collections.abc import Callable
@@ -38,6 +39,8 @@ from ..security import (
     PM,
     SecurityGroup,
 )
+
+TIME_UNITS = {"w": 7 * 24 * 60 * 60, "d": 24 * 60 * 60, "h": 60 * 60, "m": 60, "s": 1}
 
 
 @loader.tds
@@ -546,6 +549,13 @@ class HerokuSecurityMod(loader.Module):
 
                 user = await self._client.get_entity(args, exp=0)
 
+        if user is None and args:
+            await utils.answer(
+                message,
+                self.strings["target_not_found"].format(utils.escape_html(str(args))),
+            )
+            return
+
         if user is None:
             if reply is None:
                 reply = await message.get_reply_message()
@@ -816,26 +826,53 @@ class HerokuSecurityMod(loader.Module):
         )
 
     @staticmethod
-    def _extract_time(args: list) -> int:
-        for suffix, quantifier in [
-            ("d", 24 * 60 * 60),
-            ("h", 60 * 60),
-            ("m", 60),
-            ("s", 1),
-        ]:
-            duration = next(
-                (
-                    int(arg.rsplit(suffix, maxsplit=1)[0])
-                    for arg in args
-                    if arg.endswith(suffix)
-                    and arg.rsplit(suffix, maxsplit=1)[0].isdigit()
-                ),
-                None,
-            )
-            if duration is not None:
-                return duration * quantifier
+    def _entity_arg(arg: str) -> int | str:
+        return int(arg) if re.fullmatch(r"-?\d+", arg) else arg
 
-        return 0
+    def _extract_time(self, args: list) -> tuple[int, str | None]:
+        duration = 0
+        for arg in args:
+            if re.fullmatch(r"(\d+[wdhms])+", arg.lower()):
+                duration += sum(
+                    int(value) * TIME_UNITS[unit]
+                    for value, unit in re.findall(r"(\d+)([wdhms])", arg.lower())
+                )
+            elif arg[:1].isdigit() and not self._lookup(arg):
+                return 0, arg
+
+        return duration, None
+
+    def _rule_names(self, rule: str) -> set[str]:
+        return {rule} | {
+            possible.split("/", maxsplit=1)[1] for possible in self._lookup(rule)
+        }
+
+    async def _tsec_user_target(self, message: Message, target_arg: str = None):
+        if target_arg is not None:
+            try:
+                return await self._client.get_entity(
+                    self._entity_arg(target_arg), exp=0
+                )
+            except (ValueError, TypeError):
+                await utils.answer(
+                    message,
+                    self.strings["target_not_found"].format(
+                        utils.escape_html(target_arg)
+                    ),
+                )
+                return None
+
+        if message.is_private:
+            return await self._client.get_entity(message.peer_id, exp=0)
+
+        if message.is_reply:
+            return await self._client.get_entity(
+                (await message.get_reply_message()).sender_id,
+                exp=0,
+            )
+
+        await utils.answer(message, self.strings["no_target"])
+        return None
 
     def _convert_time_abs(self, timestamp: int) -> str:
         return (
@@ -984,29 +1021,43 @@ class HerokuSecurityMod(loader.Module):
             await utils.answer(message, self.strings["no_target"])
             return
 
+        rest = args[1:]
         if len(args) >= 2:
-            try:
-                if not args[1].isdigit() and not args[1].startswith("@"):
-                    raise ValueError
-
-                target = await self._client.get_entity(
-                    int(args[1]) if args[1].isdigit() else args[1],
-                    exp=0,
-                )
-            except (ValueError, TypeError):
-                if not message.is_private:
-                    target = await self._client.get_entity(message.peer_id, exp=0)
-                else:
-                    await utils.answer(message, self.strings["no_target"])
+            if re.fullmatch(r"-?\d+", args[1]) or args[1].startswith("@"):
+                try:
+                    target = await self._client.get_entity(
+                        self._entity_arg(args[1]),
+                        exp=0,
+                    )
+                except (ValueError, TypeError):
+                    await utils.answer(
+                        message,
+                        self.strings["target_not_found"].format(
+                            utils.escape_html(args[1])
+                        ),
+                    )
                     return
 
+                rest = args[2:]
+            elif not message.is_private:
+                target = await self._client.get_entity(message.peer_id, exp=0)
+            else:
+                await utils.answer(message, self.strings["no_target"])
+                return
+
+        duration, bad_time = self._extract_time(rest)
+        if bad_time is not None:
+            await utils.answer(
+                message,
+                self.strings["invalid_time"].format(utils.escape_html(bad_time)),
+            )
+            return
+
         if not (
-            possible_rules := utils.array_sum([self._lookup(arg) for arg in args[1:]])
+            possible_rules := utils.array_sum([self._lookup(arg) for arg in rest])
         ):
             await utils.answer(message, self.strings["no_rule"])
             return
-
-        duration = self._extract_time(args)
 
         if len(possible_rules) > 1:
             await self.inline.form(
@@ -1048,13 +1099,19 @@ class HerokuSecurityMod(loader.Module):
             await utils.answer(message, self.strings["sgroup_not_found"].format(target))
             return
 
+        duration, bad_time = self._extract_time(args[2:])
+        if bad_time is not None:
+            await utils.answer(
+                message,
+                self.strings["invalid_time"].format(utils.escape_html(bad_time)),
+            )
+            return
+
         if not (
-            possible_rules := utils.array_sum([self._lookup(arg) for arg in args[1:]])
+            possible_rules := utils.array_sum([self._lookup(arg) for arg in args[2:]])
         ):
             await utils.answer(message, self.strings["no_rule"])
             return
-
-        duration = self._extract_time(args)
 
         if len(possible_rules) > 1:
             await self.inline.form(
@@ -1105,7 +1162,9 @@ class HerokuSecurityMod(loader.Module):
                         int(args[1]) if args[1].isdigit() else args[1],
                         exp=0,
                     )
+                    rest = args[2:]
                 except (ValueError, TypeError):
+                    rest = args[1:]
                     if message.is_private:
                         target = await self._client.get_entity(message.peer_id, exp=0)
                     elif message.is_reply:
@@ -1121,10 +1180,16 @@ class HerokuSecurityMod(loader.Module):
             await utils.answer(message, self.strings["owner_target"])
             return
 
-        duration = self._extract_time(args)
+        duration, bad_time = self._extract_time(rest)
+        if bad_time is not None:
+            await utils.answer(
+                message,
+                self.strings["invalid_time"].format(utils.escape_html(bad_time)),
+            )
+            return
 
         if not (
-            possible_rules := utils.array_sum([self._lookup(arg) for arg in args[1:]])
+            possible_rules := utils.array_sum([self._lookup(arg) for arg in rest])
         ):
             await utils.answer(message, self.strings["no_rule"])
             return
@@ -1172,31 +1237,35 @@ class HerokuSecurityMod(loader.Module):
             return
 
         if args[0] == "user":
-            if not message.is_private and not message.is_reply and len(args) < 3:
-                await utils.answer(message, self.strings["no_target"])
+            if len(args) < 2:
+                await utils.answer(message, self.strings["no_rule"])
                 return
 
-            if message.is_private:
-                target = await self._client.get_entity(message.peer_id, exp=0)
-            elif message.is_reply:
-                target = await self._client.get_entity(
-                    (await message.get_reply_message()).sender_id,
-                    exp=0,
+            rule = args[2] if len(args) >= 3 else args[1]
+            if not (
+                target := await self._tsec_user_target(
+                    message, args[1] if len(args) >= 3 else None
                 )
-            elif len(args) == 3:
-                _ent = int(args[1]) if args[1].isdigit() else args[1]
-                try:
-                    target = await self._client.get_entity(_ent, exp=0)
-                except ValueError:
-                    await utils.answer(message, self.strings["no_target"])
-                    return
-
-            if not self._client.dispatcher.security.remove_rule(
-                "user",
-                target.id,
-                args[-1],
             ):
-                await utils.answer(message, self.strings["no_rules"])
+                return
+
+            if not any(
+                [
+                    self._client.dispatcher.security.remove_rule(
+                        "user",
+                        target.id,
+                        name,
+                    )
+                    for name in self._rule_names(rule)
+                ]
+            ):
+                await utils.answer(
+                    message,
+                    self.strings["rule_not_found"].format(
+                        utils.escape_html(rule),
+                        prefix=utils.escape_html(self.get_prefix()),
+                    ),
+                )
                 return
 
             await utils.answer(
@@ -1204,26 +1273,44 @@ class HerokuSecurityMod(loader.Module):
                 self.strings["rule_removed"].format(
                     utils.get_entity_url(target),
                     utils.escape_html(get_display_name(target)),
-                    utils.escape_html(args[-1]),
+                    utils.escape_html(rule),
                 ),
             )
             return
 
         if args[0] == "sgroup":
-            if len(args) < 3 or args[1] not in self._sgroups:
-                await utils.answer(message, self.strings["no_target"])
+            if len(args) < 2:
+                await utils.answer(message, self.strings["no_sgroup_name"])
+                return
+
+            if args[1] not in self._sgroups:
+                await utils.answer(
+                    message,
+                    self.strings["sgroup_not_found"].format(utils.escape_html(args[1])),
+                )
+                return
+
+            if len(args) < 3:
+                await utils.answer(message, self.strings["no_rule"])
                 return
 
             group = self._sgroups[args[1]]
             permissions = group.permissions
+            names = self._rule_names(args[2])
             _any = False
-            for rule in permissions:
-                if rule["rule"] == args[2]:
+            for rule in permissions.copy():
+                if rule["rule"] in names:
                     permissions.remove(rule)
                     _any = True
 
             if not _any:
-                await utils.answer(message, self.strings["no_rules"])
+                await utils.answer(
+                    message,
+                    self.strings["rule_not_found"].format(
+                        utils.escape_html(args[2]),
+                        prefix=utils.escape_html(self.get_prefix()),
+                    ),
+                )
                 return
 
             self._reload_sgroups()
@@ -1242,10 +1329,25 @@ class HerokuSecurityMod(loader.Module):
             await utils.answer(message, self.strings["no_target"])
             return
 
+        if len(args) < 2:
+            await utils.answer(message, self.strings["no_rule"])
+            return
+
         target = await self._client.get_entity(message.peer_id, exp=0)
 
-        if not self._client.dispatcher.security.remove_rule("chat", target.id, args[1]):
-            await utils.answer(message, self.strings["no_rules"])
+        if not any(
+            [
+                self._client.dispatcher.security.remove_rule("chat", target.id, name)
+                for name in self._rule_names(args[1])
+            ]
+        ):
+            await utils.answer(
+                message,
+                self.strings["rule_not_found"].format(
+                    utils.escape_html(args[1]),
+                    prefix=utils.escape_html(self.get_prefix()),
+                ),
+            )
             return
 
         await utils.answer(
@@ -1260,33 +1362,21 @@ class HerokuSecurityMod(loader.Module):
     @loader.command()
     async def tsecclr(self, message: Message):
 
-        if (
-            not (args := utils.get_args(message))
-            or not (args := args[0])
-            or args not in {"user", "chat", "sgroup"}
-        ):
+        if not (args := utils.get_args(message)) or args[0] not in {
+            "user",
+            "chat",
+            "sgroup",
+        }:
             await utils.answer(message, self.strings["no_target"])
             return
 
-        if args == "user":
-            if not message.is_private and not message.is_reply and len(args) < 2:
-                await utils.answer(message, self.strings["no_target"])
-                return
-
-            if message.is_private:
-                target = await self._client.get_entity(message.peer_id, exp=0)
-            elif message.is_reply:
-                target = await self._client.get_entity(
-                    (await message.get_reply_message()).sender_id,
-                    exp=0,
+        if args[0] == "user":
+            if not (
+                target := await self._tsec_user_target(
+                    message, args[1] if len(args) >= 2 else None
                 )
-            elif len(args) == 2:
-                _ent = int(args[1]) if args[1].isdigit() else args[1]
-                try:
-                    target = await self._client.get_entity(_ent, exp=0)
-                except ValueError:
-                    await utils.answer(message, self.strings["no_target"])
-                    return
+            ):
+                return
 
             if not self._client.dispatcher.security.remove_rules("user", target.id):
                 await utils.answer(message, self.strings["no_rules"])
@@ -1301,10 +1391,16 @@ class HerokuSecurityMod(loader.Module):
             )
             return
 
-        if args == "sgroup":
-            group = utils.get_args(message)[1]
-            if not (group := self._sgroups.get(group)):
-                await utils.answer(message, self.strings["no_target"])
+        if args[0] == "sgroup":
+            if len(args) < 2:
+                await utils.answer(message, self.strings["no_sgroup_name"])
+                return
+
+            if not (group := self._sgroups.get(args[1])):
+                await utils.answer(
+                    message,
+                    self.strings["sgroup_not_found"].format(utils.escape_html(args[1])),
+                )
                 return
 
             group.permissions.clear()

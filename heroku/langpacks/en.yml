@@ -48,6 +48,10 @@ heroku_security:
   owner_target: "<tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji> <b>This user is owner and can't be promoted by targeted security</b>"
   rules_removed: '<tg-emoji emoji-id=5472308992514464048>🔐</tg-emoji> <b>Targeted security rules for <a href="{}">{}</a> removed</b>'
   rule_removed: '<tg-emoji emoji-id=5472308992514464048>🔐</tg-emoji> <b>Targeted security rule for <a href="{}">{}</a> (</b><code>{}</code><b>) removed</b>'
+  rule_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Rule</b> <code>{}</code> <b>not found for this target. List of rules:</b> <code>{prefix}tsec</code>"
+  target_not_found: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Couldn't find</b> <code>{}</code><b>. Check the @username or ID</b>"
+  invalid_time: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Couldn't understand time</b> <code>{}</code><b>. Format: 30s, 10m, 2h, 1d, 1w, can be combined: 1d12h; no time means forever</b>"
+  no_sgroup_name: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Specify the security group name</b>"
   chat_inline: "⚠️ <b>You can't create an inline command rule for chats!</b>"
   for: "for"
   forever: "forever"
@@ -70,9 +74,9 @@ heroku_security:
   _cmd_doc_ownerlist: "List users in `owner`"
   _cmd_doc_ownerrm: "<user> - Remove user from `owner`"
   _cmd_doc_security: "[command] - Configure command's security settings"
-  _cmd_doc_tsec: "<\"user\"/\"chat\"/\"sgroup\"> [target user or chat] [rule (command/module)] [time] - Add new targeted security rule\nFor example: .tsec user ban 1d, .tsec chat weather 1h, .tsec user HikariChat"
-  _cmd_doc_tsecclr: "<\"user\"/\"chat\"/\"sgroup\"> - Clear targeted security rules\nFor example: .tsecclr user, .tsecclr chat"
-  _cmd_doc_tsecrm: "<\"user\"/\"chat\"/\"sgroup\"> <rule - command or module> - Remove targeted security rule\nFor example: .tsecrm user ban, .tsecrm chat HikariChat"
+  _cmd_doc_tsec: "<\"user\"/\"chat\"/\"sgroup\"> [target user or chat] [rule (command/module)] [time] - Add new targeted security rule\nChat target: @username or ID (negative IDs like -100… are accepted)\nTime: 30s, 10m, 2h, 1d, 1w, can be combined: 1d12h or 1d 12h; no time means forever\nFor example: .tsec user ban 1d, .tsec chat weather 1d12h, .tsec user HikariChat"
+  _cmd_doc_tsecclr: "<\"user\"/\"chat\"/\"sgroup\"> [user | group name] - Clear all targeted security rules of the target\nuser: specify @username/ID, reply to a message or run in PM; chat: run in the chat itself; sgroup: specify the security group name\nFor example: .tsecclr user @vasya, .tsecclr chat, .tsecclr sgroup friends"
+  _cmd_doc_tsecrm: "<\"user\"/\"chat\"/\"sgroup\"> [target] <rule> - Remove targeted security rule. Write the rule as shown in .tsec (module or command name also works)\nuser: @username/ID, reply to a message or PM; chat: run in the chat itself (not in PM); sgroup: security group name\nFor example: .tsecrm user @vasya ban, .tsecrm chat HikariChat, .tsecrm sgroup friends ban"
   querysec_info: "<tg-emoji emoji-id=5870704313440932932>🔒</tg-emoji> Here you can toggle the ability to use inline queries for all external users"
   _cls_doc: "Control security settings"
   until: "until"
