@@ -396,8 +396,6 @@ test:
   back: "↩️ Zurück"
   banner_url: "Bild für Ihren Ping, zum Beispiel: https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/ping_cmd.jpg"
   logs_caption: "<tg-emoji emoji-id=5350594756126721186>🪐</tg-emoji> <b>Heroku-Logs des Levels</b> <code>{}</code>\n\n<tg-emoji emoji-id=5228879218363872764>⚪️</tg-emoji> <b>Version: {}.{}.{}</b>{}"
-  debugging_enabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>Der Entwicklermodus wurde für das Modul</b> <code>{0}</code> <b>aktiviert</b>\n<i>Gehe zum Ordner `debug_modules`, ändere die Datei `{0}.py` und beobachte die Änderungen in Echtzeit</i>"
-  debugging_disabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>Der Entwicklermodus wurde deaktiviert</b>"
   suspend_invalid_time: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Ungültige Zeitdauer für das Einfrieren</b>"
   suspended: "<tg-emoji emoji-id=5452023368054216810>🥶</tg-emoji> <b>Der Bot wurde für</b> <code>{}</code> <b>Sekunden eingefroren</b>"
   confidential: "⚠️ <b>Das Log-Level</b> <code>{}</code> <b>kann vertrauliche Informationen enthalten, sei vorsichtig</b>"
@@ -405,7 +403,6 @@ test:
   choose_loglevel: "<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <b>Wähle das Log-Level</b>"
   choose_loglevel_of: "<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <b>Wähle das Log-Level für</b> <code>{}</code>"
   bad_module: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>Modul</b> <code>{}</code> <b>nicht gefunden</b>"
-  _cmd_doc_dump: "Zeigt Informationen über eine Nachricht an"
   _cmd_doc_logs: "<Level> [Modul ...] [-f] - Sendet die Log-Datei, optional gefiltert nach Modulname(n). Levels unterhalb von WARNING können vertrauliche Informationen enthalten."
   _cmd_doc_suspend: "<Zeit> - Friert den Bot für eine bestimmte Zeit ein"
   _cmd_doc_ping: "Prüft die Antwortgeschwindigkeit des Userbots"
@@ -416,7 +413,6 @@ test:
   _cmd_doc_clearlogs: "Löscht die Logs"
 
   name: Test
-  _cmd_doc_debugmod: "[Modul] - Für Entwickler: Modul zum Debuggen öffnen\nSie können Änderungen in Echtzeit verfolgen"
   _cfg_force_send_all: "⚠️ Nicht anfassen, wenn Sie nicht wissen, was es bewirkt!\nStandardmäßig versucht Heroku zu ermitteln, welcher Client die Logs verursacht hat. Beispiel: Auf Client1 ist das Modul TestModule installiert und auf Client2 TestModule2. Standardmäßig erhält Client2 die Logs von TestModule2 und Client1 die Logs von TestModule. Wenn diese Option aktiviert ist, erhält dieser Client auch Logs, die von anderen Clients verursacht wurden. Sie betrifft nur diesen Client."
   _cfg_tglog_level: "⚠️ Nicht anfassen, wenn Sie nicht wissen, was es bewirkt!\nMinimaler Loglevel für Einträge, die in Telegram gesendet werden."
   _cfg_ignore_common: "Häufige Fehler ignorieren (z. B. 'TypeError' in telethon)"
@@ -666,14 +662,11 @@ eval:
   eval_result: "\n\n<tg-emoji emoji-id=5197688912457245639>✅</tg-emoji><b> Ergebnis:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   print_outp: "\n\n<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji><b> Ergebnis drucken:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   _cmd_doc_e: "Führt Python-Code aus"
-  _cmd_doc_ebf: "Führt Brainf*ck-Code aus"
   _cmd_doc_ec: "Führt C-Code aus"
   _cmd_doc_ecpp: "Führt C++-Code aus"
   _cmd_doc_ers: "Führt Rust-Code aus"
   _cmd_doc_eg: "Führt Go-Code aus"
   _cmd_doc_enode: "Führt Node.js-Code aus"
-  _cmd_doc_ephp: "Führt PHP-Code aus"
-  _cmd_doc_eruby: "Führt Ruby-Code aus"
 
   name: Evaluator
 translate:

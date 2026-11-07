@@ -396,8 +396,6 @@ test:
   back: "↩️ Назад"
   banner_url: "Картинка для вашого пінгу, наприклад: https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/ping_cmd.jpg"
   logs_caption: "<tg-emoji emoji-id=5350594756126721186>🪐</tg-emoji> <b>Логи Heroku рівня</b> <code>{}</code>\n\n<tg-emoji emoji-id=5228879218363872764>⚪️</tg-emoji> <b>Версія: {}.{}.{}</b>{}"
-  debugging_enabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>Режим розробника увімкнено для модуля</b> <code>{0}</code>\n<i>Прямуй до директорії `debug_modules`, змінюй файл `{0}.py`, и смотри изменения в режиме реального времени</i>"
-  debugging_disabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>Режим розробника вімкнено</b>"
   suspend_invalid_time: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Неверное время заморозки</b>"
   suspended: "<tg-emoji emoji-id=5452023368054216810>🥶</tg-emoji> <b>Бота заморожено на</b> <code>{}</code> <b>секунд</b>"
   confidential: "⚠️ <b>Рівень логів</b> <code>{}</code> <b>може містити особисту інформацію, будь обережний</b>"
@@ -405,7 +403,6 @@ test:
   choose_loglevel: "<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <b>Вибери рівень логів</b>"
   choose_loglevel_of: "<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <b>Вибери рівень логів для</b> <code>{}</code>"
   bad_module: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>Модуль</b> <code>{}</code> <b>не знайдено</b>"
-  _cmd_doc_dump: "Показати інформацію про повідомлення"
   _cmd_doc_logs: "<рівень> [модуль ...] [-f] - Надсилає лог-файл, можна відфільтрувати за назвою модуля(ів). Рівні нижче WARNING можуть містити особисту інфомрацію."
   _cmd_doc_suspend: "<час> - Заморозити бота на деякий час"
   _cmd_doc_ping: "Перевіряє швидкість відгуку юзербота"
@@ -416,7 +413,6 @@ test:
   _cmd_doc_clearlogs: "Очистити логи"
 
   name: Test
-  _cmd_doc_debugmod: "[модуль] - Для розробників: відкрити модуль для налагодження\nТи зможеш відстежувати зміни в реальному часі"
   _cfg_force_send_all: "⚠️ Не чіпай, якщо не знаєш, що це робить!\nЗа замовчуванням Heroku намагається визначити, який клієнт спричинив логи. Наприклад, модуль TestModule встановлено на Client1, а TestModule2 на Client2. За замовчуванням Client2 отримає логи від TestModule2, а Client1 від TestModule. Якщо цю опцію ввімкнено, клієнт отримуватиме також логи, спричинені іншими клієнтами. Впливає лише на цього клієнта."
   _cfg_tglog_level: "⚠️ Не чіпай, якщо не знаєш, що це робить!\nМінімальний рівень логування для записів, що надсилаються в Telegram."
   _cfg_ignore_common: "Ігнорувати поширені помилки (наприклад, 'TypeError' у telethon)"
@@ -666,14 +662,11 @@ eval:
   eval_result: "\n\n<tg-emoji emoji-id=5197688912457245639>✅</tg-emoji><b> Результат:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   print_outp: "\n\n<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji><b> Друкувати результат:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   _cmd_doc_e: "Виконує Python код"
-  _cmd_doc_ebf: "Виконує Brainf*ck код"
   _cmd_doc_ec: "Виконує C код"
   _cmd_doc_ecpp: "Виконує C++ код"
   _cmd_doc_ers: "Виконує Rust код"
   _cmd_doc_eg: "Виконує Go код"
   _cmd_doc_enode: "Виконує Node.js код"
-  _cmd_doc_ephp: "Виконує PHP код"
-  _cmd_doc_eruby: "Виконує Ruby код"
 
   name: Evaluator
 translate:

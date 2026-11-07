@@ -396,8 +396,6 @@ test:
   back: "↩️ Назад"
   banner_url: "Картинка для пинга, типа: https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/ping_cmd.jpg"
   logs_caption: "<tg-emoji emoji-id=5350594756126721186>🪐</tg-emoji> <b>Логи Heroku (lvl</b> <code>{}</code><b>)</b>\n\n<tg-emoji emoji-id=5228879218363872764>⚪️</tg-emoji> <b>Версия: {}.{}.{}</b>{}"
-  debugging_enabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>Режим дебага ON для</b> <code>{0}</code>\n<i>Иди в `debug_modules`, правь `{0}.py`, и смотри че будет</i>"
-  debugging_disabled: "<tg-emoji emoji-id=5332533929020761310>✅</tg-emoji> <b>Режим дебага OFF</b>"
   suspend_invalid_time: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Время кривое</b>"
   suspended: "<tg-emoji emoji-id=5452023368054216810>🥶</tg-emoji> <b>Фризнул бота на</b> <code>{}</code> <b>сек</b>"
   confidential: "⚠️ <b>Логи уровня</b> <code>{}</code> <b>могут спалить твои данные, аккуратнее</b>"
@@ -405,7 +403,6 @@ test:
   choose_loglevel: "<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <b>Выбери уровень</b>"
   choose_loglevel_of: "<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <b>Выбери уровень для</b> <code>{}</code>"
   bad_module: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>Модуль</b> <code>{}</code> <b>не найден, братан</b>"
-  _cmd_doc_dump: "Инфа о сообщении (дамп)"
   _cmd_doc_logs: "<уровень> [модуль ...] [-f] - Дай логи, можно по модулю отфильтровать. Ниже WARNING может быть палево."
   _cmd_doc_suspend: "<время> - Фризнуть бота"
   _cmd_doc_ping: "Пинг чек"
@@ -416,7 +413,6 @@ test:
   _cmd_doc_clearlogs: "Вайпнуть логи"
 
   name: Test
-  _cmd_doc_debugmod: "[модуль] - Для разрабов: открыть модуль для дебага\nИзменения будешь видеть в реальном времени"
   _cfg_force_send_all: "⚠️ Не трогай, если не шаришь, что это делает!\nПо умолчанию Heroku пытается понять, какой клиент вызвал логи. Например, модуль TestModule стоит на Client1, а TestModule2 на Client2. По умолчанию Client2 получит логи от TestModule2, а Client1 от TestModule. Если эта опция включена, клиент будет получать ещё и логи, вызванные другими клиентами. Влияет только на этого клиента."
   _cfg_tglog_level: "⚠️ Не трогай, если не шаришь, что это делает!\nМинимальный уровень логов, которые улетают в Telegram."
   _cfg_ignore_common: "Игнорить частые ошибки (например, 'TypeError' в telethon)"
@@ -664,14 +660,11 @@ eval:
   eval_result: "\n\n<tg-emoji emoji-id=5197688912457245639>✅</tg-emoji><b> Выхлоп:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   print_outp: "\n\n<tg-emoji emoji-id=5118861066981344121>✅</tg-emoji><b> Принт:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   _cmd_doc_e: "Python"
-  _cmd_doc_ebf: "Brainf*ck"
   _cmd_doc_ec: "C"
   _cmd_doc_ecpp: "C++"
   _cmd_doc_ers: "Rust"
   _cmd_doc_eg: "Go"
   _cmd_doc_enode: "Node.js"
-  _cmd_doc_ephp: "PHP"
-  _cmd_doc_eruby: "Ruby"
 
   name: Evaluator
 translate:
