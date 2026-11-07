@@ -92,7 +92,7 @@ class UpdaterMod(loader.Module):
             else self.strings["autoupdate_off"].format(prefix=self.get_prefix())
         )
 
-        await self.inline.bot(call.answer(text, show_alert=True))
+        await self.inline.bot(call.answer(utils.remove_html(text), show_alert=True))
         await call.delete()
 
     @staticmethod
@@ -318,7 +318,7 @@ class UpdaterMod(loader.Module):
     async def update_call(self, call: InlineCall):
         """Process update buttons clicks"""
         if NO_GIT:
-            await call.answer("Git disabled via --no-git.", show_alert=True)
+            await call.answer(utils.remove_html(self.strings["no_git"]), show_alert=True)
             return
         if call.data not in {"heroku/update", "heroku/ignore_upd"}:
             return
@@ -551,26 +551,22 @@ class UpdaterMod(loader.Module):
             )
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
             logger.exception("Req install failed")
+            return False
+        return True
 
     @loader.command()
     async def update(self, message: Message):
         if NO_GIT:
-            await utils.answer(
-                message,
-                "<b>Git disabled via --no-git.</b>",
-            )
+            await utils.answer(message, self.strings["no_git"])
             return
-        try:
-            args = utils.get_args_raw(message)
-            current = utils.get_git_hash() or ""
-            with git.Repo() as repo:
-                upcoming = next(
-                    repo.iter_commits(f"origin/{version.branch}", max_count=1)
-                ).hexsha
-            if (
-                "-f" not in args
-                and self.inline.init_complete
-                and await self.inline.form(
+        if "-f" not in utils.get_args_raw(message):
+            try:
+                current = utils.get_git_hash() or ""
+                with git.Repo() as repo:
+                    upcoming = next(
+                        repo.iter_commits(f"origin/{version.branch}", max_count=1)
+                    ).hexsha
+                if self.inline.init_complete and await self.inline.form(
                     message=message,
                     text=(
                         self.strings["update_confirm"].format(
@@ -591,11 +587,15 @@ class UpdaterMod(loader.Module):
                             "style": "danger",
                         },
                     ],
-                )
-            ):
-                return
-        except Exception:
-            logger.debug("Update confirmation unavailable", exc_info=True)
+                ):
+                    return
+            except Exception:
+                logger.debug("Update confirmation unavailable", exc_info=True)
+            await utils.answer(
+                message,
+                self.strings["update_no_confirm"].format(prefix=self.get_prefix()),
+            )
+            return
         await self.inline_update(message)
 
     @loader.command()
@@ -618,8 +618,13 @@ class UpdaterMod(loader.Module):
             logger.warning("Git disabled via --no-git; update skipped")
             return
         try:
+            with contextlib.suppress(Exception):
+                await utils.answer(msg_obj, self.strings["downloading"])
             if await self.download_common():
-                await asyncio.to_thread(self.req_common)
+                with contextlib.suppress(Exception):
+                    await utils.answer(msg_obj, self.strings["installing"])
+                if not await asyncio.to_thread(self.req_common):
+                    self.set("req_failed", True)
             await self.restart_common(msg_obj)
         except Exception as e:
             logger.exception("Update failed")
@@ -689,7 +694,7 @@ class UpdaterMod(loader.Module):
                     [
                         [
                             {
-                                "text": "✅ Turn on",
+                                "text": self.strings["btn_autoupdate_on"],
                                 "callback": self._set_autoupdate_state,
                                 "args": (True,),
                                 "style": "success",
@@ -697,7 +702,7 @@ class UpdaterMod(loader.Module):
                         ],
                         [
                             {
-                                "text": "🚫 Turn off",
+                                "text": self.strings["btn_autoupdate_off"],
                                 "callback": self._set_autoupdate_state,
                                 "args": (False,),
                                 "style": "danger",
@@ -846,6 +851,10 @@ class UpdaterMod(loader.Module):
                 "secure_boot_fail" if secure_boot else "full_fail"
             ].format(utils.ascii_face(), took, fails)
 
+        if self.get("req_failed", False):
+            self.set("req_failed", False)
+            msg += self.strings["req_failed"]
+
         if ms is None:
             return
 
@@ -865,19 +874,25 @@ class UpdaterMod(loader.Module):
 
     @loader.command()
     async def rollback(self, message: Message):
-        if not (args := utils.get_args_raw(message)).isdigit():
-            await utils.answer(message, self.strings["invalid_args"])
+        if (
+            not (args := utils.get_args_raw(message)).isdigit()
+            or int(args) < 1
+        ):
+            await utils.answer(
+                message,
+                self.strings["invalid_args"].format(prefix=self.get_prefix()),
+            )
             return
         if int(args) > 10:
             await utils.answer(message, self.strings["rollback_too_far"])
             return
-        await self.inline.form(
+        if not await self.inline.form(
             message=message,
             text=self.strings["rollback_confirm"].format(num=args),
             reply_markup=[
                 [
                     {
-                        "text": "✅",
+                        "text": self.strings["btn_rollback"],
                         "callback": self.rollback_confirm,
                         "args": [args],
                         "style": "success",
@@ -885,26 +900,30 @@ class UpdaterMod(loader.Module):
                 ],
                 [
                     {
-                        "text": "❌",
+                        "text": self.strings["cancel"],
                         "action": "close",
                         "style": "danger",
                     }
                 ],
             ],
-        )
+        ):
+            await utils.answer(message, self.strings["rollback_no_confirm"])
 
     async def rollback_confirm(self, call: InlineCall, number: int):
         await utils.answer(call, self.strings["rollback_process"].format(num=number))
         utils.ensure_child_watcher()
-        await asyncio.create_subprocess_shell(
+        proc = await asyncio.create_subprocess_shell(
             f"git reset --hard HEAD~{number}", stdout=asyncio.subprocess.PIPE
         )
+        await proc.communicate()
         await self.restart_common(call)
 
     async def ubstop_func(self, call: Message | InlineCall):
         await utils.answer(
             call,
-            self.strings["ub_stop"].format(emoji=utils.get_platform_emoji()),
+            self.strings["ub_stop"].format(
+                utils.get_platform_emoji(), emoji=utils.get_platform_emoji()
+            ),
         )
 
         exit()
@@ -928,12 +947,12 @@ class UpdaterMod(loader.Module):
             reply_markup=[
                 [
                     {
-                        "text": "✅",
+                        "text": self.strings["btn_stop"],
                         "callback": self.ubstop_func,
                         "style": "primary",
                     },
                 ],
-                [{"text": "❌", "action": "close", "style": "primary"}],
+                [{"text": self.strings["cancel"], "action": "close", "style": "primary"}],
             ],
             silent=True,
         )
