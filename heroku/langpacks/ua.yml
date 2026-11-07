@@ -476,8 +476,6 @@ api_protection:
   _cfg_forbidden_methods: "Заборонити виконання зазначених методів у всіх зовнішніх модулях"
   btn_no: "🚫 Ні"
   btn_yes: "✅ Так"
-  proxied_url: "🌐 Проксоване посилання"
-  local_url: "🏠 Локальне посилання"
   _cmd_doc_api_fw_protection: "Увімкнути/вимкнути захист API"
   _cmd_doc_suspend_api_protect: "<час у секундах> - Заморозити захист API на N секунд"
 
@@ -621,7 +619,6 @@ translations:
   lang_saved: "{} <b>Мову збережено!</b>"
   pack_saved: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Пакет перекладів збережено!</b>"
   incorrect_language: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Вказано неправильну мову</b>"
-  lang_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Переклади скинуто на стандартні</b>"
   check_pack: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Невірний формат пакета переказів у посиланні</b>"
   check_url: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Ви маєте вказати посилання, що містить пакет переказів</b>"
   too_long: "<tg-emoji emoji-id=5341492148468465410>📁</tg-emoji> <b>Висновок команди занадто довгий, тому його надіслано у файлі.</b>"

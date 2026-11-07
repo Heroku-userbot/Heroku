@@ -81,6 +81,7 @@ class InlineStuff(loader.Module):
         if (
             not args.lower().endswith("bot")
             or len(args) <= 4
+            or len(args) > 32
             or any(
                 litera not in (string.ascii_letters + string.digits + "_")
                 for litera in args
@@ -100,17 +101,27 @@ class InlineStuff(loader.Module):
 
         self._db.set("heroku.inline", "custom_bot", args)
         self._db.set("heroku.inline", "bot_token", None)
-        await utils.answer(message, self.strings["bot_updated"])
+        await utils.answer(
+            message,
+            self.strings["username_updated"].format(
+                args, prefix=utils.escape_html(self.get_prefix())
+            ),
+        )
 
     @loader.command()
     async def ch_bot_token(self, message: Message):
-        args = utils.get_args_raw(message)
-        if not args or not re.match(r"[0-9]{8,10}:[a-zA-Z0-9_-]{34,36}", args):
+        args = utils.get_args_raw(message).strip()
+        if not args or not re.fullmatch(r"[0-9]{8,10}:[a-zA-Z0-9_-]{34,36}", args):
             await utils.answer(message, self.strings["token_invalid"])
             return
         self._db.set("heroku.inline", "bot_token", args)
         self._db.set("heroku.inline", "needs_inline_setup", True)
-        await utils.answer(message, self.strings["bot_updated"])
+        await utils.answer(
+            message,
+            self.strings["bot_updated"].format(
+                prefix=utils.escape_html(self.get_prefix())
+            ),
+        )
 
     async def bot_watcher(self, message: BotInlineMessage):
         match message.text:
@@ -151,7 +162,7 @@ class InlineStuff(loader.Module):
                     await message.answer_photo(
                         "https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/start_cmd.jpg",
                         caption=self.strings["profile_cmd"].format(
-                            prefix=self.get_prefix(),
+                            prefix=utils.escape_html(self.get_prefix()),
                             ram_usage=utils.get_ram_usage(),
                             cpu_usage=utils.get_cpu_usage(),
                             host=utils.get_named_platform(),
@@ -160,7 +171,7 @@ class InlineStuff(loader.Module):
                             markup_obj=[
                                 [
                                     {
-                                        "text": "Restart",
+                                        "text": self.strings["btn_restart"],
                                         "callback": self.restart,
                                         "style": "primary",
                                         "args": (message,),
@@ -169,7 +180,7 @@ class InlineStuff(loader.Module):
                                 ],
                                 [
                                     {
-                                        "text": "Reset prefix",
+                                        "text": self.strings["btn_reset_prefix"],
                                         "callback": self.reset_prefix,
                                         "style": "primary",
                                         "args": (message,),

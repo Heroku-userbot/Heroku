@@ -428,20 +428,23 @@ heroku_config:
   name: HerokuConfig
   _cfg_emoji: "Менять эмодзи при открытии конфига"
 inline_stuff:
-  bot_username_invalid: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Неправильный ник бота. Он должен заканчиваться на</b> <code>bot</code> <b>и быть не короче чем 5 символов</b>"
-  token_invalid: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Указанный токен бота недействителен. Он должен содержать 8-10 цифр, </b><code>:</code> <b>и 34-36 символов</b>"
-  bot_username_occupied: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Такой ник бота уже занят</b>"
-  bot_updated: "<tg-emoji emoji-id=6318792204118656433>🎉</tg-emoji> <b>Настройки сохранены. Для их применения нужно перезагрузить юзербот</b>"
+  bot_username_invalid: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Неверный юзернейм бота.</b> Он должен оканчиваться на <code>bot</code>, быть длиной от 5 до 32 символов и содержать только латинские буквы, цифры и _"
+  token_invalid: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Указанный токен бота недействителен. Он должен содержать 8-10 цифр, </b><code>:</code> <b>и 34-36 символов. Получить токен можно у @BotFather</b>"
+  bot_username_occupied: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Этот юзернейм бота уже занят</b>"
+  bot_updated: "<tg-emoji emoji-id=6318792204118656433>🎉</tg-emoji> <b>Настройки сохранены. Чтобы применить их, перезапустите юзербот командой</b> <code>{prefix}restart</code>"
   this_is_heroku: "{} <b>Привет! Это {} — мощный модульный Telegram юзербот. Вы можете установить его на свой аккаунт!</b>"
   support_chat_caption: "Чат поддержки"
-  profile_cmd: "ℹ️ Основная информация об юзерботе\n\n<blockquote>• Префикс: {prefix}\n• Использование RAM: {ram_usage} МБ\n• Использование CPU: {cpu_usage}%\n• Хостинг: {host}</blockquote>"
+  profile_cmd: "ℹ️ Основная информация о юзерботе\n\n<blockquote>• Префикс: <code>{prefix}</code>\n• Использование RAM: {ram_usage} МБ\n• Использование CPU: {cpu_usage}%\n• Хостинг: {host}</blockquote>"
   restart: "🔄 Ваша Heroku перезапускается..."
-  prefix_reset: "🔀 Префикс сброшен!"
-  _cmd_doc_ch_heroku_bot: "<юзернейм> - Изменить юзернейм инлайн бота"
+  prefix_reset: "🔀 Префикс сброшен на <code>.</code>, дополнительные префиксы удалены"
+  username_updated: "<tg-emoji emoji-id=6318792204118656433>🎉</tg-emoji> <b>Юзернейм бота изменён на</b> @{}<b>. Чтобы применить, перезапустите юзербот командой</b> <code>{prefix}restart</code>"
+  btn_restart: "Перезапустить"
+  btn_reset_prefix: "Сбросить префикс"
+  _cmd_doc_ch_heroku_bot: "[юзернейм] - Сменить юзернейм инлайн-бота (должен оканчиваться на bot). Без аргумента — случайный. Сбрасывает сохранённый токен; применяется после перезапуска"
 
   name: InlineStuff
-  _cls_doc: Настройка inline-бота
-  _cmd_doc_ch_bot_token: <token> - Изменить токен inline-бота
+  _cls_doc: "Настройка инлайн-бота. В ЛС с ботом: /profile — информация, перезапуск и сброс префикса"
+  _cmd_doc_ch_bot_token: "<токен> - Задать токен инлайн-бота (из @BotFather). Применяется после перезапуска. Лучше отправлять в «Избранном»"
 test:
   set_loglevel: "<tg-emoji emoji-id=5355133243773435190>🚫</tg-emoji> <b>Укажите уровень логов (с флагом -f он обязателен):</b> <code>critical</code>, <code>error</code>, <code>warning</code>, <code>info</code>, <code>debug</code>, <code>all</code> <b>или число. Например:</b> <code>{prefix}logs error</code>"
   no_logs: "<tg-emoji emoji-id=5355133243773435190>🤷‍♀️</tg-emoji> <b>Нет логов уровня</b> <code>{}</code> <b>и выше.</b>"
@@ -528,22 +531,23 @@ updater:
   _cmd_doc_changelog: Показать changelog последнего крупного обновления
   _cmd_doc_ubstop: Остановить юзербота
 api_protection:
-  warning: "<tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji> <b>ВНИМАНИЕ!</b>\n\nАккаунт вышел за лимиты запросов, указанные в конфиге. С целью предотвращения флуда Telegram API, юзербот был <b>полностью заморожен</b> на {} секунд. Дополнительная информация прикреплена в файле ниже. \n\nРекомендуется обратиться за помощью в <code>{prefix}support</code> группу!\n\nЕсли ты считаешь, что это запланированное поведение юзербота, просто подожди, пока закончится таймер и в следующий раз, когда запланируешь выполнять такую ресурсозатратную операцию, используй <code>{prefix}suspend_api_protect</code> &lt;время в секундах&gt;"
-  args_invalid: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Неверные аргументы</b>"
-  suspended_for: "<tg-emoji emoji-id=5458450833857322148>👌</tg-emoji> <b>Защита API отключена на {} секунд</b>"
-  on: "<tg-emoji emoji-id=5458450833857322148>👌</tg-emoji> <b>Защита включена</b>"
-  off: "<tg-emoji emoji-id=5458450833857322148>👌</tg-emoji> <b>Защита отключена</b>"
-  u_sure: "<tg-emoji emoji-id=5312383351217201533><tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji></tg-emoji> <b>Ты уверен?</b>"
-  _cfg_time_sample: "Временной промежуток, по которому будет считаться количество запросов"
-  _cfg_threshold: "Порог запросов, при котором будет срабатывать защита"
-  _cfg_local_floodwait: "Заморозить юзербота на это количество секунд, если лимит запросов превышен"
+  warning: "<tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji> <b>ВНИМАНИЕ!</b>\n\nАккаунт превысил лимит запросов, указанный в конфиге. Чтобы не флудить Telegram API, юзербот <b>полностью заморожен</b> на {} секунд. Подробности — в прикреплённом файле.\n\nЕсли нужна помощь, напишите в группу <code>{prefix}support</code>.\n\nЕсли такая нагрузка ожидаема, дождитесь окончания таймера, а перед следующей ресурсоёмкой операцией выполните <code>{prefix}suspend_api_protect &lt;секунды&gt;</code>. Полностью выключить защиту: <code>{prefix}api_fw_protection</code>"
+  args_invalid: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Укажите время в секундах целым числом, например</b> <code>600</code>"
+  suspended_for: "<tg-emoji emoji-id=5458450833857322148>👌</tg-emoji> <b>Защита API приостановлена на {} секунд</b>"
+  on: "<tg-emoji emoji-id=5458450833857322148>👌</tg-emoji> <b>Защита API включена</b>"
+  off: "<tg-emoji emoji-id=5458450833857322148>👌</tg-emoji> <b>Защита API выключена</b>"
+  u_sure: "<tg-emoji emoji-id=5447644880824181073>⚠️</tg-emoji> <b>Защита API сейчас {}. Переключить?</b>"
+  already_off: "ℹ️ <b>Защита API и так выключена.</b> Включить: <code>{prefix}api_fw_protection</code>"
+  state_on: "включена"
+  state_off: "выключена"
+  _cfg_time_sample: "Окно в секундах, за которое считаются запросы (работает только при включённой защите, см. api_fw_protection)"
+  _cfg_threshold: "Сколько запросов за окно допускается до срабатывания защиты (работает только при включённой защите)"
+  _cfg_local_floodwait: "На сколько секунд заморозить юзербот, если лимит запросов превышен (работает только при включённой защите)"
   _cfg_forbidden_methods: "Запретить выполнение указанных методов во всех внешних модулях"
   btn_no: "🚫 Нет"
   btn_yes: "✅ Да"
-  proxied_url: "🌐 Проксированная ссылка"
-  local_url: "🏠 Локальная ссылка"
-  _cmd_doc_api_fw_protection: "Включить/выключить защиту API"
-  _cmd_doc_suspend_api_protect: "<время в секундах> - Заморозить защиту API на N секунд"
+  _cmd_doc_api_fw_protection: "Включить или выключить защиту API от флуда (по умолчанию выключена)"
+  _cmd_doc_suspend_api_protect: "<секунды> - Временно отключить защиту API на указанное число секунд (0 — снова включить)"
   name: APILimiter
   _cls_doc: Помогает юзерботу не спамить Telegram API
 help:
@@ -746,20 +750,19 @@ loader_restrictor:
 translations:
   lang_saved: "{} <b>Язык сохранён!</b>"
   pack_saved: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Пакет переводов сохранён!</b>"
-  incorrect_language: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Указан неверный язык</b>"
-  lang_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Переводы сброшены на стандартные</b>"
-  check_pack: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Неверный формат пакета переводов в ссылке</b>"
-  check_url: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Вы должны указать ссылку, содержащую пакет переводов</b>"
+  incorrect_language: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Неизвестный язык. Доступны:</b> <code>en ru uk de ja leet uwu tiktok neofit</code><b>. Без аргументов откроется меню выбора</b>"
+  check_pack: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Не удалось загрузить пакет переводов по ссылке.</b> Проверьте, что ссылка прямая (raw) на .yml/.json файл"
+  check_url: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Укажите прямую ссылку на пакет переводов (.yml/.json)</b>"
   too_long: "<tg-emoji emoji-id=5341492148468465410>📁</tg-emoji> <b>Вывод команды слишком длинный, поэтому он отправлен в файле.</b>"
   choose_language: "<tg-emoji emoji-id=5454219968948229067>🗽</tg-emoji> <b>Выберите язык</b>"
-  off_langs: "🏴‍☠️ Официальные переводы"
+  off_langs: "🌐 Официальные переводы"
   meme_langs: "🏴‍☠️ Мемные переводы"
   not_official: "<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Этот язык не поддерживается официально</b>"
   requested_join: "<tg-emoji emoji-id=5469741319330996757>💫</tg-emoji> <b>Модуль</b> <code>{}</code> <b>запросил присоединение к каналу <a href='https://t.me/{}'>{}</a></b>\n\n<b>❓ Причина:</b> <i>{}</i>"
-  fw_error: "<tg-emoji emoji-id=5877458226823302157>🕒</tg-emoji> <b>Команда</b> <code>{}</code> <b>вызвал FloodWait {} в методе</b> <code> {}</code>"
+  fw_error: "<tg-emoji emoji-id=5877458226823302157>🕒</tg-emoji> <b>Команда</b> <code>{}</code> <b>вызвала FloodWait ({}) в методе</b> <code>{}</code>"
   rpc_error: "<tg-emoji emoji-id=5877477244938489129>🚫</tg-emoji> <b>Команда</b> <code>{}</code> <b>не удалась из-за ошибки RPC:</b> <code>{}</code>"
-  _cmd_doc_dllangpack: "[ссылка на пак] - добавить внешний пак перевода"
-  _cmd_doc_setlang: "[язык] - изменить стандартный язык"
+  _cmd_doc_dllangpack: "<ссылка> - Установить внешний пак переводов по прямой ссылке на .yml/.json (заменяет ранее установленный)"
+  _cmd_doc_setlang: "[код ...] - Сменить язык юзербота (en, ru, uk, de, ja, мемные: leet, uwu, tiktok, neofit). Без аргумента — меню выбора. Можно несколько через пробел; en — вернуть английский. Внешний пак при этом отключается, для ссылки на пак используйте dllangpack"
   downloaded_langs: "Скачанные"
   btn_yes: "Да"
   btn_cancel: "Отмена"
@@ -767,9 +770,9 @@ translations:
   btn_back: "Назад"
   no_downloaded: "<b>Список пуст</b>"
   choose_downloaded: "<b>Скачанные языки</b>"
-  confirm_lang: "<b>Установить этот язык?</b>"
+  confirm_lang: "<b>Установить этот пак?</b>\n<code>{}</code>"
   action_cancelled: "<b>Действие отменено</b>"
-  lang_deleted: "<b>Язык успешно удалён</b>"
+  lang_deleted: "<b>Пак успешно удалён</b>"
 
   name: Translations
   _cls_doc: Управляет внутренними переводами
@@ -798,16 +801,16 @@ eval:
   no_code: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Нет кода для выполнения. Укажите код после команды, ответьте на сообщение с кодом или прикрепите файл</b>"
   file_decode_error: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Не удалось прочитать файл как текст (UTF-8)</b>"
 translate:
-  no_args: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Не указаны аргументы</b>"
-  error: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Не удалось перевести текст</b>"
+  no_args: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Укажите текст или ответьте на сообщение, которое нужно перевести</b>"
+  error: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Не удалось перевести текст.</b> Проверьте код языка (например, en, ru, de) и что в сообщении есть текст"
   language: "ru"
   translated_text: "<tg-emoji emoji-id=5787344001862471785>🔁</tg-emoji> Переведённый текст:\n<blockquote>{tr_text} </blockquote>"
-  _cls_doc: "Переводит текст (очевидно)"
-  _cmd_doc_tr: "[код языка, напр. en/ru] [текст|реплай] - Перевести"
+  _cls_doc: "Переводит текст"
+  _cmd_doc_tr: "[код языка] [текст] - Перевести текст или сообщение, на которое вы отвечаете (код языка: en, ru, de...). Без кода — на язык юзербота"
 
   name: Translator
-  _cfg_only_text: "Только переведённый текст в .tr"
-  _cfg_provider: "Используемый провайдер перевода"
+  _cfg_only_text: "Отправлять только перевод, без заголовка «Переведённый текст»"
+  _cfg_provider: "Провайдер перевода: telegram (сохраняет форматирование) или google"
 
 quickstart:
   base: "<tg-emoji emoji-id=5463379725441341739>🪐</tg-emoji> <b>Привет.</b> Ваш юзербот <b>{}</b> теперь установлен.\n\n<tg-emoji emoji-id=5134202243486057363>💫</tg-emoji> <b>Нужна помощь?</b> Заходите в <a href=\"https://t.me/heroku_talks\">наш чат поддержки</a>. Мы помогаем <b>всем</b>.\n\n<tg-emoji emoji-id=4940480187436369099>💁‍♀️</tg-emoji> <b>Краткое руководство:</b>\n\n<tg-emoji emoji-id=5456197350416486261>1️⃣</tg-emoji> <b>Напишите</b> <code>.help</code><b>, чтобы увидеть список модулей</b>\n<tg-emoji emoji-id=5456261689026581678>2️⃣</tg-emoji> <b>Напишите</b> <code>.help &lt;Имя модуля/команда&gt;</code><b>, чтобы увидеть описание модуля</b>\n<tg-emoji emoji-id=5458366235886522404>3️⃣</tg-emoji> <b>Напишите</b> <code>.dlmod &lt;ссылка&gt;</code><b>, чтобы загрузить модуль по ссылке</b>\n<tg-emoji emoji-id=5456207331920483861>4️⃣</tg-emoji> <b>Напишите</b> <code>.loadmod</code> <b>в ответ на файл, чтобы загрузить из него модуль</b>\n<tg-emoji emoji-id=5456185418997340146>5️⃣</tg-emoji> <b>Напишите</b> <code>.unloadmod &lt;Имя модуля&gt;</code><b>, чтобы выгрузить модуль</b>\n\n<tg-emoji emoji-id=5456178297941561360>💡</tg-emoji> <b>Heroku поддерживает модули от Hikka, Friendly-Telegram и GeekTG, а также свои собственные.</b>\n"

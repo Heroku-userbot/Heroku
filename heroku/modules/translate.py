@@ -68,7 +68,7 @@ class Translator(loader.Module):
 
     @loader.command()
     async def tr(self, message: Message):
-        """[lang code, e.g. en/ru] [text|reply] - Translate"""
+        """[lang code] [text] - Translate text or the replied message"""
         if not (args := utils.get_args_raw(message.raw_text)):
             text = None
             lang = self.strings["language"]
@@ -141,7 +141,9 @@ class Translator(loader.Module):
                         message.peer_id, message, lang, raw_text=text, entities=entities
                     )
             else:
-                tr_text = await self._translate_external(text, lang)
+                tr_text = utils.escape_html(
+                    await self._translate_external(text, lang)
+                )
 
             if self.config["only_text"]:
                 await utils.answer(message, tr_text)

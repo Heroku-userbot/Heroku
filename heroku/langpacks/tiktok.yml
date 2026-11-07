@@ -476,8 +476,6 @@ api_protection:
   _cfg_forbidden_methods: "Запретить эти методы во всех внешних модулях"
   btn_no: "🚫 Не"
   btn_yes: "✅ Да"
-  proxied_url: "🌐 Прокси ссылка"
-  local_url: "🏠 Локал ссылка"
   _cmd_doc_api_fw_protection: "Вкл/выкл защиту API"
   _cmd_doc_suspend_api_protect: "<секунды> - Заморозить защиту API на N сек"
   name: APILimiter
@@ -619,7 +617,6 @@ translations:
   lang_saved: "{} <b>Язык сменил, красава!</b>"
   pack_saved: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Пак переводов сохранил!</b>"
   incorrect_language: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Язык кривой</b>"
-  lang_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Сбросил на дефолт</b>"
   check_pack: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Пак кривой в ссылке</b>"
   check_url: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Ссылку дай норм с паком</b>"
   too_long: "<tg-emoji emoji-id=5341492148468465410>📁</tg-emoji> <b>Текста дофига, кидаю файлом.</b>"

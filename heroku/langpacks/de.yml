@@ -476,8 +476,6 @@ api_protection:
   _cfg_forbidden_methods: "Verhindere die Ausführung der angegebenen Methoden in allen externen Modulen"
   btn_no: "🚫 Nein"
   btn_yes: "✅ Ja"
-  proxied_url: "🌐 Proxy-Link"
-  local_url: "🏠 Lokaler Link"
   _cmd_doc_api_fw_protection: "Aktivieren/Deaktivieren des API-Schutzes"
   _cmd_doc_suspend_api_protect: "<Zeit in Sekunden> - Friert den API-Schutz für N Sekunden ein"
 
@@ -621,7 +619,6 @@ translations:
   lang_saved: "{} <b>Sprache gespeichert!</b>"
   pack_saved: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Übersetzungspaket gespeichert!</b>"
   incorrect_language: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Falsche Sprache angegeben</b>"
-  lang_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Übersetzungen auf Standard zurückgesetzt</b>"
   check_pack: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Falsches Format des Übersetzungspakets im Link</b>"
   check_url: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Du musst einen Link angeben, der ein Übersetzungspaket enthält</b>"
   too_long: "<tg-emoji emoji-id=5341492148468465410>📁</tg-emoji> <b>Die Ausgabe des Befehls ist zu lang, daher wurde sie in einer Datei gesendet.</b>"
