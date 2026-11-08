@@ -887,4 +887,4 @@ aliases:
   load_failed: "<b>🚫 Failed to load</b>"
   aliases_list: "<b>✅ Loaded:</b>\n\n<code>{}</code>"
   no_aliases: "<b>🚫 You have no aliases</b>"
-  aliases_file: "БАБАБАБА, ИЗМЕНИТЬ ПОТОМ ДА. {prefix}la,"
+  aliases_file: "БАБАБАБА, ИЗМЕНИТЬ ПОТОМ ДА. {prefix}la"
