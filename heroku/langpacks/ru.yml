@@ -879,3 +879,10 @@ command_conflicts:
   used: "Команда уже выбрана."
   unavailable: "<tg-emoji emoji-id=5870657884844462243>❌</tg-emoji> Команда больше недоступна."
   failed: "<tg-emoji emoji-id=5870931487146119264>❗</tg-emoji> Не удалось показать выбор модуля. Проверь инлайн-бота."
+
+aliases:
+  "no_file": "<b>🚫 Нужен файл. </b>",
+  "load_failed": "<b>🚫 Не удалось загрузить</b>",
+  "aliases_list": "<b>✅ Загружено:</b>\n\n<code>{}</code>",
+  "no_aliases": "<b>🚫 У вас нету алиасов</b>",
+  "aliases_file": "БАБАБАБА, ИЗМЕНИТЬ ПОТОМ ДА. {prefix}la"
