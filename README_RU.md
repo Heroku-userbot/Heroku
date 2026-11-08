@@ -212,7 +212,7 @@ sudo apt update ; sudo apt upgrade -y ; sudo apt install -y python3 python3-venv
 
 | Тип | Ссылка |
 |------|-------|
-| Пользовательская документация | [heroku-ub.xyz](https://heroku-ub.xyz/) |
+| Документация для пользователей | [heroku-ub.xyz](https://heroku-ub.xyz/) |
 | Документация для разработчиков | [dev.heroku-ub.xyz](https://dev.heroku-ub.xyz/) |
 
 ---
