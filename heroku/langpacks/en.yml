@@ -881,3 +881,10 @@ command_conflicts:
   used: "This command has already been selected."
   unavailable: "<tg-emoji emoji-id=5870657884844462243>❌</tg-emoji> The command is no longer available."
   failed: "<tg-emoji emoji-id=5870931487146119264>❗</tg-emoji> Cannot show module selection. Check the inline bot."
+
+aliases:
+  no_file: "<b>🚫 File is required.</b>"
+  load_failed: "<b>🚫 Failed to load</b>"
+  aliases_list: "<b>✅ Loaded:</b>\n\n<code>{}</code>"
+  no_aliases: "<b>🚫 You have no aliases</b>"
+  aliases_file: "БАБАБАБА, ИЗМЕНИТЬ ПОТОМ ДА. {prefix}la,"
