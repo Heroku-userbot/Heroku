@@ -314,6 +314,7 @@ settings:
   aliases_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>R3m0v3d {count} 4l14535:</b>\n<blockquote expandable>{aliases}</blockquote>"
   aliases_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>4ll 4l14535 r3m0v3d</b>."
   no_alias: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>4l145</b> <code>{}</code> <b>d035 n07 3x157</b>"
+  no_aliases: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>N0 4l145 4v41l4bl3</b>"
   db_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>DB cl34r3d</b>"
   heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>D3v: <a href=\"t.me/zetgo\">@zetgo</a></b>"
   rich_heroku_message: '<figure><img src="{banner_url}"/></figure><h1>{platform} Userbot</h1><table bordered><tr><th>C0mp0n3nt</th><th>Curr3nt r3l3453</th></tr><tr><td><b>V3r510n</b></td><td><code>{version}</code></td></tr><tr><td><b>Bu1ld</b></td><td>{build}</td></tr><tr><td><b>Heroku TL</b></td><td><code>{htl_version}</code></td></tr><tr><td><b>API l4y3r</b></td><td><code>{layer}</code></td></tr><tr><td><b>Curr3nt u53r</b></td><td><code>{current_user}</code></td></tr><tr><td><b>D3v3l0p3r</b></td><td><a href="https://t.me/zetgo">@zetgo</a></td></tr></table>'
