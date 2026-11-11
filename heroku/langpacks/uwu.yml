@@ -300,7 +300,7 @@ settings:
   alias_created: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Awias cweated. Access it with</b> <code>{}</code>"
   aliases_created: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Added {count} awiases:</b>\n<blockquote expandable>{aliases}</blockquote>"
   aliases_created_line: "{aliases} fow {command}"
-  aliases_list: "<b>🔗 Impowtɛd awias:</b>\n\n<blockquote expandable>{}</blockquote>"
+  aliases_list: "<b>🔗 Impowted awias:</b>\n\n<blockquote expandable>{}</blockquote>"
   aliases_file: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Yow awias</b>\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}la in weply to this message to impowt awias</b>"
   aliases: "<b>🔗 Awiases:</b>\n"
   happy_beta: "\n\n<tg-emoji emoji-id=5465188915990255885>🌟</tg-emoji> <b>You are a happy owner of the <code>{}</code> version~ UwU</b>"
@@ -314,6 +314,7 @@ settings:
   aliases_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Wemoved {count} awiases:</b>\n<blockquote expandable>{aliases}</blockquote>"
   aliases_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Aww awiases wemoved</b>."
   no_alias: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Awias</b> <code>{}</code> <b>does nyot exist</b>"
+  no_aliases: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>You hwve no awiases</b>"
   db_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Database cweawed</b>"
   heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>Devewopew: <a href=\"t.me/zetgo\">@zetgo</a></b> :3"
   rich_heroku_message: '<figure><img src="{banner_url}"/></figure><h1>{platform} Userbot</h1><table bordered><tr><th>Component</th><th>Cuwwent wewease</th></tr><tr><td><b>Vewsion</b></td><td><code>{version}</code></td></tr><tr><td><b>Buiwd</b></td><td>{build}</td></tr><tr><td><b>Hewoku TL</b></td><td><code>{htl_version}</code></td></tr><tr><td><b>API wayew</b></td><td><code>{layer}</code></td></tr><tr><td><b>Cuwwent usew</b></td><td><code>{current_user}</code></td></tr><tr><td><b>Devewopew</b></td><td><a href="https://t.me/zetgo">@zetgo</a></td></tr></table>'

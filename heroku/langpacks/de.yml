@@ -311,6 +311,7 @@ settings:
   aliases_removed: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>{count} Aliase entfernt:</b>\n<blockquote expandable>{aliases}</blockquote>"
   aliases_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Alle Aliase wurden entfernt</b>."
   no_alias: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Alias</b> <code>{}</code> <b>existiert nicht</b>"
+  no_aliases: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Du hast keine Aliase</b>"
   db_cleared: "<tg-emoji emoji-id=5197474765387864959>👍</tg-emoji> <b>Datenbank wurde gelöscht</b>"
   heroku: "{} <b>{}.{}.{}</b> <i>{}</i>\n\n<tg-emoji emoji-id=5289608677244811430>📁</tg-emoji> <b>heroku-tl:</b> <i>{}</i>\n\n<tg-emoji emoji-id=5228879218363872764>⌨</tg-emoji> <b>Developer: <a href=\"t.me/zetgo\">@zetgo</a></b>"
   rich_heroku_message: '<figure><img src="{banner_url}"/></figure><h1>{platform} Userbot</h1><table bordered><tr><th>Komponente</th><th>Aktuelles Release</th></tr><tr><td><b>Version</b></td><td><code>{version}</code></td></tr><tr><td><b>Build</b></td><td>{build}</td></tr><tr><td><b>Heroku TL</b></td><td><code>{htl_version}</code></td></tr><tr><td><b>API-Layer</b></td><td><code>{layer}</code></td></tr><tr><td><b>Aktueller Benutzer</b></td><td><code>{current_user}</code></td></tr><tr><td><b>Entwickler</b></td><td><a href="https://t.me/zetgo">@zetgo</a></td></tr></table>'

@@ -12,8 +12,14 @@
 
 import contextlib
 import getpass
+import io
+import logging
+
 import herokutl
+import orjson
 from herokutl.tl.types import Message, MessageActionTopicCreate, User
+
+logger = logging.getLogger(__name__)
 
 from .. import loader, main, utils, version
 from ..inline.types import InlineCall
@@ -326,6 +332,75 @@ class CoreMod(loader.Module):
                 ]
             )
             + "</blockquote>",
+        )
+
+    @loader.command(alias="la")
+    async def loadaliases(self, message: Message):
+        """Load aliases from file. Send a file with the command or reply to a file."""
+        msg = message if message.file else (await message.get_reply_message())
+        if not msg or not msg.file:
+            await message.edit(self.strings["no_file"])
+            return
+
+        try:
+            data = orjson.loads(await msg.download_media(bytes))
+        except Exception:
+            await message.edit(self.strings["load_failed"])
+            logger.exception("Failed to load aliases from file")
+            return
+
+        if not isinstance(data, list) or not all(
+            isinstance(item, dict) and "alias" in item and "command" in item
+            for item in data
+        ):
+            await message.edit(self.strings["load_failed"])
+            logger.error("Invalid aliases format")
+            return
+
+        loaded = []
+        for item in data:
+            alias = item["alias"]
+            cmd_str = item["command"]
+            parts = cmd_str.split(maxsplit=1)
+            cmd = parts[0]
+            rest = parts[1] if len(parts) > 1 else None
+            if self.allmodules.add_alias(alias, cmd, rest):
+                self.set(
+                    "aliases",
+                    {
+                        **self.get("aliases", {}),
+                        alias: f"{cmd} {rest}" if rest else cmd,
+                    },
+                )
+                loaded.append(alias)
+            else:
+                logger.error("Failed to load alias %s", alias)
+
+        await utils.answer(
+            message,
+            self.strings["aliases_list"].format(
+                "\n".join(f"{alias}" for alias in loaded)
+            ),
+            reply_to=getattr(message, "reply_to_msg_id", None),
+        )
+
+    @loader.command(alias="al")
+    async def aliasload(self, message: Message):
+        """Send aliases via file"""
+        aliases = list(self.allmodules.aliases.items())
+        if not aliases:
+            await message.edit(self.strings["no_aliases"])
+            return
+
+        file = io.BytesIO(
+            orjson.dumps([{"alias": alias, "command": cmd} for alias, cmd in aliases])
+        )
+        file.name = "aliases.json"
+        await utils.answer(
+            message,
+            self.strings["aliases_file"].format(prefix=self.get_prefix()),
+            file=file,
+            reply_to=getattr(message, "reply_to_msg_id", None),
         )
 
     @loader.command()
