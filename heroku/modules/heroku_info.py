@@ -110,7 +110,9 @@ class HerokuInfoMod(loader.Module):
                     if line.startswith("PRETTY_NAME"):
                         return line.split("=")[1].strip().strip('"')
         except FileNotFoundError:
-            return self.strings["non_detectable"]
+            pass
+
+        return self.strings["non_detectable"]
 
     def _get_ram_usage(self):
         import psutil
@@ -204,7 +206,8 @@ class HerokuInfoMod(loader.Module):
             if name in data:
                 return str(data[name])
             return self.strings["missing_placeholder"].format(
-                placeholder=utils.escape_html(match.group(0))
+                placeholder=utils.escape_html(match.group(0)),
+                prefix=utils.escape_html(self.get_prefix()),
             )
 
         return re.sub(r"{(\w+)}", replace, template)

@@ -118,7 +118,7 @@ class HerokuConfigMod(loader.Module):
             return value
 
         plain = utils.remove_html(value)
-        suffix = "\n... <i>значение обрезано для inline-сообщения</i>"
+        suffix = self.strings["value_truncated"]
         plain_limit = max(0, limit - len(suffix) - len("<b><code></code></b>"))
         return f"<b><code>{utils.escape_html(plain[:plain_limit])}</code></b>{suffix}"
 
@@ -186,6 +186,27 @@ class HerokuConfigMod(loader.Module):
         cat_obj = getattr(instance.config, "_categories", {}).get(category)
         return cat_obj.getdoc() if cat_obj else ""
 
+    @staticmethod
+    def _drop_empty_doc(text: str) -> str:
+        return text.replace("\n<i>ℹ️ </i>", "")
+
+    def _validation_error_text(self, error: Exception) -> str:
+        text = error.args[0] if error.args else ""
+        if texts := getattr(text, "translations", None):
+            text = next(
+                (
+                    texts[lang]
+                    for original_lang in self._db.get(
+                        translations.__name__, "lang", "en"
+                    ).split(" ")
+                    for lang in translations.iter_language_codes(original_lang)
+                    if lang in texts
+                ),
+                text,
+            )
+
+        return self.strings["validation_error"].format(utils.escape_html(str(text)))
+
     async def inline__set_config(
         self,
         call: InlineCall,
@@ -199,7 +220,7 @@ class HerokuConfigMod(loader.Module):
             self.lookup(mod).config[option] = query
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings["validation_error"].format(e.args[0]),
+                self._validation_error_text(e),
                 reply_markup={
                     "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
@@ -283,7 +304,7 @@ class HerokuConfigMod(loader.Module):
             self.lookup(mod).config[option] = value
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings["validation_error"].format(e.args[0]),
+                self._validation_error_text(e),
                 reply_markup={
                     "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
@@ -349,7 +370,7 @@ class HerokuConfigMod(loader.Module):
                 *(
                     [
                         {
-                            "text": f"❌ {self.strings['set']} `False`",
+                            "text": f"❌ {self.strings['set']} False",
                             "callback": self.inline__set_bool,
                             "args": (mod, option, False),
                             "kwargs": {"obj_type": obj_type},
@@ -358,7 +379,7 @@ class HerokuConfigMod(loader.Module):
                     if self.lookup(mod).config[option]
                     else [
                         {
-                            "text": f"✅ {self.strings['set']} `True`",
+                            "text": f"✅ {self.strings['set']} True",
                             "callback": self.inline__set_bool,
                             "args": (mod, option, True),
                             "kwargs": {"obj_type": obj_type},
@@ -419,7 +440,7 @@ class HerokuConfigMod(loader.Module):
             self.lookup(mod).config[option] = self.lookup(mod).config[option] + query
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings["validation_error"].format(e.args[0]),
+                self._validation_error_text(e),
                 reply_markup={
                     "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
@@ -484,12 +505,11 @@ class HerokuConfigMod(loader.Module):
 
             if old_config_len == len(self.lookup(mod).config[option]):
                 raise loader.validators.ValidationError(
-                    f"Nothing from passed value ({self.prep_value(query)}) is not in"
-                    " target list"
+                    self.strings["remove_not_found"].format(", ".join(query))
                 )
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings["validation_error"].format(e.args[0]),
+                self._validation_error_text(e),
                 reply_markup={
                     "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
@@ -552,17 +572,17 @@ class HerokuConfigMod(loader.Module):
                             "args": (mod, option, call.inline_message_id),
                             "kwargs": {"obj_type": obj_type},
                         },
-                        {
-                            "text": self.strings["add_item_btn"],
-                            "input": self.strings["add_item_desc"],
-                            "handler": self.inline__add_item,
-                            "args": (mod, option, call.inline_message_id),
-                            "kwargs": {"obj_type": obj_type},
-                        },
                     ]
                     if self.lookup(mod).config[option]
                     else []
                 ),
+                {
+                    "text": self.strings["add_item_btn"],
+                    "input": self.strings["add_item_desc"],
+                    "handler": self.inline__add_item,
+                    "args": (mod, option, call.inline_message_id),
+                    "kwargs": {"obj_type": obj_type},
+                },
             ],
             [
                 *(
@@ -607,7 +627,7 @@ class HerokuConfigMod(loader.Module):
             self.lookup(mod).config[option] = value
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings["validation_error"].format(e.args[0]),
+                self._validation_error_text(e),
                 reply_markup={
                     "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
@@ -661,7 +681,7 @@ class HerokuConfigMod(loader.Module):
             self.lookup(mod).config.reload()
         except loader.validators.ValidationError as e:
             await call.edit(
-                self.strings["validation_error"].format(e.args[0]),
+                self._validation_error_text(e),
                 reply_markup={
                     "text": self.strings["try_again"],
                     "callback": self.inline__configure_option,
@@ -701,8 +721,8 @@ class HerokuConfigMod(loader.Module):
                 [
                     {
                         "text": (
-                            f"{'☑️' if self.lookup(mod).config[option] == value else '🔘'} "
-                            f"{value if len(str(value)) < 20 else str(value)[:20]}"
+                            f"{'☑️' if self.lookup(mod).config[option] == value else '⚪️'} "
+                            f"{value if len(str(value)) < 20 else str(value)[:20] + '…'}"
                         ),
                         "callback": self._choice_set_value,
                         "args": (mod, option, value, obj_type),
@@ -776,7 +796,7 @@ class HerokuConfigMod(loader.Module):
                     {
                         "text": (
                             f"{'☑️' if value in self.lookup(mod).config[option] else '◻️'} "
-                            f"{value if len(str(value)) < 20 else str(value)[:20]}"
+                            f"{value if len(str(value)) < 20 else str(value)[:20] + '…'}"
                         ),
                         "callback": self._multi_choice_set_value,
                         "args": (mod, option, value, obj_type),
@@ -911,13 +931,15 @@ class HerokuConfigMod(loader.Module):
                     eng_art="n" if doc.lower().startswith(tuple("euioay")) else "",
                 )
             ]
-            text = self.strings[
-                (
-                    "configuring_option"
-                    if isinstance(obj_type, bool)
-                    else "configuring_option_lib"
-                )
-            ].format(*args)
+            text = self._drop_empty_doc(
+                self.strings[
+                    (
+                        "configuring_option"
+                        if isinstance(obj_type, bool)
+                        else "configuring_option_lib"
+                    )
+                ].format(*args)
+            )
             text, pagination = self._paginate_text_markup(
                 text,
                 page,
@@ -977,13 +999,15 @@ class HerokuConfigMod(loader.Module):
                     )
                     return
 
-        text = self.strings[
-            (
-                "configuring_option"
-                if isinstance(obj_type, bool)
-                else "configuring_option_lib"
-            )
-        ].format(*args)
+        text = self._drop_empty_doc(
+            self.strings[
+                (
+                    "configuring_option"
+                    if isinstance(obj_type, bool)
+                    else "configuring_option_lib"
+                )
+            ].format(*args)
+        )
 
         text, pagination = self._paginate_text_markup(
             text,
@@ -1085,21 +1109,25 @@ class HerokuConfigMod(loader.Module):
                 f"<tg-emoji emoji-id=5253713110111365241>▫️</tg-emoji> <code>{utils.escape_html(p)}</code>: {fmt_value(p)}"
                 for p in params
             ]
-            options_text = "\n".join(option_lines) if option_lines else "No options"
+            options_text = (
+                "\n".join(option_lines) if option_lines else self.strings["no_options"]
+            )
 
             cat_doc = self._get_category_doc(module, category)
 
-            cat_text = self.strings[
-                (
-                    "configuring_category"
-                    if isinstance(obj_type, bool)
-                    else "configuring_category_lib"
+            cat_text = self._drop_empty_doc(
+                self.strings[
+                    (
+                        "configuring_category"
+                        if isinstance(obj_type, bool)
+                        else "configuring_category_lib"
+                    )
+                ].format(
+                    utils.escape_html(mod),
+                    utils.escape_html(category),
+                    utils.escape_html(cat_doc),
+                    options_text,
                 )
-            ].format(
-                utils.escape_html(mod),
-                utils.escape_html(category),
-                utils.escape_html(cat_doc),
-                options_text,
             )
             cat_text, pagination = self._paginate_text_markup(
                 cat_text,
@@ -1152,7 +1180,9 @@ class HerokuConfigMod(loader.Module):
                 f"<tg-emoji emoji-id=5253713110111365241>▫️</tg-emoji> <code>{utils.escape_html(p)}</code>: {fmt_value(p)}"
                 for p in params
             ]
-            text = "\n".join(option_lines) if option_lines else "No options"
+            text = (
+                "\n".join(option_lines) if option_lines else self.strings["no_options"]
+            )
             text = self.strings[
                 ("configuring_mod" if isinstance(obj_type, bool) else "configuring_lib")
             ].format(utils.escape_html(mod), text)
@@ -1251,7 +1281,9 @@ class HerokuConfigMod(loader.Module):
                     }
                 )
 
-        text = "\n".join(sections).lstrip("\n") if sections else "No options"
+        text = (
+            "\n".join(sections).lstrip("\n") if sections else self.strings["no_options"]
+        )
         text = self.strings[
             "configuring_mod" if isinstance(obj_type, bool) else "configuring_lib"
         ].format(utils.escape_html(mod), text)
@@ -1278,7 +1310,7 @@ class HerokuConfigMod(loader.Module):
             ],
         )
 
-    def _fuzzy_lookup_configurable(self, query: str) -> tuple[str | None, bool]:
+    def _fuzzy_lookup_configurable(self, query: str) -> tuple[str | None, float]:
         query_lower = query.lower()
         best_score = -1.0
         best_name: str | None = None
@@ -1302,7 +1334,7 @@ class HerokuConfigMod(loader.Module):
 
             for name in names:
                 if name.lower() == query_lower:
-                    return mod_name, True
+                    return mod_name, 1.0
                 score = difflib.SequenceMatcher(None, query_lower, name.lower()).ratio()
                 if score > best_score:
                     best_score = score
@@ -1313,13 +1345,13 @@ class HerokuConfigMod(loader.Module):
                 continue
             lib_name = getattr(lib, "name", lib.__class__.__name__)
             if lib_name.lower() == query_lower:
-                return lib_name, True
+                return lib_name, 1.0
             score = difflib.SequenceMatcher(None, query_lower, lib_name.lower()).ratio()
             if score > best_score:
                 best_score = score
                 best_name = lib_name
 
-        return best_name, False
+        return best_name, best_score
 
     def _get_all_folders(self) -> dict:
         folders = {}
@@ -1489,7 +1521,7 @@ class HerokuConfigMod(loader.Module):
         await call.edit(
             self.strings["configuring_folder"].format(
                 utils.escape_html(folder),
-                "\n".join(text_parts) if text_parts else "No options",
+                "\n".join(text_parts) if text_parts else self.strings["no_options"],
             ),
             reply_markup=list(utils.chunks(btns, 1))
             + [
@@ -1591,7 +1623,10 @@ class HerokuConfigMod(loader.Module):
         if (instance := self.lookup(query)) and hasattr(instance, "config"):
             return query, instance, self._get_config_obj_type(instance)
 
-        fuzzy_name, _ = self._fuzzy_lookup_configurable(query)
+        fuzzy_name, score = self._fuzzy_lookup_configurable(query)
+        if score < 0.6:
+            return None, None, None
+
         if fuzzy_name and (instance := self.lookup(fuzzy_name)):
             if hasattr(instance, "config") and instance.config:
                 return fuzzy_name, instance, self._get_config_obj_type(instance)
@@ -1630,6 +1665,13 @@ class HerokuConfigMod(loader.Module):
             if len(split) == 2 and reply_text and split[1] in instance.config:
                 return split[1], reply_text
 
+            if (
+                len(split) == 3
+                and reply_text
+                and (config_opt := self._category_option(instance, split[1], split[2]))
+            ):
+                return config_opt, reply_text
+
             return None
 
         split = raw.split(maxsplit=2)
@@ -1644,6 +1686,16 @@ class HerokuConfigMod(loader.Module):
 
         return None
 
+    def _no_option_text(self, mod: str, instance: typing.Any, option: str) -> str:
+        return self.strings["no_option"].format(
+            mod=utils.escape_html(mod),
+            opt=utils.escape_html(option),
+            options=", ".join(
+                f"<code>{utils.escape_html(key)}</code>"
+                for key in instance.config.keys()
+            ),
+        )
+
     async def _apply_config_updates(
         self,
         message: Message,
@@ -1652,55 +1704,61 @@ class HerokuConfigMod(loader.Module):
         first_update: tuple[str, str],
         parts: list[str],
     ) -> None:
-        updates = []
+        lines = []
+
+        def saved_and(error: str) -> str:
+            # Show what was already saved before the failed part of `&&` chain
+            return "\n\n".join(["\n".join(lines), error]) if lines else error
+
+        def save_line(option: str) -> str:
+            return self.strings[
+                (
+                    "option_saved"
+                    if isinstance(instance, loader.Module)
+                    else "option_saved_lib"
+                )
+            ].format(
+                utils.escape_html(option),
+                utils.escape_html(mod),
+                self._get_value(mod, option),
+            )
 
         for option, value in [first_update]:
             if option not in instance.config:
-                await utils.answer(message, self.strings["no_option"])
+                await utils.answer(message, self._no_option_text(mod, instance, option))
                 return
 
             try:
                 instance.config[option] = value
             except loader.validators.ValidationError as e:
-                await utils.answer(
-                    message, self.strings["validation_error"].format(e.args[0])
-                )
+                await utils.answer(message, self._validation_error_text(e))
                 return
 
-            updates.append((option, self._get_value(mod, option)))
+            lines.append(save_line(option))
 
         for part in parts:
             update = self._parse_config_update(instance, part)
             if update is None:
-                await utils.answer(message, self.strings["args"])
+                await utils.answer(
+                    message,
+                    saved_and(self.strings["args"].format(utils.escape_html(part))),
+                )
                 return
 
             option, value = update
             if option not in instance.config:
-                await utils.answer(message, self.strings["no_option"])
+                await utils.answer(
+                    message, saved_and(self._no_option_text(mod, instance, option))
+                )
                 return
 
             try:
                 instance.config[option] = value
             except loader.validators.ValidationError as e:
-                await utils.answer(
-                    message, self.strings["validation_error"].format(e.args[0])
-                )
+                await utils.answer(message, saved_and(self._validation_error_text(e)))
                 return
 
-            updates.append((option, self._get_value(mod, option)))
-
-        lines = []
-        for option, value in updates:
-            lines.append(
-                self.strings[
-                    (
-                        "option_saved"
-                        if isinstance(instance, loader.Module)
-                        else "option_saved_lib"
-                    )
-                ].format(utils.escape_html(option), utils.escape_html(mod), value)
-            )
+            lines.append(save_line(option))
 
         await utils.answer(message, "\n".join(lines))
 
@@ -1714,7 +1772,18 @@ class HerokuConfigMod(loader.Module):
 
         mod_name, instance, obj_type = self._resolve_configurable(args_s[0])
         if not mod_name or not instance or obj_type is None:
-            await self.inline__choose_category(message)
+            fuzzy_name, _ = self._fuzzy_lookup_configurable(args_s[0])
+            if not fuzzy_name:
+                await self.inline__choose_category(message)
+                return
+
+            await utils.answer(
+                message,
+                self.strings["no_mod"].format(
+                    utils.escape_html(args_s[0]),
+                    utils.escape_html(fuzzy_name),
+                ),
+            )
             return
 
         parts = [part.strip() for part in raw.split("&&") if part.strip()]
@@ -1769,6 +1838,16 @@ class HerokuConfigMod(loader.Module):
                 )
                 return
 
+            if len(args_s) >= 3:
+                await utils.answer(
+                    message,
+                    self.strings["no_cat_option"].format(
+                        utils.escape_html(args_s[1]),
+                        utils.escape_html(args_s[2]),
+                    ),
+                )
+                return
+
             await self._send_initial_config_form(
                 message,
                 self.inline__configure,
@@ -1778,7 +1857,7 @@ class HerokuConfigMod(loader.Module):
             )
             return
 
-        await self.inline__choose_category(message)
+        await utils.answer(message, self._no_option_text(mod_name, instance, args_s[1]))
 
     @loader.command(aliases=["cfg", "fcfg"])
     async def configcmd(self, message: Message):

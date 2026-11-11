@@ -6,6 +6,7 @@
 
 import inspect
 import logging
+import re
 import shlex
 import typing
 
@@ -54,7 +55,7 @@ def get_args(message: Message | str) -> list[str]:
     :return: List of arguments
     """
     if not (message := getattr(message, "message", message)):
-        return False
+        return []
 
     if len(message := message.split(maxsplit=1)) <= 1:
         return []
@@ -64,7 +65,7 @@ def get_args(message: Message | str) -> list[str]:
     try:
         split = shlex.split(message)
     except ValueError:
-        return message  # Cannot split, let's assume that it's just one long message
+        split = message.split()  # Unbalanced quotes, fall back to plain split
 
     return list(filter(lambda x: len(x) > 0, split))
 
@@ -102,10 +103,10 @@ def get_args_html(message: Message) -> str:
 
     raw_text = herokutl.helpers.add_surrogate(raw_text)
 
-    try:
-        command = raw_text[:raw_text.index(" ")]
-    except ValueError:
+    if not (match := re.search(r"\s", raw_text)):
         return ""
+
+    command = raw_text[: match.start()]
 
     command_len = len(command) + 1
 

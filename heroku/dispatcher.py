@@ -394,6 +394,8 @@ class CommandDispatcher:
         if selected is not None:
             handlers = [handler for handler in handlers if handler == selected]
         if not handlers:
+            if message.out and not watcher and selected is None:
+                await self._notify_disabled(message, prefix, tag[0])
             return False
 
         if message.is_channel and message.edit_date and not message.is_group:
@@ -418,7 +420,11 @@ class CommandDispatcher:
         message.__dict__.update(event.message.__dict__)
         filter_event.__dict__["message"] = message
         if not watcher:
-            new_text = prefix + txt + _msg[_cmd_offset + len(command) :]
+            # Only the command name is converted from the wrong layout,
+            # arguments are kept as typed
+            new_text = prefix + txt + (
+                message.message if _switch_layout else _msg
+            )[_cmd_offset + len(command) :]
             if new_text != message.message:
                 offset = len(new_text) - len(message.message)
                 if offset and message.entities:
@@ -451,7 +457,7 @@ class CommandDispatcher:
         if not watcher:
             self._remember_state(event.message)
         if len(available) > 1 and not watcher:
-            await self._choose_command(event, txt, available)
+            await self._choose_command(event, txt, available, prefix)
             return False
         func = available[-1]
         if not await self._handle_ratelimit(message, func):
@@ -469,7 +475,25 @@ class CommandDispatcher:
     def _conflict_text(self, key):
         return self._modules.translator.getkey(f"heroku.modules.command_conflicts.{key}")
 
-    async def _choose_command(self, event, text, handlers):
+    async def _notify_disabled(self, message, prefix, command):
+        disabled_commands = self._db.get(main.__name__, "disabled_commands", {})
+        if not any(
+            command.lower() == item.lower()
+            for items in disabled_commands.values()
+            for item in items
+        ) or not (text := self._conflict_text("disabled")):
+            return
+
+        with contextlib.suppress(Exception):
+            await utils.answer(
+                message,
+                text.format(
+                    utils.escape_html(command.lower()),
+                    prefix=utils.escape_html(prefix),
+                ),
+            )
+
+    async def _choose_command(self, event, text, handlers, prefix="."):
         state = {"author": event.sender_id, "used": False}
         buttons = []
         for handler in handlers:
@@ -483,7 +507,11 @@ class CommandDispatcher:
             }])
         try:
             form = await self._modules.inline.form(
-                text=self._conflict_text("choose").format(utils.escape_html(text)),
+                text=self._conflict_text("choose").format(
+                    utils.escape_html(text),
+                    utils.escape_html(text.split()[0]),
+                    prefix=utils.escape_html(prefix),
+                ),
                 message=utils.get_chat_id(event),
                 reply_to=event.message.id,
                 reply_markup=buttons,
@@ -553,10 +581,11 @@ class CommandDispatcher:
                 hours = exc.seconds // 3600
                 minutes = (exc.seconds % 3600) // 60
                 seconds = exc.seconds % 60
-                hours = f"{hours} hours, " if hours else ""
-                minutes = f"{minutes} minutes, " if minutes else ""
-                seconds = f"{seconds} seconds" if seconds else ""
-                fw_time = f"{hours}{minutes}{seconds}"
+                fw_time = " ".join(
+                    f"{value}{unit}"
+                    for value, unit in ((hours, "h"), (minutes, "m"), (seconds, "s"))
+                    if value
+                ) or "0s"
                 txt = (
                     self._client.loader.lookup("translations")
                     .strings("fw_error")

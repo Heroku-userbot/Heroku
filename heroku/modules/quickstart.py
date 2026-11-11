@@ -139,7 +139,7 @@ class Quickstart(loader.Module):
 
         await self.request_join(
             "heroku_talks",
-            "Heroku help is only available in this chat. By agreeing to join the chat, you agree to the Heroku federation rules and if you violate them, you will be permanently banned.",
+            self.strings["join_reason"],
         )
 
         self.mark = lambda: [

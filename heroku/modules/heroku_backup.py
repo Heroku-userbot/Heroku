@@ -56,7 +56,7 @@ class HerokuBackupMod(loader.Module):
                     utils.chunks(
                         [
                             {
-                                "text": f"🕰 {i} h",
+                                "text": self.strings["btn_period"].format(i),
                                 "callback": self._set_backup_period,
                                 "args": (i,),
                             }
@@ -67,7 +67,7 @@ class HerokuBackupMod(loader.Module):
                     + [
                         [
                             {
-                                "text": "🚫 Never",
+                                "text": self.strings["btn_never"],
                                 "callback": self._set_backup_period,
                                 "args": (0,),
                             }
@@ -90,10 +90,13 @@ class HerokuBackupMod(loader.Module):
 
         self.set("period", value * 60 * 60)
         self.set("last_backup", round(time.time()))
+        self.handler.start()
 
         await self.inline.bot(
             call.answer(
-                self.strings["saved_bot"].format(prefix=self.get_prefix()),
+                self.strings["saved_bot"].format(
+                    prefix=self.get_prefix(), hours=value
+                ),
                 show_alert=True,
             )
         )
@@ -114,15 +117,21 @@ class HerokuBackupMod(loader.Module):
             self.set("period", "disabled")
             await utils.answer(
                 message,
-                f"<b>{self.strings['never'].format(prefix=self.get_prefix())}</b>",
+                self.strings["never"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
             )
             return
 
         period = int(args) * 60 * 60
         self.set("period", period)
         self.set("last_backup", round(time.time()))
+        self.handler.start()
         await utils.answer(
-            message, f"<b>{self.strings['saved'].format(prefix=self.get_prefix())}</b>"
+            message,
+            self.strings["saved"].format(
+                prefix=utils.escape_html(self.get_prefix()), hours=int(args)
+            ),
         )
 
     @loader.loop(interval=1, autostart=True)
@@ -189,7 +198,7 @@ class HerokuBackupMod(loader.Module):
                     [
                         [
                             {
-                                "text": "↪️ Restore this",
+                                "text": self.strings["btn_restore"],
                                 "data": "heroku/backupall/restore/confirm",
                             }
                         ]
@@ -213,14 +222,34 @@ class HerokuBackupMod(loader.Module):
         if call.data == "heroku/backupall/restore/confirm":
             await utils.answer(
                 call,
-                "❓ <b>Are you sure?</b>",
+                self.strings["restore_confirm"],
+                reply_markup=[
+                    {
+                        "text": self.strings["btn_restore_yes"],
+                        "data": "heroku/backupall/restore",
+                    },
+                    {
+                        "text": self.strings["btn_cancel"],
+                        "data": "heroku/backupall/restore/cancel",
+                    },
+                ],
+            )
+            return
+
+        if call.data == "heroku/backupall/restore/cancel":
+            await utils.answer(
+                call,
+                self.strings["backupall_info"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
                 reply_markup={
-                    "text": "✅ Yes",
-                    "data": "heroku/backupall/restore",
+                    "text": self.strings["btn_restore"],
+                    "data": "heroku/backupall/restore/confirm",
                 },
             )
             return
 
+        db_restored = False
         try:
             file = await (
                 await self._client.get_messages(
@@ -242,6 +271,7 @@ class HerokuBackupMod(loader.Module):
                 self._db.clear()
                 self._db.update(**db_data)
                 self._db.save()
+                db_restored = True
 
                 with zf.open("mods.zip") as modzip_bytes:
                     with zipfile.ZipFile(io.BytesIO(modzip_bytes.read())) as modzip:
@@ -267,7 +297,14 @@ class HerokuBackupMod(loader.Module):
         except Exception:
             logger.exception("Restore from backupall failed")
             await self.inline.bot(
-                call.answer(self.strings["reply_to_file"], show_alert=True)
+                call.answer(
+                    self.strings["restore_partial_bot"].format(
+                        prefix=self.get_prefix()
+                    )
+                    if db_restored
+                    else self.strings["restore_failed_bot"],
+                    show_alert=True,
+                )
             )
 
     def _convert(self, backup):
@@ -296,7 +333,9 @@ class HerokuBackupMod(loader.Module):
                 await utils.answer(
                     call,
                     self.strings["advice_converting"],
-                    reply_markup=[[{"text": "🔻 Close", "action": "close"}]],
+                    reply_markup=[
+                        [{"text": self.strings["btn_close"], "action": "close"}]
+                    ],
                 )
 
     @loader.command()
@@ -307,15 +346,26 @@ class HerokuBackupMod(loader.Module):
         txt.name = f"db-backup-{datetime.datetime.now():%d-%m-%Y-%H-%M}.json"
 
         if not getattr(self, "_content_channel_id", None):
+            await utils.answer(message, self.strings["waiting_channel"])
             self._content_channel_id = await utils.wait_for_content_channel(self._db)
 
         backup_topic_id = await utils.get_topic_id(self._db, "Backups")
         if not backup_topic_id:
             logger.error("Backups topic not found in database")
-            await utils.answer(message, self.strings["backup_sent"])
+            await utils.answer(
+                message,
+                self.strings["backup_topic_missing"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
-        await self._assert_backup_destination()
+        try:
+            await self._assert_backup_destination()
+        except PermissionError:
+            await utils.answer(message, self.strings["unsafe_channel"])
+            return
+
         backup_msg = await self.inline.bot.send_document(
             int(f"-100{self._content_channel_id}"),
             txt,
@@ -346,9 +396,12 @@ class HerokuBackupMod(loader.Module):
 
             decoded_text = orjson.loads(file.decode())
 
-        except UnicodeDecodeError:
+        except (UnicodeDecodeError, orjson.JSONDecodeError):
             await utils.answer(
-                message, self.strings["probably_zip"].format(self.get_prefix())
+                message,
+                self.strings["probably_zip"].format(
+                    utils.escape_html(self.get_prefix())
+                ),
             )
             return
         if re.search(r'"(hikka\.)(\S+\":)', file.decode()):
@@ -357,7 +410,7 @@ class HerokuBackupMod(loader.Module):
                 self.strings["db_warning"],
                 reply_markup=[
                     {
-                        "text": "❌",
+                        "text": self.strings["btn_cancel"],
                         "callback": self.convert,
                         "args": (
                             "n",
@@ -365,7 +418,7 @@ class HerokuBackupMod(loader.Module):
                         ),
                     },
                     {
-                        "text": "✅",
+                        "text": self.strings["btn_convert"],
                         "callback": self.convert,
                         "args": (
                             "y",
@@ -415,6 +468,7 @@ class HerokuBackupMod(loader.Module):
         archive.name = f"mods-{datetime.datetime.now():%d-%m-%Y-%H-%M}.zip"
 
         if not getattr(self, "_content_channel_id", None):
+            await utils.answer(message, self.strings["waiting_channel"])
             self._content_channel_id = await utils.wait_for_content_channel(self._db)
 
         backup_topic_id = await utils.get_topic_id(self._db, "Backups")
@@ -430,7 +484,12 @@ class HerokuBackupMod(loader.Module):
             )
             return
 
-        await self._assert_backup_destination()
+        try:
+            await self._assert_backup_destination()
+        except PermissionError:
+            await utils.answer(message, self.strings["unsafe_channel"])
+            return
+
         backup_msg = await self.inline.bot.send_document(
             int(f"-100{self._content_channel_id}"),
             archive,
@@ -455,6 +514,7 @@ class HerokuBackupMod(loader.Module):
             return
 
         file = await reply.download_media(bytes)
+        partial = False
         try:
             decoded_text = orjson.loads(file.decode())
         except Exception:
@@ -474,6 +534,8 @@ class HerokuBackupMod(loader.Module):
                             for key, value in db_mods.items()
                         ):
                             self.lookup("LoaderMod").set("loaded_modules", db_mods)
+                        else:
+                            partial = True
 
                     for name in zf.namelist():
                         if name == "db_mods.json" or not Path(name).name.endswith(
@@ -486,7 +548,12 @@ class HerokuBackupMod(loader.Module):
                             path.write_bytes(module.read())
             except Exception:
                 logger.exception("Unable to restore modules")
-                await utils.answer(message, self.strings["reply_to_file"])
+                await utils.answer(
+                    message,
+                    self.strings["restore_failed"].format(
+                        prefix=utils.escape_html(self.get_prefix())
+                    ),
+                )
                 return
         else:
             if not isinstance(decoded_text, dict) or not all(
@@ -497,7 +564,10 @@ class HerokuBackupMod(loader.Module):
 
             self.lookup("LoaderMod").set("loaded_modules", decoded_text)
 
-        await utils.answer(message, self.strings["mods_restored"])
+        await utils.answer(
+            message,
+            self.strings["mods_restored_partial" if partial else "mods_restored"],
+        )
         await self.invoke("restart", "-f", peer=message.peer_id)
 
     @loader.command()
@@ -532,16 +602,27 @@ class HerokuBackupMod(loader.Module):
 
         archive.name = f"heroku-{datetime.datetime.now():%d-%m-%Y-%H-%M}.backup"
 
+        if not getattr(self, "_content_channel_id", None):
+            await utils.answer(message, self.strings["waiting_channel"])
+            self._content_channel_id = await utils.wait_for_content_channel(self._db)
+
         backup_topic_id = await utils.get_topic_id(self._db, "Backups")
         if not backup_topic_id:
             logger.error("Backups topic not found in database")
             await utils.answer(
                 message,
-                "<b>Backups topic not found in database. Please run quickstart to create it.</b>",
+                self.strings["backup_topic_missing"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
             )
             return
 
-        await self._assert_backup_destination()
+        try:
+            await self._assert_backup_destination()
+        except PermissionError:
+            await utils.answer(message, self.strings["unsafe_channel"])
+            return
+
         backup_msg = await self.inline.bot.send_document(
             int(f"-100{self._content_channel_id}"),
             archive,
@@ -552,7 +633,7 @@ class HerokuBackupMod(loader.Module):
                 [
                     [
                         {
-                            "text": "↪️ Restore this",
+                            "text": self.strings["btn_restore"],
                             "data": "heroku/backupall/restore/confirm",
                         },
                     ],
@@ -576,6 +657,7 @@ class HerokuBackupMod(loader.Module):
 
         status_message = await utils.answer(message, self.strings["restoring_backup"])
         file = await reply.download_media(bytes)
+        db_restored = False
         try:
             zipfile_bytes = io.BytesIO(file)
             with zipfile.ZipFile(zipfile_bytes) as zf:
@@ -591,6 +673,7 @@ class HerokuBackupMod(loader.Module):
                 self._db.clear()
                 self._db.update(**db_data)
                 self._db.save()
+                db_restored = True
 
                 with zf.open("mods.zip") as modzip_bytes:
                     with zipfile.ZipFile(io.BytesIO(modzip_bytes.read())) as modzip:
@@ -610,7 +693,12 @@ class HerokuBackupMod(loader.Module):
                                 path.write_bytes(module.read())
         except Exception:
             logger.exception("Restore all failed")
-            await utils.answer(status_message, self.strings["reply_to_file"])
+            await utils.answer(
+                status_message,
+                self.strings[
+                    "restore_partial" if db_restored else "restore_failed"
+                ].format(prefix=utils.escape_html(self.get_prefix())),
+            )
             return
 
         await utils.answer(status_message, self.strings["all_restored"])

@@ -19,7 +19,7 @@ import grapheme
 import emoji
 
 from . import utils
-from .translations import SUPPORTED_LANGUAGES, translator
+from .translations import SUPPORTED_LANGUAGES, fmt, translator
 
 ConfigAllowedTypes = typing.Union[tuple, list, str, int, bool, None]
 
@@ -32,6 +32,45 @@ class ValidationError(Exception):
     Must be raised with string, describing why value is incorrect
     It will be shown in .config, if user tries to set incorrect value
     """
+
+
+class LocalizedText(str):
+    """English text, which also carries its translations in `translations`"""
+
+    translations: dict
+
+
+def _tr(key: str, **kwargs) -> dict:
+    """Same as `translator.getdict`, but falls back to english text"""
+    key = f"validators.{key}"
+    default = translator.data.get("en", {}).get(key) or key
+    return {
+        lang: fmt(pack.get(key) or default, kwargs)
+        for lang, pack in translator.data.items()
+    }
+
+
+def _error(key: str, localized: dict | None = None, **kwargs) -> ValidationError:
+    """
+    Builds translated `ValidationError` from `validators.err_<key>`
+    :param localized: Placeholders, which have different values for each language
+    """
+    texts = {
+        lang: fmt(
+            text,
+            {
+                **kwargs,
+                **{
+                    name: values.get(lang, values.get("en", ""))
+                    for name, values in (localized or {}).items()
+                },
+            },
+        )
+        for lang, text in _tr(f"err_{key}").items()
+    }
+    text = LocalizedText(texts.get("en", key))
+    text.translations = texts
+    return ValidationError(text)
 
 
 class Validator:
@@ -91,7 +130,7 @@ class Boolean(Validator):
     @staticmethod
     def _validate(value: ConfigAllowedTypes, /) -> bool:
         if value not in Boolean._ALL_VALUES:
-            raise ValidationError("Passed value must be a boolean")
+            raise _error("boolean", value=value)
 
         return value in Boolean._TRUE_VALUES
 
@@ -114,11 +153,7 @@ class Integer(Validator):
         _signs = (
             translator.getdict("validators.positive")
             if minimum is not None and minimum == 0
-            else (
-                translator.getdict("validators.negative")
-                if maximum is not None and maximum == 0
-                else {}
-            )
+            else (_tr("negative") if maximum is not None and maximum == 0 else {})
         )
         _digits = (
             translator.getdict("validators.digits", digits=digits)
@@ -194,19 +229,16 @@ class Integer(Validator):
         try:
             value = int(str(value).strip())
         except ValueError:
-            raise ValidationError(f"Passed value ({value}) must be a number")
+            raise _error("integer", value=value)
 
         if minimum is not None and value < minimum:
-            raise ValidationError(f"Passed value ({value}) is lower than minimum one")
+            raise _error("minimum", value=value, minimum=minimum)
 
         if maximum is not None and value > maximum:
-            raise ValidationError(f"Passed value ({value}) is greater than maximum one")
+            raise _error("maximum", value=value, maximum=maximum)
 
         if digits is not None and len(str(value)) != digits:
-            raise ValidationError(
-                f"The length of passed value ({value}) is incorrect "
-                f"(Must be exactly {digits} digits)"
-            )
+            raise _error("digits", value=value, digits=digits)
 
         return value
 
@@ -239,9 +271,15 @@ class Choice(Validator):
         possible_values: list[ConfigAllowedTypes],
     ) -> ConfigAllowedTypes:
         if value not in possible_values:
-            raise ValidationError(
-                f"Passed value ({value}) is not one of the following:"
-                f" {' / '.join(list(map(str, possible_values)))}"
+            # "1" may come as int after `ast.literal_eval`, compare as strings too
+            for possible in possible_values:
+                if str(possible) == str(value):
+                    return possible
+
+            raise _error(
+                "choice",
+                value=value,
+                possible=" / ".join(list(map(str, possible_values))),
             )
 
         return value
@@ -275,12 +313,22 @@ class MultiChoice(Validator):
         if not isinstance(value, (list, tuple)):
             value = [value]
 
-        for item in value:
+        value = list(value)
+        for i, item in enumerate(value):
             if item not in possible_values:
-                raise ValidationError(
-                    f"One of passed values ({item}) is not one of the following:"
-                    f" {' / '.join(list(map(str, possible_values)))}"
-                )
+                matches = [
+                    possible
+                    for possible in possible_values
+                    if str(possible) == str(item)
+                ]
+                if not matches:
+                    raise _error(
+                        "choice",
+                        value=item,
+                        possible=" / ".join(list(map(str, possible_values))),
+                    )
+
+                value[i] = matches[0]
 
         return list(set(value))
 
@@ -361,19 +409,13 @@ class Series(Validator):
             value = list(value)
 
         if min_len is not None and len(value) < min_len:
-            raise ValidationError(
-                f"Passed value ({value}) contains less than {min_len} items"
-            )
+            raise _error("series_min_len", value=value, min_len=min_len)
 
         if max_len is not None and len(value) > max_len:
-            raise ValidationError(
-                f"Passed value ({value}) contains more than {max_len} items"
-            )
+            raise _error("series_max_len", value=value, max_len=max_len)
 
         if fixed_len is not None and len(value) != fixed_len:
-            raise ValidationError(
-                f"Passed value ({value}) must contain exactly {fixed_len} items"
-            )
+            raise _error("series_fixed_len", value=value, fixed_len=fixed_len)
 
         value = [item.strip() if isinstance(item, str) else item for item in value]
 
@@ -382,9 +424,11 @@ class Series(Validator):
                 try:
                     value[i] = validator.validate(item)
                 except ValidationError:
-                    raise ValidationError(
-                        f"Passed value ({value}) contains invalid item"
-                        f" ({str(item).strip()}), which must be {validator.doc['en']}"
+                    raise _error(
+                        "series_item",
+                        localized={"each": validator.doc or {}},
+                        value=value,
+                        item=str(item).strip(),
                     )
 
         value = list(filter(lambda x: x, value))
@@ -408,7 +452,7 @@ class Link(Validator):
             if not utils.check_url(value):
                 raise Exception("Invalid URL")
         except Exception:
-            raise ValidationError(f"Passed value ({value}) is not a valid URL")
+            raise _error("link", value=value)
 
         return value
 
@@ -471,25 +515,19 @@ class String(Validator):
             isinstance(length, int)
             and len(list(grapheme.graphemes(str(value)))) != length
         ):
-            raise ValidationError(
-                f"Passed value ({value}) must be a length of {length}"
-            )
+            raise _error("string_fixed_len", value=value, length=length)
 
         if (
             isinstance(min_len, int)
             and len(list(grapheme.graphemes(str(value)))) < min_len
         ):
-            raise ValidationError(
-                f"Passed value ({value}) must be a length of at least {min_len}"
-            )
+            raise _error("string_min_len", value=value, min_len=min_len)
 
         if (
             isinstance(max_len, int)
             and len(list(grapheme.graphemes(str(value)))) > max_len
         ):
-            raise ValidationError(
-                f"Passed value ({value}) must be a length of up to {max_len}"
-            )
+            raise _error("string_max_len", value=value, max_len=max_len)
 
         return str(value)
 
@@ -539,7 +577,7 @@ class RegExp(Validator):
         flags: re.RegexFlag | None,
     ) -> str:
         if not re.match(regex, str(value), flags=flags):
-            raise ValidationError(f"Passed value ({value}) must follow pattern {regex}")
+            raise _error("regex", value=value, regex=regex)
 
         return str(value)
 
@@ -559,11 +597,7 @@ class Float(Validator):
         _signs = (
             translator.getdict("validators.positive")
             if minimum is not None and minimum == 0
-            else (
-                translator.getdict("validators.negative")
-                if maximum is not None and maximum == 0
-                else {}
-            )
+            else (_tr("negative") if maximum is not None and maximum == 0 else {})
         )
 
         if minimum is not None and minimum != 0:
@@ -615,13 +649,13 @@ class Float(Validator):
         try:
             value = float(str(value).strip().replace(",", "."))
         except ValueError:
-            raise ValidationError(f"Passed value ({value}) must be a float")
+            raise _error("float", value=value)
 
         if minimum is not None and value < minimum:
-            raise ValidationError(f"Passed value ({value}) is lower than minimum one")
+            raise _error("minimum", value=value, minimum=minimum)
 
         if maximum is not None and value > maximum:
-            raise ValidationError(f"Passed value ({value}) is greater than maximum one")
+            raise _error("maximum", value=value, maximum=maximum)
 
         return value
 
@@ -636,7 +670,7 @@ class TelegramID(Validator):
 
     @staticmethod
     def _validate(value: ConfigAllowedTypes, /) -> int:
-        e = ValidationError(f"Passed value ({value}) is not a valid telegram id")
+        e = _error("telegram_id", value=value)
 
         try:
             value = int(str(value).strip())
@@ -685,7 +719,7 @@ class Union(Validator):
             except ValidationError:
                 pass
 
-        raise ValidationError(f"Passed value ({value}) is not valid")
+        raise _error("union", value=value)
 
 
 class NoneType(Validator):
@@ -698,8 +732,8 @@ class NoneType(Validator):
 
     @staticmethod
     def _validate(value: ConfigAllowedTypes, /) -> None:
-        if not value:
-            raise ValidationError(f"Passed value ({value}) is not None")
+        if value:
+            raise _error("empty", value=value)
 
         return None
 
@@ -777,32 +811,25 @@ class Emoji(Validator):
         passed_length = len(list(grapheme.graphemes(value)))
 
         if length is not None and passed_length != length:
-            raise ValidationError(f"Passed value ({value}) is not {length} emojis long")
+            raise _error("emoji_fixed_len", value=value, length=length)
 
         if (
             min_len is not None
             and max_len is not None
             and (passed_length < min_len or passed_length > max_len)
         ):
-            raise ValidationError(
-                f"Passed value ({value}) is not between {min_len} and {max_len} emojis"
-                " long"
+            raise _error(
+                "emoji_len_range", value=value, min_len=min_len, max_len=max_len
             )
 
         if min_len is not None and passed_length < min_len:
-            raise ValidationError(
-                f"Passed value ({value}) is not at least {min_len} emojis long"
-            )
+            raise _error("emoji_min_len", value=value, min_len=min_len)
 
         if max_len is not None and passed_length > max_len:
-            raise ValidationError(
-                f"Passed value ({value}) is not no more than {max_len} emojis long"
-            )
+            raise _error("emoji_max_len", value=value, max_len=max_len)
 
         if any(emoji not in ALLOWED_EMOJIS for emoji in grapheme.graphemes(value)):
-            raise ValidationError(
-                f"Passed value ({value}) is not a valid string with emojis"
-            )
+            raise _error("emoji", value=value)
 
         return value
 
@@ -810,7 +837,7 @@ class Emoji(Validator):
 class EntityLike(RegExp):
     def __init__(self):
         super().__init__(
-            regex=r"^(?:@|https?://t\.me/)?(?:[a-zA-Z0-9_]{5,32}|[a-zA-Z0-9_]{1,32}\?[a-zA-Z0-9_]{1,32})$",
+            regex=r"^(?:-?\d+|(?:@|https?://t\.me/)?(?:[a-zA-Z0-9_]{5,32}|[a-zA-Z0-9_]{1,32}\?[a-zA-Z0-9_]{1,32}))$",
             description=translator.getdict("validators.entity_like"),
         )
 
@@ -822,16 +849,15 @@ class EntityLike(RegExp):
         regex: str,
         flags: re.RegexFlag | None,
     ) -> str | int:
-        value = super()._validate(value, regex=regex, flags=flags)
+        value = RegExp._validate(value, regex=regex, flags=flags)
 
-        if value.isdigit():
-            if value.startswith("-100"):
+        if value.lstrip("-").isdigit():
+            if value.startswith("-100") and len(value) > 4:
                 value = value[4:]
 
-            value = int(value)
+            return int(value)
 
-        if value.startswith("https://t.me/"):
-            value = value.split("https://t.me/")[1]
+        value = re.sub(r"^https?://t\.me/", "", value)
 
         if not value.startswith("@"):
             value = f"@{value}"
@@ -859,8 +885,8 @@ class RandomLink(Series):
         super().__init__(validator=Link(), min_len=1)
         self.internal_id = "Series"
         self.doc = {
-            "en": "A list of links, one of which will be chosen randomly",
-            "ru": "Список ссылок, одна из которых будет выбрана случайным образом",
+            "en": "list of links, one of which will be chosen randomly",
+            "ru": "списком ссылок, из которых будет выбрана случайная",
         }
 
     @staticmethod

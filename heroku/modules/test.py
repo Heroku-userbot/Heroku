@@ -184,7 +184,7 @@ class TestMod(loader.Module):
         mods: list[str] | None = None,
         mod_names: list[str] | None = None,
     ):
-        """[modules] [-f] - Dump logs, optionally filtered by module name(s)"""
+        """[level] [module ...] [-f] - Dump logs, optionally filtered by module name(s)"""
         raw_args = utils.get_args_raw(message) if isinstance(message, Message) else ""
         args = raw_args.split()
         if "-f" in args or "--force" in args:
@@ -230,15 +230,22 @@ class TestMod(loader.Module):
                     try:
                         lvl = int(args[0])
                     except ValueError:
-                        lvl = getattr(logging, args[0].upper(), None)
+                        lvl = (
+                            0
+                            if args[0].lower() == "all"
+                            else getattr(logging, args[0].upper(), None)
+                        )
                 except IndexError:
                     lvl = None
             else:
                 lvl = None
 
         if not isinstance(lvl, int):
+            set_loglevel = self.strings["set_loglevel"].format(
+                prefix=utils.escape_html(self.get_prefix())
+            )
             if force:
-                await utils.answer(message, self.strings["set_loglevel"])
+                await utils.answer(message, set_loglevel)
                 return
 
             try:
@@ -261,7 +268,7 @@ class TestMod(loader.Module):
                                     "args": (False, level, mods, mod_names),
                                 }
                                 for name, level in [
-                                    ("🚫 Critical", 60),
+                                    ("🚫 Critical", 50),
                                     ("🚫 Error", 40),
                                     ("⚠️ Warning", 30),
                                     ("ℹ️ Info", 20),
@@ -275,8 +282,8 @@ class TestMod(loader.Module):
                     )
                 else:
                     raise
-            except Exception as e:
-                await utils.answer(message, self.strings["set_loglevel"] + f"\n{e}")
+            except Exception:
+                await utils.answer(message, set_loglevel)
 
             return
 
@@ -321,7 +328,13 @@ class TestMod(loader.Module):
             except Exception:
                 await utils.answer(
                     message,
-                    self.strings["confidential_text"].format(named_lvl),
+                    self.strings["confidential_text"].format(
+                        named_lvl,
+                        prefix=utils.escape_html(self.get_prefix()),
+                        mods=utils.escape_html(
+                            "".join(f" {name}" for name in mod_names or [])
+                        ),
+                    ),
                 )
 
             return
@@ -380,18 +393,22 @@ class TestMod(loader.Module):
 
     @loader.command()
     async def suspend(self, message: Message):
+        invalid_time = self.strings["suspend_invalid_time"].format(
+            prefix=utils.escape_html(self.get_prefix())
+        )
         try:
             time_sleep = float(utils.get_args_raw(message))
-            if time_sleep > 86400 * 365 * 100:
-                await utils.answer(message, self.strings["suspend_invalid_time"])
+            if not 0 <= time_sleep <= 86400 * 365 * 100:
+                await utils.answer(message, invalid_time)
             else:
-                await utils.answer(
+                message = await utils.answer(
                     message,
-                    self.strings["suspended"].format(time_sleep),
+                    self.strings["suspended"].format(f"{time_sleep:g}"),
                 )
                 time.sleep(time_sleep)
+                await utils.answer(message, self.strings["unsuspended"])
         except ValueError:
-            await utils.answer(message, self.strings["suspend_invalid_time"])
+            await utils.answer(message, invalid_time)
 
     @loader.command()
     async def ping(self, message: Message):
@@ -410,7 +427,7 @@ class TestMod(loader.Module):
             "ping": round((time.perf_counter_ns() - start) / 10**6, 3),
             "uptime": utils.formatted_uptime(),
             "ping_hint": (
-                (self.config["hint"]) if random.choice([0, 0, 1]) == 1 else ""
+                (self.config["hint"] or "") if random.choice([0, 0, 1]) == 1 else ""
             ),
             "hostname": lib_platform.node(),
             "user": getpass.getuser(),
@@ -424,9 +441,11 @@ class TestMod(loader.Module):
         data = await utils.get_placeholders(data, self.config["custom_message"])
         try:
             placeholders_msg = self.config["custom_message"].format(**data)
-        except KeyError:
+        except (KeyError, IndexError, ValueError) as e:
             logger.exception("Missing placeholder in custom_message")
-            placeholders_msg = "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji>"
+            placeholders_msg = self.strings["custom_message_error"].format(
+                utils.escape_html(str(e))
+            )
         if self.config["rich_mode"]:
             rich_message = placeholders_msg.replace("\r\n", "<br>").replace("\n", "<br>")
             await utils.answer_with_media_fallback(
