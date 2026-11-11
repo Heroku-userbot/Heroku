@@ -612,12 +612,25 @@ heroku_info:
 
 loader:
   loaded_placeholders: "Плейсхолдеры"
-  module_update_prompt: "<tg-emoji emoji-id=5765071340847501478>🔗</tg-emoji> <b>Модуль {} был обновлён. Установить?</b>"
-  module_update_yes: "Да"
-  module_update_no: "Нет"
-  module_update_always: "Всегда обновлять"
+  module_update_prompt: "<p><tg-emoji emoji-id=5899757765743615694>⬇️</tg-emoji> <b>Доступно обновление</b></p><p>{}</p>"
+  module_update_yes: "Обновить"
+  module_update_no: "Пропустить"
+  module_update_always: "Автообновление"
+  module_update_never: "Никогда не обновлять"
+  module_update_warning: '<details><summary><tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> Перед обновлением проверь код</summary><p>Новая версия может содержать вредоносный код, даже если прежняя была безопасной. Модуль получает доступ к данным и возможностям твоего юзербота. Описание коммита не гарантирует безопасность.</p><p>Источник обновлений для .cfg Loader:<br><code>{}</code></p></details>'
+  module_update_auto_warning: '<p><tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Включить автообновление этого модуля?</b></p><p>Текущая версия будет установлена, а следующие обновления будут выполняться без проверки кода с твоей стороны и без подтверждения. Вредоносное обновление может украсть данные или получить управление аккаунтом.</p>'
+  module_update_auto_confirm: "Включить и обновить"
+  module_update_disabled: "<b>Обновления этого модуля отключены.</b> Установленная версия сохранена. Для включения обновлений убери адрес модуля из NEVER_UPDATE_MODULES в .cfg Loader."
+  auto_update_modules_doc: "Автообновление: URL источников модулей. Кнопка «Автообновление» добавляет адрес сюда. Новые версии устанавливаются без подтверждения и могут содержать вредоносный код. Модули вне обоих списков обновляются с подтверждением."
+  never_update_modules_doc: "Не обновлять: URL источников модулей. Кнопка «Никогда не обновлять» добавляет адрес сюда. Удали адрес для возврата подтверждений. Этот список приоритетнее AUTO_UPDATE_MODULES."
+  module_auto_success: '<p><tg-emoji emoji-id=5784993237412351403>🛡</tg-emoji> <b>Автообновление установлено</b></p><p>{}</p>'
+  module_auto_failed: '<p><tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Ошибка автообновления</b></p><p>{}</p><details><summary>Причина</summary><p>{}</p></details><p>Проверь состояние модуля. Настройки обновлений — в .cfg Loader.</p>'
+  module_auto_install_failed: "Загрузчик не смог установить модуль."
+  module_auto_identity_failed: "Источник вернул другой модуль или изменил имя его класса."
+  module_changelog: "Что нового"
+  module_changelog_commit: '<a href="{}">Последний коммит файла на GitHub</a>'
   module_update_installed: "<b>Обновление модуля установлено.</b>"
-  module_update_declined: "<b>Обновление модуля отклонено.</b>"
+  module_update_declined: "<b>Эта версия пропущена.</b> О следующей версии сообщим отдельно."
   module_update_expired: "<b>Предложение обновления модуля устарело.</b>"
   module_update_failed: "<b>Не удалось установить обновление модуля.</b>"
   link: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Файл</b> {class_name}\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}lm в ответ на это сообщение для установки</b>\n\n<tg-emoji emoji-id=4916086774649848789>🔗</tg-emoji> <code>{prefix}dlm {url}</code>\n\n{not_exact}"
@@ -709,6 +722,17 @@ loader:
   result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Результат поиска по</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> от <b>{dev}</b>\n<tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Команды:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
   not_subscribed: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Сначала нужно подписаться на канал модуля</b>
   verify_required: '<tg-emoji emoji-id=5188463524568926712>⚠️</tg-emoji> <b>Для разблокировки возможности устанавливать модули сторонних разработчиков пройдите тест в <a href="https://t.me/{}?start=lm_verify">вашем боте</a></b>'
+  origin_prompt: '<p><tg-emoji emoji-id=5765071340847501478>🔗</tg-emoji> <b>Подключить обновления?</b></p><p><code>{}</code></p><p>Новые версии — <b>с твоего подтверждения</b>.</p><details><summary><tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> Источник и предупреждение</summary><p><code>{}</code></p><p>Адрес указан в файле и не подтверждает авторство. Подключай только источник, которому доверяешь, и проверяй код перед обновлением.</p></details>'
+  origin_connect: "Подключить"
+  origin_file_only: "Только файл"
+  origin_cancel: "Отмена"
+  origin_checking: "<b>Проверяю источник модуля…</b>"
+  origin_cancelled: "<b>Установка отменена. Источник не подключён.</b>"
+  origin_inline_required: "<b>Для подтверждения источника нужен работающий инлайн-бот. Установка не выполнена.</b>"
+  origin_invalid: '<p><b>Некорректный источник в {}</b></p><p>Можно установить только присланный файл, без подключения обновлений.</p>'
+  origin_unavailable: '<p><b>Не удалось проверить источник для {}</b></p><p>Адрес недоступен, вернул некорректный код или другой модуль. Можно установить присланный файл без обновлений.</p>'
+  origin_different: '<p><tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Версии отличаются</b></p><p><code>{}</code></p><p>Это может быть старая версия или изменённая копия. Какую версию установить?</p>'
+  origin_use_remote: "Из источника"
 loader_restrictor:
   q1: "На что способен любой модуль, который вы устанавливаете?"
   q1_ans1: "Ровно то, что написано в его описании - не больше и не меньше"

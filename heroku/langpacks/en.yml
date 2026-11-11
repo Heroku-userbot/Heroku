@@ -614,12 +614,25 @@ heroku_info:
 
 loader:
   loaded_placeholders: "Placeholders"
-  module_update_prompt: "<tg-emoji emoji-id=5765071340847501478>🔗</tg-emoji> <b>Module {} has been updated. Install it?</b>"
-  module_update_yes: "Yes"
-  module_update_no: "No"
-  module_update_always: "Always update"
+  module_update_prompt: "<p><tg-emoji emoji-id=5899757765743615694>⬇️</tg-emoji> <b>Update available</b></p><p>{}</p>"
+  module_update_yes: "Update"
+  module_update_no: "Skip"
+  module_update_always: "Auto-update"
+  module_update_never: "Never update"
+  module_update_warning: '<details><summary><tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> Review the code before updating</summary><p>A new version may contain malicious code even if the previous one was safe. Modules can access your userbot data and capabilities. A commit message does not guarantee safety.</p><p>Update source for .cfg Loader:<br><code>{}</code></p></details>'
+  module_update_auto_warning: '<p><tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Enable auto-updates for this module?</b></p><p>The offered version will be installed and future updates will run without your code review or confirmation. A malicious update may steal data or take control of your account.</p>'
+  module_update_auto_confirm: "Enable and update"
+  module_update_disabled: "<b>Updates disabled for this module.</b> The installed version is kept. To enable updates, remove the module URL from NEVER_UPDATE_MODULES in .cfg Loader."
+  auto_update_modules_doc: "Auto-updates: module source URLs. The Auto-update button adds the URL here. New versions run without confirmation and may contain malicious code. Modules outside both lists require confirmation."
+  never_update_modules_doc: "Never update: module source URLs. The Never update button adds the URL here. Remove it to restore update prompts. This list takes precedence over AUTO_UPDATE_MODULES."
+  module_auto_success: '<p><tg-emoji emoji-id=5784993237412351403>🛡</tg-emoji> <b>Automatic update installed</b></p><p>{}</p>'
+  module_auto_failed: '<p><tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Automatic update failed</b></p><p>{}</p><details><summary>Reason</summary><p>{}</p></details><p>Check the module status. Update settings are available in .cfg Loader.</p>'
+  module_auto_install_failed: "The loader could not install the module."
+  module_auto_identity_failed: "The source returned a different module or changed its class name."
+  module_changelog: "What's new"
+  module_changelog_commit: '<a href="{}">Latest file commit on GitHub</a>'
   module_update_installed: "<b>Module update installed.</b>"
-  module_update_declined: "<b>Module update declined.</b>"
+  module_update_declined: "<b>This version was skipped.</b> You will be notified about the next version."
   module_update_expired: "<b>The module update offer has expired.</b>"
   module_update_failed: "<b>Failed to install the module update.</b>"
   name: "Loader"
@@ -709,6 +722,17 @@ loader:
   _cmd_doc_ml: <module> - Send module as a file
   result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Search result for</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> by <b>{dev}</b>\n<tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Commands:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
   verify_required: '<tg-emoji emoji-id=5188463524568926712>⚠️</tg-emoji> <b>To unlock the ability to install third-party modules, complete the test in <a href="https://t.me/{}?start=lm_verify">your bot</a></b>'
+  origin_prompt: '<p><tg-emoji emoji-id=5765071340847501478>🔗</tg-emoji> <b>Connect updates?</b></p><p><code>{}</code></p><p>New versions require <b>your confirmation</b>.</p><details><summary><tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> Source and warning</summary><p><code>{}</code></p><p>The address is declared in the file and does not verify authorship. Only connect a source you trust and review the code before updating.</p></details>'
+  origin_connect: "Connect"
+  origin_file_only: "File only"
+  origin_cancel: "Cancel"
+  origin_checking: "<b>Checking module source…</b>"
+  origin_cancelled: "<b>Installation cancelled. Source not connected.</b>"
+  origin_inline_required: "<b>A working inline bot is required to approve the source. Nothing was installed.</b>"
+  origin_invalid: '<p><b>Invalid source in {}</b></p><p>You can install the attached file without connecting updates.</p>'
+  origin_unavailable: '<p><b>Could not verify the source for {}</b></p><p>The address is unavailable, returned invalid code or a different module. You can install the attached file without updates.</p>'
+  origin_different: '<p><tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Versions differ</b></p><p><code>{}</code></p><p>This may be an older version or a modified copy. Which version should be installed?</p>'
+  origin_use_remote: "From source"
 loader_restrictor:
   name: "LoaderRestrictor"
   q1: "What can any module you install actually do?"
