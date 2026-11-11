@@ -709,6 +709,11 @@ loader:
   result: "<tg-emoji emoji-id=5337183664630709422>🔎</tg-emoji> <b>Результат поиска по</b> <code>{query}</code>\n\n<tg-emoji emoji-id=5258270535710317499>📦</tg-emoji> <b>{name}</b> от <b>{dev}</b>\n<tg-emoji emoji-id=5879813604068298387>ℹ️</tg-emoji> <i>{cls_doc}</i>\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <b>Команды:</b>\n{commands}\n\n<tg-emoji emoji-id=5188377234380954537>🪐</tg-emoji> <code>{prefix}dlmod {mhash}</code>"
   not_subscribed: <tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Сначала нужно подписаться на канал модуля</b>
   verify_required: '<tg-emoji emoji-id=5188463524568926712>⚠️</tg-emoji> <b>Для разблокировки возможности устанавливать модули сторонних разработчиков пройдите тест в <a href="https://t.me/{}?start=lm_verify">вашем боте</a></b>'
+  lm_choose_module: '<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Выбери модуль для установки:</b>'
+  lm_install_all: "Установить все"
+  lm_close: "Закрыть"
+  lm_selection_expired: "<b>Выбор модуля устарел. Запусти команду ещё раз.</b>"
+  lm_installing_all: "<b>Устанавливаю модулей: {count}...</b>"
 loader_restrictor:
   q1: "На что способен любой модуль, который вы устанавливаете?"
   q1_ans1: "Ровно то, что написано в его описании - не больше и не меньше"
