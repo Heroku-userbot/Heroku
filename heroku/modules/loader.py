@@ -21,32 +21,59 @@ import hashlib
 import importlib
 import inspect
 import io
+import ipaddress
+import json
 import logging
 import os
 import re
 import shutil
+import socket
 import sys
 import time
+import tokenize
 import typing
 import uuid
 from collections import ChainMap
 from importlib.machinery import ModuleSpec
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlparse
 
 import requests
+import aiohttp
 from herokutl.tl.custom import Message
 from herokutl.errors.common import ScamDetectionError
 from herokutl.errors.rpcerrorlist import MediaCaptionTooLongError
 from herokutl.tl.functions.channels import JoinChannelRequest
-from herokutl.tl.types import Channel, InputMediaWebPage
+from herokutl.tl.types import (
+    Channel,
+    Document,
+    DocumentAttributeFilename,
+    InputMediaWebPage,
+)
 
 from .. import loader, main, utils
-from .._internal import fetch_text, private_write
+from .._internal import fetch_text, private_write, redact
 from .._local_storage import RemoteStorage
-from ..inline.types import InlineCall
+from ..inline.types import BotInlineMessage, InlineCall
 from ..types import CoreOverwriteError, CoreUnloadError
 
 logger = logging.getLogger(__name__)
+
+
+class PublicOriginResolver(aiohttp.abc.AbstractResolver):
+    def __init__(self):
+        self._resolver = aiohttp.resolver.DefaultResolver()
+
+    async def resolve(self, host, port=0, family=socket.AF_INET):
+        addresses = await self._resolver.resolve(host, port, family)
+        if not addresses or any(
+            not ipaddress.ip_address(address["host"]).is_global
+            for address in addresses
+        ):
+            raise ValueError("Module source resolves to a non-public address")
+        return addresses
+
+    async def close(self):
+        await self._resolver.close()
 
 
 class FakeOne:
@@ -78,6 +105,11 @@ class LoaderMod(loader.Module):
         self._storage: RemoteStorage = None
         self._modules_cache_dir = os.path.join(main.BASE_DIR, ".modules_cache")
         self._pending_module_updates = {}
+        self._module_update_checks = {}
+        self._module_changelogs = {}
+        self._auto_update_failures = {}
+        self._policies_ready = False
+        self._update_policy_snapshot = (frozenset(), frozenset())
         self._startup_updates_task = None
 
         self.config = loader.ModuleConfig(
@@ -124,10 +156,18 @@ class LoaderMod(loader.Module):
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
-                "ignored_update_modules",
+                "AUTO_UPDATE_MODULES",
                 [],
-                lambda: self.strings["ignored_update_modules_doc"],
+                lambda: self.strings["auto_update_modules_doc"],
                 validator=loader.validators.Series(validator=loader.validators.Link()),
+                on_change=self._update_policy_changed,
+            ),
+            loader.ConfigValue(
+                "NEVER_UPDATE_MODULES",
+                [],
+                lambda: self.strings["never_update_modules_doc"],
+                validator=loader.validators.Series(validator=loader.validators.Link()),
+                on_change=self._update_policy_changed,
             ),
         )
 
@@ -153,6 +193,7 @@ class LoaderMod(loader.Module):
             await asyncio.sleep(0.5)
 
         self._storage = RemoteStorage(self._client)
+        self._migrate_update_policies()
 
         self.allmodules.add_aliases(settings.get("aliases", {}))
 
@@ -208,6 +249,255 @@ class LoaderMod(loader.Module):
                 },
             },
         )
+
+    @staticmethod
+    def _origin_lines(doc: str) -> list[tuple[int, str]]:
+        result = []
+        try:
+            for token in tokenize.generate_tokens(io.StringIO(doc.lstrip("\ufeff")).readline):
+                if token.type == tokenize.COMMENT:
+                    match = re.fullmatch(r"#\s*meta\s+origin:\s*(.*?)\s*", token.string)
+                    if match:
+                        result.append((token.start[0] - 1, match[1]))
+                elif token.type not in {
+                    tokenize.NL, tokenize.NEWLINE, tokenize.ENCODING, tokenize.ENDMARKER,
+                }:
+                    break
+        except (tokenize.TokenError, IndentationError):
+            pass
+        return result
+
+    @staticmethod
+    def _public_origin(url: str) -> str:
+        parsed = urlparse(url)
+        if (
+            parsed.scheme != "https" or not parsed.hostname
+            or parsed.username is not None or parsed.password is not None
+            or parsed.fragment or len(url) > 2048
+            or any(ord(char) < 33 or char == "\\" for char in url)
+            or any(re.search(r"token|key|auth|secret|signature|credential", key, re.I)
+                   for key, _ in parse_qsl(parsed.query))
+        ):
+            raise ValueError("Invalid public module source")
+        parsed.port
+        try:
+            address = ipaddress.ip_address(parsed.hostname)
+        except ValueError:
+            if parsed.hostname.lower() == "localhost" or parsed.hostname.lower().endswith(
+                (".localhost", ".local", ".internal")
+            ):
+                raise ValueError("Module source must be public")
+        else:
+            if not address.is_global:
+                raise ValueError("Module source must be public")
+        if parsed.hostname.lower() == "github.com":
+            parts = parsed.path.split("/")
+            if len(parts) >= 6 and parts[3] in {"blob", "raw"}:
+                return "https://raw.githubusercontent.com/" + "/".join(
+                    [parts[1], parts[2], *parts[4:]]
+                ) + ("?" + parsed.query if parsed.query else "")
+        if parsed.hostname.lower() == "gitlab.com":
+            url = url.replace("/-/blob/", "/-/raw/")
+        return url
+
+    @classmethod
+    def _source_origin(cls, doc: str) -> str | None:
+        values = {value for _, value in cls._origin_lines(doc)}
+        if not values:
+            return None
+        if len(values) != 1:
+            raise ValueError("Conflicting module sources")
+        return cls._public_origin(values.pop())
+
+    @classmethod
+    def _source_hash(cls, doc: str) -> str:
+        excluded = {line for line, _ in cls._origin_lines(doc)}
+        lines = doc.lstrip("\ufeff").replace("\r\n", "\n").replace("\r", "\n").splitlines(True)
+        source = "".join(line for index, line in enumerate(lines) if index not in excluded)
+        return hashlib.sha256(source.encode()).hexdigest()
+
+    @classmethod
+    async def _fetch_origin(cls, url: str) -> str:
+        resolver = PublicOriginResolver()
+        try:
+            async with aiohttp.ClientSession(
+                connector=aiohttp.TCPConnector(resolver=resolver, use_dns_cache=False),
+                timeout=aiohttp.ClientTimeout(total=30),
+                trust_env=False,
+                cookie_jar=aiohttp.DummyCookieJar(),
+                headers={"User-Agent": "Heroku-ModuleLoader"},
+            ) as session:
+                for _ in range(6):
+                    url = cls._public_origin(url)
+                    async with session.get(url, allow_redirects=False) as response:
+                        if response.status in {301, 302, 303, 307, 308}:
+                            location = response.headers.get("Location")
+                            if not location:
+                                raise ValueError("Missing redirect target")
+                            url = urljoin(url, location)
+                            continue
+                        if response.status != 200:
+                            raise ValueError(f"Module source returned HTTP {response.status}")
+                        content = bytearray()
+                        async for chunk in response.content.iter_chunked(65536):
+                            content.extend(chunk)
+                            if len(content) > 5 * 1024 * 1024:
+                                raise ValueError("Module source exceeds the size limit")
+                        return content.decode("utf-8-sig")
+                raise ValueError("Too many module source redirects")
+        finally:
+            await resolver.close()
+
+    @staticmethod
+    def _loader_text(text: str, rich: bool) -> str:
+        if rich:
+            return text
+        text = re.sub(r"<tg-emoji\b[^>]*>(.*?)</tg-emoji>", r"\1", text)
+        for old, new in (
+            ("<p>", ""), ("</p>", "\n"), ("<br>", "\n"),
+            ("<br/>", "\n"), ("<details>", "<blockquote expandable>"),
+            ("</details>", "</blockquote>\n"), ("<summary>", "<b>"),
+            ("</summary>", "</b>\n"),
+        ):
+            text = text.replace(old, new)
+        return text.strip()
+
+    async def _loader_form(self, text, message, rows, *, on_unload=None, ttl=600):
+        rich = bool(self.config["rich_mode"])
+        if not rich:
+            rows = [[{key: value for key, value in button.items()
+                      if key not in {"emoji_id", "emoji_alt"}}
+                     for button in row] for row in rows]
+        keys = []
+        unit_ref = {}
+
+        def cleanup():
+            for key in keys:
+                self.inline._custom_map.pop(key, None)
+            if on_unload:
+                on_unload()
+
+        if rich:
+            rendered_rows = []
+            for row in rows:
+                rendered_row = []
+                for button in row:
+                    handler = button["callback"]
+
+                    async def bound(call, *args, _handler=handler):
+                        call.unit_id = unit_ref.get("id")
+                        if call.unit_id in self.inline._units:
+                            call.form = {"id": call.unit_id, **self.inline._units[call.unit_id]}
+                        return await _handler(call, *args)
+
+                    rendered_row.append({**button, "callback": bound, "force_me": True})
+                rendered_rows.append(rendered_row)
+            markup = self.inline.generate_markup(rendered_rows)
+            if not markup:
+                cleanup()
+                return False
+            for source_row, rendered_row in zip(rendered_rows, markup):
+                html = []
+                for button, rendered in zip(source_row, rendered_row):
+                    data = rendered.type.data
+                    data = data.decode() if isinstance(data, bytes) else str(data)
+                    keys.append(data)
+                    label = utils.escape_html(button["text"])
+                    if button.get("emoji_id"):
+                        label = (
+                            f'<tg-emoji emoji-id="{button["emoji_id"]}">'
+                            f'{button.get("emoji_alt", "⬇️")}</tg-emoji> {label}'
+                        )
+                    style = f' style="{button["style"]}"' if button.get("style") else ""
+                    html.append(
+                        f'<tg-button type="callback_data" data="{utils.escape_html(data)}"{style}>'
+                        f"{label}</tg-button>"
+                    )
+                text += "<tg-button-row>" + "".join(html) + "</tg-button-row>"
+        try:
+            if isinstance(message, int):
+                unit_id = utils.rand(16)
+                unit_ref["id"] = unit_id
+                self.inline._units[unit_id] = {
+                    "type": "form", "uid": unit_id, "chat": message,
+                    "caller": message, "message_id": None, "force_me": True,
+                    "buttons": [] if rich else rows, "ttl": time.time() + ttl,
+                    "on_unload": cleanup,
+                }
+                markup = None if rich else self.inline.generate_markup(rows)
+                if rich:
+                    sent = await self.inline.bot.send_rich_message(
+                        message, text, disable_notification=True,
+                    )
+                else:
+                    sent = await self.inline.bot.send_message(
+                        message, self._loader_text(text, False),
+                        reply_markup=markup, disable_notification=True,
+                    )
+                self.inline._units[unit_id]["message_id"] = sent.id
+                form = BotInlineMessage(self.inline, unit_id, message=sent)
+            else:
+                form = await self.inline.form(
+                    "🪐" if rich else self._loader_text(text, False), message,
+                    reply_markup=[] if rich else rows,
+                    force_me=True, on_unload=cleanup, ttl=ttl,
+                    **({"rich_message": text} if rich else {}),
+                )
+        except Exception:
+            if unit_ref.get("id"):
+                self.inline._units.pop(unit_ref["id"], None)
+            cleanup()
+            raise
+        if form:
+            unit_ref["id"] = form.unit_id
+        else:
+            cleanup()
+        return form
+
+    async def _origin_decision(self, message, text, options):
+        if not self.inline.init_complete:
+            if not isinstance(message, int):
+                await utils.answer(message, self.strings["origin_inline_required"])
+            return "cancel", message
+        future = asyncio.get_running_loop().create_future()
+
+        async def choose(call, value):
+            if call.from_user.id != self.tg_id or future.done():
+                return
+            future.set_result((value, call))
+            with contextlib.suppress(Exception):
+                await call.answer()
+
+        def cancel():
+            if not future.done():
+                future.set_result(("cancel", message))
+
+        alts = {
+            "5872829476143894491": "🚫",
+            "5256113064821926998": "©",
+            "5765071340847501478": "🔗",
+            "5784993237412351403": "🛡",
+        }
+        rows = [[{
+            "text": self.strings[label], "callback": choose, "args": (value,),
+            "style": style, "emoji_id": icon, "force_me": True,
+            "emoji_alt": alts.get(icon, "⬇️"),
+        }] for value, label, style, icon in options]
+        try:
+            form = await self._loader_form(text, message, rows, on_unload=cancel, ttl=300)
+        except Exception:
+            logger.exception("Failed to send module source confirmation")
+            return "cancel", message
+        if not form:
+            return "cancel", message
+        try:
+            result = await asyncio.wait_for(future, 300)
+        except asyncio.TimeoutError:
+            result = ("cancel", form)
+        if result[0] == "cancel":
+            with contextlib.suppress(Exception):
+                await form.edit(self.strings["origin_cancelled"])
+        return result
 
     def _get_banner_url(self, doc: str) -> str | None:
         match = re.search(r"# ?meta banner: ?(.+)", doc)
@@ -642,6 +932,7 @@ class LoaderMod(loader.Module):
                 raise ModuleInstallError(f"Module {module_name} was not installed")
 
             self._write_module_cache(url, r)
+            self._set_update_policy(url, "confirm")
             return MODULE_LOADING_SUCCESS
         except Exception:
             logger.exception("Failed to install external module %s", module_name)
@@ -659,6 +950,160 @@ class LoaderMod(loader.Module):
 
         await self.load_module(doc, call, origin=path_ or "<string>", save_fs=True)
 
+    @staticmethod
+    def _module_file_name(document: Document) -> str | None:
+        for attribute in getattr(document, "attributes", None) or []:
+            if isinstance(attribute, DocumentAttributeFilename):
+                return attribute.file_name
+        return None
+
+    @classmethod
+    def _module_file_label(cls, document: Document) -> str:
+        name = cls._module_file_name(document) or f"module_{document.id}.py"
+        name = name.rsplit("/", 1)[-1]
+        return name if len(name) <= 48 else name[:45] + "..."
+
+    async def _read_module_document(
+        self,
+        document: Document,
+        message: Message | InlineCall | None,
+    ) -> str | None:
+        if (getattr(document, "size", 0) or 0) > 5 * 1024 * 1024:
+            if message is not None:
+                await utils.answer(message, self.strings["load_failed"])
+            return None
+        try:
+            raw = await self._client.download_media(document, bytes)
+        except Exception:
+            logger.exception(
+                "Failed to download module %s",
+                self._module_file_name(document) or document.id,
+            )
+            if message is not None:
+                await utils.answer(message, self.strings["load_failed"])
+
+            return None
+
+        if not isinstance(raw, (bytes, bytearray)):
+            logger.error(
+                "Module %s download returned %s",
+                self._module_file_name(document) or document.id,
+                type(raw),
+            )
+            if message is not None:
+                await utils.answer(message, self.strings["load_failed"])
+
+            return None
+
+        try:
+            doc = bytes(raw).decode("utf-8-sig")
+        except UnicodeDecodeError:
+            if message is not None:
+                await utils.answer(message, self.strings["bad_unicode"])
+
+            return None
+        if len(raw) > 5 * 1024 * 1024:
+            return None
+        return doc
+
+    async def _install_document(self, document, message) -> bool:
+        doc = await self._read_module_document(document, message)
+        if doc is None:
+            return False
+        context = message
+        label = utils.escape_html(self._module_file_label(document))
+        origin = None
+        invalid = False
+        try:
+            origin = self._source_origin(doc)
+        except ValueError:
+            invalid = True
+        options = [
+            ("local", "origin_file_only", None, "5256113064821926998"),
+            ("cancel", "origin_cancel", "danger", "5872829476143894491"),
+        ]
+        choice = None
+        if invalid or origin:
+            text = self.strings["origin_invalid"].format(label) if invalid else self.strings[
+                "origin_prompt"
+            ].format(label, utils.escape_html(origin))
+            available = options if invalid else [
+                ("connect", "origin_connect", "success", "5784993237412351403"), *options
+            ]
+            choice, context = await self._origin_decision(context, text, available)
+        if choice == "cancel":
+            return False
+        if origin and choice == "connect":
+            if not isinstance(context, int):
+                context = await utils.answer(context, self.strings["origin_checking"])
+            try:
+                remote = await self._fetch_origin(origin)
+                ast.parse(remote)
+                classes = self._module_class_names(doc)
+                if not classes or classes != self._module_class_names(remote):
+                    raise ValueError("Different or ambiguous module classes")
+                if self._is_core_module_update(origin, remote):
+                    raise ValueError("Core module source is not supported")
+            except Exception:
+                choice, context = await self._origin_decision(
+                    context, self.strings["origin_unavailable"].format(label), options
+                )
+                if choice != "local":
+                    return False
+            else:
+                if self._source_hash(doc) != self._source_hash(remote):
+                    choice, context = await self._origin_decision(
+                        context, self.strings["origin_different"].format(label),
+                        [("remote", "origin_use_remote", "success", "5899757765743615694"), *options],
+                    )
+                    if choice == "cancel":
+                        return False
+                    if choice == "remote":
+                        doc = remote
+                else:
+                    choice = "remote"
+        if choice not in {"remote"}:
+            origin = None
+        name = self._extract_module_name(doc)
+        old = self.lookup(name) if name else None
+        old_source = getattr(old, "__source__", None)
+        old_origin = getattr(old, "__origin__", None)
+        try:
+            if message is not None:
+                message = context
+            installed = await self.load_module(
+                doc, message, name=name, origin=origin or "<string>",
+                save_fs=True,
+            )
+            if not installed:
+                return False
+            if origin:
+                self._write_module_cache(origin, doc)
+                urls = set(self.get("file_origin_urls", []))
+                urls.add(origin)
+                self.set("file_origin_urls", sorted(urls))
+                self._set_update_policy(origin, "confirm")
+                if name and old_source is not None:
+                    path = os.path.join(loader.LOADED_MODULES_DIR, f"{name}_{self.tg_id}.py")
+                    if os.path.isfile(path) and not os.path.islink(path):
+                        with open(path, encoding="utf-8", newline="") as file:
+                            saved = file.read()
+                        if saved == old_source:
+                            os.unlink(path)
+            elif old_origin and old_origin.startswith("https://"):
+                self._set_update_policy(old_origin, "never")
+            self.update_modules_in_db()
+            return True
+        except Exception:
+            logger.exception(
+                "Failed to install module %s",
+                self._module_file_name(document) or document.id,
+            )
+            if message is not None:
+                await utils.answer(message, self.strings["load_failed"])
+
+            return False
+
     @loader.command(alias="lm")
     async def loadmod(self, message: Message):
         if await self._check_pass(message):
@@ -672,19 +1117,7 @@ class LoaderMod(loader.Module):
 
         await utils.answer(message, self.strings["loading_module_via_file"])
 
-        path_ = None
-        doc = await msg.download_media(bytes)
-
-        try:
-            doc = doc.decode()
-        except UnicodeDecodeError:
-            await utils.answer(message, self.strings["bad_unicode"])
-            return
-
-        if path_ is not None:
-            await self.load_module(doc, message, origin=path_, save_fs=True)
-        else:
-            await self.load_module(doc, message, save_fs=True)
+        await self._install_document(getattr(msg, "document", None) or msg, message)
 
     async def approve_internal(
         self,
@@ -836,6 +1269,7 @@ class LoaderMod(loader.Module):
         did_packages: bool = False,
         _raise_install_errors: bool = False,
         _loaded_modules: list | None = None,
+        _changelog: dict | None = None,
     ) -> bool:
         module_label = name or origin
 
@@ -1390,7 +1824,7 @@ class LoaderMod(loader.Module):
                     ),
                     blob_link,
                     subscribe if use_subscribe else "",
-                )
+                ) + self._changelog_text(_changelog, rich=False)
             result = self._batch_loaded_message(
                 [instance], [], rich=True, single=True,
                 command_lines=[
@@ -1412,7 +1846,7 @@ class LoaderMod(loader.Module):
                     "<p>" + text.replace("\n", "<br/>") + "</p>"
                     if rich_mode else "\n\n" + text
                 )
-            return result
+            return result + self._changelog_text(_changelog, rich=True)
 
         if developer:
             if developer.startswith("@") and developer not in self.get(
@@ -1755,14 +2189,18 @@ class LoaderMod(loader.Module):
             worked = self._remove_failed_module(module)
 
         if not self.allmodules.secure_boot:
+            previous = self.get("loaded_modules", {})
+            remaining = {name: url for name, url in previous.items() if name not in worked}
             self.set(
                 "loaded_modules",
-                {
-                    mod: link
-                    for mod, link in self.get("loaded_modules", {}).items()
-                    if mod not in worked
-                },
+                remaining,
             )
+            for url in set(previous.values()) - set(remaining.values()):
+                self._set_update_policy(url, "confirm")
+                self.set("file_origin_urls", [
+                    source for source in self.get("file_origin_urls", []) if source != url
+                ])
+                self._module_update_checks.pop(url, None)
 
         msg = (
             self.strings["unloaded"].format(
@@ -1880,8 +2318,14 @@ class LoaderMod(loader.Module):
 
     async def _inline__clearmodules(self, call: InlineCall):
         self.set("loaded_modules", {})
-        self.set("always_update_modules", [])
+        self.config["AUTO_UPDATE_MODULES"] = []
+        self.config["NEVER_UPDATE_MODULES"] = []
+        self.set("file_origin_urls", [])
+        self.set("skipped_module_versions", {})
         self._pending_module_updates.clear()
+        self._module_update_checks.clear()
+        self._module_changelogs.clear()
+        self._auto_update_failures.clear()
         shutil.rmtree(self._modules_cache_dir, ignore_errors=True)
 
         for file in os.scandir(loader.LOADED_MODULES_DIR):
@@ -1960,68 +2404,281 @@ class LoaderMod(loader.Module):
         path = self._module_cache_path(url)
         private_write(path, doc)
 
+    def _set_update_policy(self, url: str, mode: str):
+        for token, pending in list(self._pending_module_updates.items()):
+            if pending["url"] == url:
+                self._pending_module_updates.pop(token, None)
+        for key, enabled in (
+            ("AUTO_UPDATE_MODULES", mode == "auto"),
+            ("NEVER_UPDATE_MODULES", mode == "never"),
+        ):
+            values = set(self.config[key])
+            if enabled:
+                values.add(url)
+            else:
+                values.discard(url)
+            self.config[key] = sorted(values)
+        skipped = dict(self.get("skipped_module_versions", {}))
+        skipped.pop(url, None)
+        self.set("skipped_module_versions", skipped)
+
+    def _update_mode(self, url: str) -> str:
+        if url in self.config["NEVER_UPDATE_MODULES"]:
+            return "never"
+        if url in self.config["AUTO_UPDATE_MODULES"]:
+            return "auto"
+        return "confirm"
+
+    def _migrate_update_policies(self):
+        stored_config = dict(self.get("__config__", {}))
+        ignored = stored_config.pop("ignored_update_modules", None)
+        if ignored is not None:
+            self.set("__config__", stored_config)
+            if ignored:
+                self.config["NEVER_UPDATE_MODULES"] = sorted(
+                    set(self.config["NEVER_UPDATE_MODULES"]) | set(ignored)
+                )
+        for old, key in (
+            ("always_update_modules", "AUTO_UPDATE_MODULES"),
+            ("never_update_modules", "NEVER_UPDATE_MODULES"),
+        ):
+            legacy = self.get(old, [])
+            if legacy:
+                self.config[key] = sorted(set(self.config[key]) | set(legacy))
+                self.set(old, [])
+        self._update_policy_snapshot = (
+            frozenset(self.config["AUTO_UPDATE_MODULES"]),
+            frozenset(self.config["NEVER_UPDATE_MODULES"]),
+        )
+        self._policies_ready = True
+
+    def _update_policy_changed(self):
+        if not self._policies_ready:
+            return
+        current = (
+            frozenset(self.config["AUTO_UPDATE_MODULES"]),
+            frozenset(self.config["NEVER_UPDATE_MODULES"]),
+        )
+        changed = set().union(*(
+            before ^ after for before, after in zip(self._update_policy_snapshot, current)
+        ))
+        self._update_policy_snapshot = current
+        skipped = dict(self.get("skipped_module_versions", {}))
+        for url in changed:
+            self._module_update_checks.pop(url, None)
+            self._auto_update_failures.pop(url, None)
+            skipped.pop(url, None)
+        for token, pending in list(self._pending_module_updates.items()):
+            if pending["url"] in changed:
+                self._pending_module_updates.pop(token, None)
+        if changed:
+            self.set("skipped_module_versions", skipped)
+
+    async def _github_changelog(self, url: str, doc: str) -> dict | None:
+        key = hashlib.sha256((url + self._source_hash(doc)).encode()).hexdigest()
+        if key in self._module_changelogs:
+            return self._module_changelogs[key]
+        result = None
+        try:
+            parsed = urlparse(self._public_origin(url))
+            parts = parsed.path.strip("/").split("/")
+            if parsed.hostname != "raw.githubusercontent.com" or len(parts) < 4:
+                return None
+            owner, repo, ref, *path = parts
+            query = urlencode({"sha": ref, "path": "/".join(path), "per_page": 1})
+            api = (
+                f"https://api.github.com/repos/{quote(owner, safe='')}/"
+                f"{quote(repo, safe='')}/commits?{query}"
+            )
+            commits = json.loads(await self._fetch_origin(api))
+            if not isinstance(commits, list) or not commits:
+                return None
+            commit = commits[0]
+            sha = commit.get("sha", "")
+            if not re.fullmatch(r"[0-9a-f]{40,64}", sha):
+                return None
+            pinned = f"https://raw.githubusercontent.com/{owner}/{repo}/{sha}/{'/'.join(path)}"
+            source = await self._fetch_origin(pinned)
+            message = commit.get("commit", {}).get("message", "")
+            if self._source_hash(source) == self._source_hash(doc) and isinstance(message, str) and message.strip():
+                result = {
+                    "message": message.strip(),
+                    "url": f"https://github.com/{owner}/{repo}/commit/{sha}",
+                    "source": pinned,
+                }
+        except Exception:
+            logger.debug("GitHub changelog is unavailable")
+        if len(self._module_changelogs) >= 64:
+            self._module_changelogs.pop(next(iter(self._module_changelogs)))
+        self._module_changelogs[key] = result
+        return result
+
+    def _changelog_text(self, changelog: dict | None, *, rich: bool) -> str:
+        if not changelog:
+            return ""
+        text = changelog.get("message", "")
+        if not text:
+            return ""
+        text = utils.escape_html(text[:4000] + ("…" if len(text) > 4000 else ""))
+        url = utils.escape_html(changelog["url"])
+        title = self.strings["module_changelog"]
+        link = self.strings["module_changelog_commit"].format(url)
+        if rich:
+            return (
+                f"<details><summary>{title}</summary><p>"
+                + text.replace("\n", "<br/>") + f"</p><p>{link}</p></details>"
+            )
+        return f"\n\n<b>{title}</b>\n<blockquote expandable>{text}</blockquote>\n{link}"
+
+    async def _report_auto_update(self, url, *, name=None, error=None, changelog=None):
+        if not self.inline.init_complete:
+            logger.warning("Inline bot is unavailable for the module update report")
+            return
+        source = changelog.get("source", url) if changelog else url
+        name = name or url.rsplit("/", 1)[-1].removesuffix(".py")
+        label = f'<a href="{utils.escape_html(source)}">{utils.escape_html(name)}</a>'
+        if error is not None:
+            reason = utils.escape_html(redact(f"{type(error).__name__}: {error}")[:500])
+            text = self.strings["module_auto_failed"].format(label, reason)
+        else:
+            text = self.strings["module_auto_success"].format(label)
+            text += self._changelog_text(changelog, rich=bool(self.config["rich_mode"]))
+        try:
+            if self.config["rich_mode"]:
+                await self.inline.bot.send_rich_message(
+                    int(self.tg_id), text, disable_notification=True,
+                )
+            else:
+                await self.inline.bot.send_message(
+                    int(self.tg_id), self._loader_text(text, False),
+                    disable_notification=True,
+                )
+        except Exception:
+            logger.exception("Failed to deliver the automatic module update report")
+
+    def _pending_update(self, token):
+        pending = self._pending_module_updates.get(token)
+        if pending and pending["expires"] <= time.time():
+            self._pending_module_updates.pop(token, None)
+            return None
+        return pending
+
     async def _accept_module_update(
         self,
         call: InlineCall,
         token: str,
         always: bool = False,
     ):
-        pending = self._pending_module_updates.pop(token, None)
+        pending = self._pending_update(token)
         if pending is None:
             await call.edit(self.strings["module_update_expired"])
             return
 
-        url, doc = pending
         if always:
-            urls = set(self.get("always_update_modules", []))
-            urls.add(url)
-            self.set("always_update_modules", sorted(urls))
+            rows = [[
+                {"text": self.strings["module_update_auto_confirm"],
+                 "callback": self._confirm_auto_update, "args": (token,),
+                 "style": "success", "emoji_id": "5899757765743615694"},
+                {"text": self.strings["origin_cancel"], "callback": self._cancel_auto_update,
+                 "args": (token,), "style": "danger", "emoji_id": "5872829476143894491",
+                 "emoji_alt": "🚫"},
+            ]]
+            await self._loader_form(self.strings["module_update_auto_warning"], call, rows)
+            return
+        await self._install_module_update(call, token)
 
-        installed = await self.load_module(
-            doc,
-            call,
-            self._extract_module_name(doc),
-            url,
-            _raise_install_errors=True,
-        )
+    async def _confirm_auto_update(self, call, token):
+        await self._install_module_update(call, token, auto=True)
+
+    async def _cancel_auto_update(self, call, token):
+        pending = self._pending_update(token)
+        if not pending:
+            await call.edit(self.strings["module_update_expired"])
+            return
+        self._pending_module_updates.pop(token, None)
+        await self._offer_module_update(pending["url"], pending["doc"], message=call)
+
+    async def _install_module_update(self, call, token, *, auto=False):
+        if not self._pending_update(token):
+            await call.edit(self.strings["module_update_expired"])
+            return
+        pending = self._pending_module_updates.pop(token)
+        url, doc = pending["url"], pending["doc"]
+        with contextlib.suppress(Exception):
+            await call.answer()
+        call = await utils.answer(call, self.strings["loading_module_via_file"])
+        changelog = pending.get("changelog")
+        if "changelog" not in pending:
+            changelog = await self._github_changelog(url, doc)
+        if self._update_mode(url) == "never":
+            await call.edit(self.strings["module_update_disabled"])
+            return
+        try:
+            installed = await self.load_module(
+                doc, call, self._extract_module_name(doc), url,
+                _raise_install_errors=True, _changelog=changelog,
+            )
+        except Exception:
+            logger.exception("Module update installation failed")
+            installed = False
         if not installed:
             await call.edit(self.strings["module_update_failed"])
             return
-
         self._write_module_cache(url, doc)
+        self._set_update_policy(url, "auto" if auto else "confirm")
         self.update_modules_in_db()
-        await call.edit(self.strings["module_update_installed"])
 
     async def _decline_module_update(self, call: InlineCall, token: str):
-        self._pending_module_updates.pop(token, None)
-        await call.edit(self.strings["module_update_declined"])
-
-    async def _ignore_module_update(self, call: InlineCall, token: str):
-        pending = self._pending_module_updates.pop(token, None)
-        if pending is None:
+        pending = self._pending_update(token)
+        if not pending:
             await call.edit(self.strings["module_update_expired"])
             return
+        self._pending_module_updates.pop(token, None)
+        skipped = dict(self.get("skipped_module_versions", {}))
+        skipped[pending["url"]] = self._source_hash(pending["doc"])
+        self.set("skipped_module_versions", skipped)
+        await call.edit(self.strings["module_update_declined"])
 
-        url, _ = pending
-        self.config["ignored_update_modules"] = [
-            *self.config["ignored_update_modules"],
-            url,
-        ]
-        await call.edit(self.strings["module_update_ignored"])
+    async def _never_module_update(self, call: InlineCall, token: str):
+        pending = self._pending_update(token)
+        if not pending:
+            await call.edit(self.strings["module_update_expired"])
+            return
+        self._pending_module_updates.pop(token, None)
+        self._set_update_policy(pending["url"], "never")
+        await call.edit(self.strings["module_update_disabled"])
 
     async def _offer_module_update(
         self,
         url: str,
         doc: str,
         old_doc: str | None = None,
+        *,
+        message=None,
     ) -> None:
         name = self._extract_module_name(doc) or url.rsplit("/", 1)[-1].removesuffix(
             ".py"
         )
         name_plain = name
-        name = f'<a href="{utils.escape_html(url)}">{utils.escape_html(name)}</a>'
+        diff = (
+            "\n".join(
+                difflib.unified_diff(
+                    old_doc.splitlines(), doc.splitlines(), "old", "new", lineterm="", n=2
+                )
+            )
+            if old_doc is not None
+            else ""
+        )
+        changelog = await self._github_changelog(url, doc)
+        if self._update_mode(url) != "confirm":
+            return
+        source = changelog.get("source", url) if changelog else url
+        name = f'<a href="{utils.escape_html(source)}">{utils.escape_html(name)}</a>'
         token = uuid.uuid4().hex
-        self._pending_module_updates[token] = (url, doc)
+        self._pending_module_updates[token] = {
+            "url": url, "doc": doc, "expires": time.time() + 600,
+            "changelog": changelog,
+        }
 
         for _ in range(120):
             if self.inline.init_complete and self.inline._bot_client:
@@ -2032,17 +2689,6 @@ class LoaderMod(loader.Module):
             logger.error("Inline bot is not ready; module update prompt was not sent")
             return
 
-        diff = (
-            "\n".join(
-                difflib.unified_diff(
-                    old_doc.splitlines(), doc.splitlines(), "old", "new", lineterm="", n=2
-                )
-            )
-            if old_doc is not None
-            else ""
-        )
-
-        unit_id = utils.rand(16)
         buttons = [
             [
                 {
@@ -2057,7 +2703,7 @@ class LoaderMod(loader.Module):
                     "callback": self._decline_module_update,
                     "args": (token,),
                     "emoji_id": "5872829476143894491",
-                    "style": "danger",
+                    "emoji_alt": "🚫",
                 },
             ],
             [
@@ -2068,54 +2714,38 @@ class LoaderMod(loader.Module):
                     "emoji_id": "5879883461711367869",
                     "style": "primary",
                 },
-                {
-                    "text": self.strings["module_update_ignore"],
-                    "callback": self._ignore_module_update,
-                    "args": (token,),
-                    "emoji_id": "5872829476143894491",
-                    "style": "primary",
-                },
             ],
+            [{
+                "text": self.strings["module_update_never"],
+                "callback": self._never_module_update, "args": (token,),
+                "emoji_id": "5872829476143894491", "emoji_alt": "🚫", "style": "danger",
+            }],
         ]
-        text = self.strings["module_update_prompt"].format(name)
-        if diff and len(diff) < 500:
-            text += f"\n<blockquote expandable>{utils.escape_html(diff)}</blockquote>"
-
-        self.inline._units[unit_id] = {
-            "type": "form",
-            "text": text,
-            "buttons": buttons,
-            "caller": None,
-            "chat": int(self.tg_id),
-            "message_id": None,
-            "uid": unit_id,
-            "force_me": True,
-        }
-
         try:
-            markup = self.inline.generate_markup(unit_id)
-            if len(diff) >= 500:
+            if self._pending_update(token) is None:
+                return
+            text = self.strings["module_update_prompt"].format(name)
+            if diff and len(diff) < 500:
+                text += (
+                    f"<details><summary>{self.strings['module_update_diff']}</summary>"
+                    + "<br>".join(utils.escape_html(line) for line in diff.splitlines())
+                    + "</details>"
+                )
+            elif diff:
                 file = io.BytesIO(diff.encode())
                 file.name = f"{name_plain}.diff"
-                sent = await self.inline.bot.send_document(
-                    int(self.tg_id),
-                    file,
-                    caption=self.inline._units[unit_id]["text"],
-                    reply_markup=markup,
-                    disable_notification=True,
+                await self.inline.bot.send_document(
+                    int(self.tg_id), file, disable_notification=True,
                 )
-            else:
-                sent = await self.inline.bot.send_message(
-                    int(self.tg_id),
-                    self.inline._units[unit_id]["text"],
-                    reply_markup=markup,
-                    disable_notification=True,
-                )
-
-            self.inline._units[unit_id]["message_id"] = sent.id
+            sent = await self._loader_form(
+                text
+                + self.strings["module_update_warning"].format(utils.escape_html(url)),
+                message if message is not None else int(self.tg_id), buttons,
+            )
+            if not sent:
+                self._pending_module_updates.pop(token, None)
         except Exception:
             self._pending_module_updates.pop(token, None)
-            self.inline._units.pop(unit_id, None)
             logger.exception(
                 "Failed to send module update prompt from inline bot to owner %s",
                 self.tg_id,
@@ -2130,6 +2760,10 @@ class LoaderMod(loader.Module):
         name: str | None = None,
         offer_update: bool = True,
     ) -> bool:
+        if self._update_mode(url) == "never":
+            return False
+        for token in list(self._pending_module_updates):
+            self._pending_update(token)
         if cached_doc is None:
             path = self._module_cache_path(url)
             if not os.path.isfile(path):
@@ -2143,43 +2777,75 @@ class LoaderMod(loader.Module):
                 return False
 
         try:
-            remote_doc = await self._storage.fetch(
-                url, auth=self.config["basic_auth"],
-                trusted_url=self.config["MODULES_REPO"],
-            )
-        except Exception:
+            if url in self.get("file_origin_urls", []):
+                remote_doc = await self._fetch_origin(url)
+            else:
+                remote_doc = await self._storage.fetch(
+                    url, auth=self.config["basic_auth"],
+                    trusted_url=self.config["MODULES_REPO"],
+                )
+        except Exception as error:
             logger.warning("Failed to check module update for %s", url, exc_info=True)
+            if self._update_mode(url) == "auto":
+                failure = ("fetch", type(error).__name__)
+                if self._auto_update_failures.get(url) != failure:
+                    self._auto_update_failures[url] = failure
+                    await self._report_auto_update(url, name=name, error=error)
             return False
 
-        cached_hash = hashlib.sha256(cached_doc.encode()).digest()
-        remote_hash = hashlib.sha256(remote_doc.encode()).digest()
+        mode = self._update_mode(url)
+        if mode == "never":
+            return False
+
+        cached_hash = self._source_hash(cached_doc)
+        remote_hash = self._source_hash(remote_doc)
         if cached_hash == remote_hash:
+            self._auto_update_failures.pop(url, None)
             return False
 
         if self._is_core_module_update(url, remote_doc):
             self._write_module_cache(url, remote_doc)
             return True
 
-        if url in self.config["ignored_update_modules"]:
+        if self._module_class_names(cached_doc) != self._module_class_names(remote_doc):
+            logger.warning("Module update changed its class identity; update ignored")
+            failure = ("identity", remote_hash)
+            if mode == "auto" and self._auto_update_failures.get(url) != failure:
+                self._auto_update_failures[url] = failure
+                await self._report_auto_update(
+                    url, name=name, error=ValueError(self.strings["module_auto_identity_failed"]),
+                )
+            return False
+        if mode != "auto" and self.get("skipped_module_versions", {}).get(url) == remote_hash:
             return False
 
-        if url in self.get("always_update_modules", []):
-            installed = await self.load_module(
-                remote_doc,
-                None,
-                name,
-                url,
-                _raise_install_errors=True,
-            )
-            if installed:
+        if mode == "auto":
+            failure = ("install", remote_hash)
+            if self._auto_update_failures.get(url) == failure:
+                return False
+            changelog = await self._github_changelog(url, remote_doc)
+            if self._update_mode(url) != "auto":
+                return False
+            try:
+                installed = await self.load_module(
+                    remote_doc, None, name, url, _raise_install_errors=True,
+                )
+                if not installed:
+                    raise ModuleInstallError(self.strings["module_auto_install_failed"])
                 self._write_module_cache(url, remote_doc)
                 self.update_modules_in_db()
-
-            return bool(installed)
+            except Exception as error:
+                logger.exception("Automatic module update failed")
+                self._auto_update_failures[url] = failure
+                await self._report_auto_update(url, name=name, error=error)
+                return False
+            self._auto_update_failures.pop(url, None)
+            await self._report_auto_update(url, name=name, changelog=changelog)
+            return True
 
         if offer_update and not any(
-            pending_url == url
-            for pending_url, _ in self._pending_module_updates.values()
+            pending["url"] == url
+            for pending in self._pending_module_updates.values()
         ):
             await self._offer_module_update(url, remote_doc, cached_doc)
 
@@ -2193,6 +2859,8 @@ class LoaderMod(loader.Module):
                 with open(path, encoding="utf-8", newline="") as file:
                     doc = file.read()
             else:
+                if self._update_mode(url) == "never" or url in self.get("file_origin_urls", []):
+                    raise ValueError("Installed module snapshot is missing")
                 doc = await self._storage.fetch(
                     url, auth=self.config["basic_auth"],
                     trusted_url=self.config["MODULES_REPO"],
@@ -2234,17 +2902,21 @@ class LoaderMod(loader.Module):
 
     @loader.loop(interval=60, wait_before=True, autostart=True)
     async def _auto_update_modules(self):
-        if not self.fully_loaded or self._storage is None:
+        if not self.fully_loaded or self._storage is None or self._secure_boot:
             return
 
         if self._startup_updates_task and not self._startup_updates_task.done():
             return
 
         loaded_modules = self.get("loaded_modules", {})
-        always_update_urls = set(self.get("always_update_modules", []))
         for name, url in loaded_modules.items():
-            if url in always_update_urls:
-                await self._check_module_update(url, offer_update=False, name=name)
+            interval = 60 if self._update_mode(url) == "auto" else 900
+            if time.monotonic() - self._module_update_checks.get(url, 0) >= interval:
+                self._module_update_checks[url] = time.monotonic()
+                try:
+                    await self._check_module_update(url, name=name)
+                except Exception:
+                    logger.exception("Failed to check module update")
 
     async def _update_modules(self):
         started = time.perf_counter()
