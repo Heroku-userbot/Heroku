@@ -18,7 +18,6 @@ import contextlib
 import difflib
 import functools
 import hashlib
-import http.client
 import importlib
 import inspect
 import io
@@ -39,6 +38,7 @@ from importlib.machinery import ModuleSpec
 from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlparse
 
 import requests
+import aiohttp
 from herokutl.tl.custom import Message
 from herokutl.errors.common import ScamDetectionError
 from herokutl.errors.rpcerrorlist import MediaCaptionTooLongError
@@ -57,6 +57,23 @@ from ..inline.types import BotInlineMessage, InlineCall
 from ..types import CoreOverwriteError, CoreUnloadError
 
 logger = logging.getLogger(__name__)
+
+
+class PublicOriginResolver(aiohttp.abc.AbstractResolver):
+    def __init__(self):
+        self._resolver = aiohttp.resolver.DefaultResolver()
+
+    async def resolve(self, host, port=0, family=socket.AF_INET):
+        addresses = await self._resolver.resolve(host, port, family)
+        if not addresses or any(
+            not ipaddress.ip_address(address["host"]).is_global
+            for address in addresses
+        ):
+            raise ValueError("Module source resolves to a non-public address")
+        return addresses
+
+    async def close(self):
+        await self._resolver.close()
 
 
 class FakeOne:
@@ -300,45 +317,36 @@ class LoaderMod(loader.Module):
         return hashlib.sha256(source.encode()).hexdigest()
 
     @classmethod
-    def _fetch_origin(cls, url: str) -> str:
-        for _ in range(6):
-            url = cls._public_origin(url)
-            parsed = urlparse(url)
-            addresses = socket.getaddrinfo(
-                parsed.hostname, parsed.port or 443, type=socket.SOCK_STREAM
-            )
-            if not addresses or any(
-                not ipaddress.ip_address(address[4][0]).is_global for address in addresses
-            ):
-                raise ValueError("Module source resolves to a non-public address")
-            address = addresses[0][4][0]
-            connection = http.client.HTTPSConnection(
-                parsed.hostname, parsed.port or 443, timeout=30
-            )
-            connection._create_connection = lambda target, timeout, source_address=None: socket.create_connection(
-                (address, parsed.port or 443), timeout, source_address
-            )
-            try:
-                path = parsed.path or "/"
-                if parsed.query:
-                    path += "?" + parsed.query
-                connection.request("GET", path, headers={"User-Agent": "Heroku-ModuleLoader"})
-                response = connection.getresponse()
-                if response.status in {301, 302, 303, 307, 308}:
-                    location = response.getheader("Location")
-                    if not location:
-                        raise ValueError("Missing redirect target")
-                    url = urljoin(url, location)
-                    continue
-                if response.status != 200:
-                    raise ValueError(f"Module source returned HTTP {response.status}")
-                content = response.read(5 * 1024 * 1024 + 1)
-                if len(content) > 5 * 1024 * 1024:
-                    raise ValueError("Module source exceeds the size limit")
-                return content.decode("utf-8-sig")
-            finally:
-                connection.close()
-        raise ValueError("Too many module source redirects")
+    async def _fetch_origin(cls, url: str) -> str:
+        resolver = PublicOriginResolver()
+        try:
+            async with aiohttp.ClientSession(
+                connector=aiohttp.TCPConnector(resolver=resolver, use_dns_cache=False),
+                timeout=aiohttp.ClientTimeout(total=30),
+                trust_env=False,
+                cookie_jar=aiohttp.DummyCookieJar(),
+                headers={"User-Agent": "Heroku-ModuleLoader"},
+            ) as session:
+                for _ in range(6):
+                    url = cls._public_origin(url)
+                    async with session.get(url, allow_redirects=False) as response:
+                        if response.status in {301, 302, 303, 307, 308}:
+                            location = response.headers.get("Location")
+                            if not location:
+                                raise ValueError("Missing redirect target")
+                            url = urljoin(url, location)
+                            continue
+                        if response.status != 200:
+                            raise ValueError(f"Module source returned HTTP {response.status}")
+                        content = bytearray()
+                        async for chunk in response.content.iter_chunked(65536):
+                            content.extend(chunk)
+                            if len(content) > 5 * 1024 * 1024:
+                                raise ValueError("Module source exceeds the size limit")
+                        return content.decode("utf-8-sig")
+                raise ValueError("Too many module source redirects")
+        finally:
+            await resolver.close()
 
     @staticmethod
     def _loader_text(text: str, rich: bool) -> str:
@@ -1029,7 +1037,7 @@ class LoaderMod(loader.Module):
             if not isinstance(context, int):
                 context = await utils.answer(context, self.strings["origin_checking"])
             try:
-                remote = await utils.run_sync(self._fetch_origin, origin)
+                remote = await self._fetch_origin(origin)
                 ast.parse(remote)
                 classes = self._module_class_names(doc)
                 if not classes or classes != self._module_class_names(remote):
@@ -2417,7 +2425,7 @@ class LoaderMod(loader.Module):
                 f"https://api.github.com/repos/{quote(owner, safe='')}/"
                 f"{quote(repo, safe='')}/commits?{query}"
             )
-            commits = json.loads(await utils.run_sync(self._fetch_origin, api))
+            commits = json.loads(await self._fetch_origin(api))
             if not isinstance(commits, list) or not commits:
                 return None
             commit = commits[0]
@@ -2425,7 +2433,7 @@ class LoaderMod(loader.Module):
             if not re.fullmatch(r"[0-9a-f]{40,64}", sha):
                 return None
             pinned = f"https://raw.githubusercontent.com/{owner}/{repo}/{sha}/{'/'.join(path)}"
-            source = await utils.run_sync(self._fetch_origin, pinned)
+            source = await self._fetch_origin(pinned)
             message = commit.get("commit", {}).get("message", "")
             if self._source_hash(source) == self._source_hash(doc) and isinstance(message, str) and message.strip():
                 result = {
@@ -2675,7 +2683,7 @@ class LoaderMod(loader.Module):
 
         try:
             if url in self.get("file_origin_urls", []):
-                remote_doc = await utils.run_sync(self._fetch_origin, url)
+                remote_doc = await self._fetch_origin(url)
             else:
                 remote_doc = await self._storage.fetch(
                     url, auth=self.config["basic_auth"],
