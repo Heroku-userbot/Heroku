@@ -738,6 +738,11 @@ loader:
   origin_unavailable: '<p><b>Could not verify the source for {}</b></p><p>The address is unavailable, returned invalid code or a different module. You can install the attached file without updates.</p>'
   origin_different: '<p><tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Versions differ</b></p><p><code>{}</code></p><p>This may be an older version or a modified copy. Which version should be installed?</p>'
   origin_use_remote: "From source"
+  lm_choose_module: '<tg-emoji emoji-id=5312383351217201533>⚠️</tg-emoji> <b>Select a module to install:</b>'
+  lm_install_all: "Install all"
+  lm_close: "Close"
+  lm_selection_expired: "<b>The module selection has expired. Run the command again.</b>"
+  lm_installing_all: "<b>Installing {count} modules...</b>"
 loader_restrictor:
   name: "LoaderRestrictor"
   q1: "What can any module you install actually do?"

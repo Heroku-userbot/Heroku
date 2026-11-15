@@ -48,6 +48,7 @@ from herokutl.tl.types import (
     Document,
     DocumentAttributeFilename,
     InputMediaWebPage,
+    MessageMediaDocument,
 )
 
 from .. import loader, main, utils
@@ -105,6 +106,7 @@ class LoaderMod(loader.Module):
         self._storage: RemoteStorage = None
         self._modules_cache_dir = os.path.join(main.BASE_DIR, ".modules_cache")
         self._pending_module_updates = {}
+        self._pending_module_installs: dict[str, list[Document]] = {}
         self._module_update_checks = {}
         self._module_changelogs = {}
         self._auto_update_failures = {}
@@ -963,6 +965,67 @@ class LoaderMod(loader.Module):
         name = name.rsplit("/", 1)[-1]
         return name if len(name) <= 48 else name[:45] + "..."
 
+    @classmethod
+    def _is_python_document(cls, document: Document) -> bool:
+        name = cls._module_file_name(document)
+        if name and name.lower().endswith(".py"):
+            return True
+
+        return (getattr(document, "mime_type", None) or "").lower() in {
+            "text/x-python",
+            "application/x-python-code",
+            "application/x-python",
+        }
+
+    async def _collect_module_documents(self, message: Message) -> list[Document]:
+        documents: list[Document] = []
+        seen: set[tuple[int, int]] = set()
+
+        def add(document):
+            if not isinstance(document, Document):
+                return
+
+            key = (document.id, getattr(document, "access_hash", 0) or 0)
+            if key in seen:
+                return
+
+            seen.add(key)
+            documents.append(document)
+
+        def add_media(media):
+            document = (
+                media.document
+                if isinstance(media, MessageMediaDocument)
+                else getattr(media, "document", None)
+            )
+            if isinstance(document, Document):
+                add(document)
+
+        def add_message(msg):
+            if not msg:
+                return
+
+            rich = getattr(msg, "rich_message", None)
+            if rich:
+                for document in rich.documents or []:
+                    add(document)
+
+            add_media(getattr(msg, "media", None))
+
+        add_message(message)
+
+        if not message.file and not getattr(message, "rich_message", None):
+            try:
+                add_message(await self._get_reply(message))
+            except Exception:
+                logger.debug("Failed to resolve .lm reply", exc_info=True)
+
+        reply_to = getattr(message, "reply_to", None)
+        if reply_to:
+            add_media(getattr(reply_to, "reply_media", None))
+
+        return documents
+
     async def _read_module_document(
         self,
         document: Document,
@@ -1006,7 +1069,13 @@ class LoaderMod(loader.Module):
             return None
         return doc
 
-    async def _install_document(self, document, message) -> bool:
+    async def _install_document(
+        self,
+        document,
+        message,
+        *,
+        _loaded_modules: list | None = None,
+    ) -> bool:
         doc = await self._read_module_document(document, message)
         if doc is None:
             return False
@@ -1093,6 +1162,10 @@ class LoaderMod(loader.Module):
             elif old_origin and old_origin.startswith("https://"):
                 self._set_update_policy(old_origin, "never")
             self.update_modules_in_db()
+            if _loaded_modules is not None and name:
+                module = self.lookup(name)
+                if module:
+                    _loaded_modules.append(module)
             return True
         except Exception:
             logger.exception(
@@ -1104,20 +1177,282 @@ class LoaderMod(loader.Module):
 
             return False
 
+    def _selection_text(self, documents: list[Document], *, rich: bool) -> str:
+        files = "\n".join(
+            f"{index}. <code>{utils.escape_html(self._module_file_label(document))}</code>"
+            for index, document in enumerate(documents, start=1)
+        )
+        header = self.strings["lm_choose_module"]
+
+        if rich:
+            return f"<p>{header}</p><p>{files.replace(chr(10), '<br>')}</p>"
+
+        return f"{header}\n\n{files}"
+
+    def _selection_markup(
+        self,
+        token: str,
+        documents: list[Document],
+        *,
+        rich: bool,
+    ) -> list[list[dict]]:
+        close = {
+            "text": self.strings["lm_close"],
+            "action": "close",
+            "callback": self.inline._close_unit_handler,
+            "style": "danger",
+        }
+
+        if rich:
+            return [[close]]
+
+        rows: list[list[dict]] = []
+
+        for index, document in enumerate(documents):
+            rows.append(
+                [
+                    {
+                        "text": self._module_file_label(document),
+                        "callback": self._install_selected_module,
+                        "args": (token, index),
+                    }
+                ]
+            )
+
+        rows.append(
+            [
+                {
+                    "text": self.strings["lm_install_all"],
+                    "callback": self._install_all_modules,
+                    "args": (token,),
+                    "style": "success",
+                }
+            ]
+        )
+        rows.append([close])
+
+        return rows
+
+    def _selection_rich_html(
+        self,
+        token: str,
+        documents: list[Document],
+        on_select,
+        on_all,
+    ) -> tuple[str, list[str]] | None:
+        rows: list[list[dict]] = [
+            [
+                {
+                    "text": self._module_file_label(document),
+                    "callback": on_select,
+                    "args": (token, index),
+                }
+            ]
+            for index, document in enumerate(documents)
+        ]
+        rows.append(
+            [
+                {
+                    "text": self.strings["lm_install_all"],
+                    "callback": on_all,
+                    "args": (token,),
+                    "style": "success",
+                }
+            ]
+        )
+
+        rendered = self.inline.generate_markup(rows)
+        if not rendered:
+            return None
+
+        callback_keys: list[str] = []
+        buttons: list[str] = []
+
+        for index, row in enumerate(rendered):
+            if not row:
+                return None
+
+            data = getattr(getattr(row[0], "type", None), "data", b"")
+            if isinstance(data, (bytes, bytearray, memoryview)):
+                data = bytes(data).decode("utf-8", errors="ignore")
+            else:
+                data = str(data)
+
+            callback_keys.append(data)
+
+            if index < len(documents):
+                label = utils.escape_html(self._module_file_label(documents[index]))
+                content = (
+                    '<tg-emoji emoji-id=5256113064821926998>©</tg-emoji> '
+                    f"{label}"
+                )
+                attributes = f'type="callback_data" data="{data}"'
+            else:
+                label = utils.escape_html(self.strings["lm_install_all"])
+                content = (
+                    '<tg-emoji emoji-id=5784993237412351403>🛡</tg-emoji> '
+                    f"{label}"
+                )
+                attributes = (
+                    f'type="callback_data" data="{data}" style="success"'
+                )
+
+            buttons.append(
+                f"<tg-button-row><tg-button {attributes}>"
+                f"{content}</tg-button></tg-button-row>"
+            )
+
+        body = self._selection_text(documents, rich=True)
+        return body + "".join(buttons), callback_keys
+
+    async def _offer_module_selection(
+        self,
+        message: Message,
+        documents: list[Document],
+    ):
+        token = uuid.uuid4().hex
+        self._pending_module_installs[token] = documents
+        rich = bool(self.config["rich_mode"])
+        rich_html = None
+        callback_keys: list[str] = []
+        unit_ref: dict[str, str | None] = {"id": None}
+
+        def bind_unit(call: InlineCall):
+            unit_id = unit_ref["id"]
+            call.unit_id = unit_id
+            if unit_id and unit_id in self.inline._units:
+                call.form = {"id": unit_id, **self.inline._units[unit_id]}
+
+        async def rich_select(call: InlineCall, token: str, index: int):
+            bind_unit(call)
+            await self._install_selected_module(call, token, index)
+
+        async def rich_install_all(call: InlineCall, token: str):
+            bind_unit(call)
+            await self._install_all_modules(call, token)
+
+        if rich:
+            built = self._selection_rich_html(
+                token,
+                documents,
+                rich_select,
+                rich_install_all,
+            )
+            if built is None:
+                rich = False
+            else:
+                rich_html, callback_keys = built
+
+        def unload():
+            self._pending_module_installs.pop(token, None)
+            for key in callback_keys:
+                self.inline._custom_map.pop(key, None)
+
+        if rich:
+            form = await self.inline.form(
+                "🪐",
+                message,
+                reply_markup=self._selection_markup(token, documents, rich=True),
+                on_unload=unload,
+                rich_message=rich_html,
+            )
+            if form:
+                unit_ref["id"] = getattr(form, "unit_id", None)
+        else:
+            text = self._selection_text(documents, rich=False)
+            form = await self.inline.form(
+                text,
+                message,
+                reply_markup=self._selection_markup(token, documents, rich=False),
+                on_unload=unload,
+            )
+
+        if not form:
+            self._pending_module_installs.pop(token, None)
+            for key in callback_keys:
+                self.inline._custom_map.pop(key, None)
+            await self._install_all_documents(message, documents)
+
+    async def _install_selected_module(
+        self,
+        call: InlineCall,
+        token: str,
+        index: int,
+    ):
+        documents = self._pending_module_installs.pop(token, None)
+        if not documents or not 0 <= index < len(documents):
+            await call.answer(self.strings["lm_selection_expired"], show_alert=True)
+            return
+
+        await call.edit(self.strings["loading_module_via_file"])
+        await self._install_document(documents[index], call)
+
+    async def _install_all_documents(
+        self,
+        message: Message | InlineCall,
+        documents: list[Document],
+    ):
+        message = await utils.answer(
+            message,
+            self.strings["lm_installing_all"].format(count=len(documents)),
+        )
+        loaded_modules = []
+        failed = []
+
+        for document in documents:
+            if not await self._install_document(
+                document,
+                message,
+                _loaded_modules=loaded_modules,
+            ):
+                failed.append(self._module_file_label(document))
+
+        rich = bool(self.config["rich_mode"])
+        result = self._batch_loaded_message(loaded_modules, failed, rich=rich)
+        await self._answer_loaded_message(message, result, rich=rich)
+
+    async def _install_all_modules(self, call: InlineCall, token: str):
+        documents = self._pending_module_installs.pop(token, None)
+        if not documents:
+            await call.answer(self.strings["lm_selection_expired"], show_alert=True)
+            return
+
+        await self._install_all_documents(call, documents)
+
     @loader.command(alias="lm")
     async def loadmod(self, message: Message):
         if await self._check_pass(message):
             return
 
-        msg = message if message.file else (await self._get_reply(message))
-
-        if msg is None or msg.media is None:
+        documents = await self._collect_module_documents(message)
+        if not documents:
             await utils.answer(message, self.strings["provide_module"])
             return
 
-        await utils.answer(message, self.strings["loading_module_via_file"])
+        python_documents = [
+            document for document in documents if self._is_python_document(document)
+        ]
 
-        await self._install_document(getattr(msg, "document", None) or msg, message)
+        selected = None
+        if len(python_documents) == 1:
+            selected = python_documents[0]
+        elif not python_documents and len(documents) == 1:
+            selected = documents[0]
+
+        if selected is not None:
+            await utils.answer(message, self.strings["loading_module_via_file"])
+            await self._install_document(selected, message)
+            return
+
+        if len(python_documents) < 2:
+            await utils.answer(message, self.strings["provide_module"])
+            return
+
+        if not self.inline.init_complete:
+            await self._install_all_documents(message, python_documents)
+            return
+
+        await self._offer_module_selection(message, python_documents)
 
     async def approve_internal(
         self,
