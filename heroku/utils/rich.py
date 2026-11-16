@@ -20,7 +20,7 @@ def _text(value) -> str:
     if name == "TextEmpty":
         return ""
     if name == "TextPlain":
-        return _escape(getattr(value, "text", ""))
+        return _escape(getattr(value, "text", "")).replace("\n", "<br>")
     if name == "TextConcat":
         return "".join(_text(item) for item in getattr(value, "texts", []))
     if name == "TextWithEntities":
@@ -226,7 +226,7 @@ def _block(value) -> str:
         return text if tag is None else f"<{tag}>{text}</{tag}>"
     if name == "PageBlockPreformatted":
         language = _attribute(getattr(value, "language", ""))
-        return f'<pre><code class="language-{language}">{text}</code></pre>'
+        return f'<pre><code class="language-{language}">{text.replace("<br>", chr(10))}</code></pre>'
     if name == "PageBlockDivider":
         return "<hr>"
     if name == "PageBlockAnchor":
