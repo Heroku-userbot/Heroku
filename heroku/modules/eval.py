@@ -42,6 +42,16 @@ class Evaluator(loader.Module):
 
     strings = {"name": "Evaluator"}
 
+    def __init__(self):
+        self.config = loader.ModuleConfig(
+            loader.ConfigValue(
+                "censor_guesses",
+                True,
+                lambda: self.strings["censor_guesses_doc"],
+                validator=loader.validators.Boolean(),
+            ),
+        )
+
     class _SecureDB:
         """
         Proxy class to protect sensitive DB fields from eval
@@ -464,7 +474,7 @@ class Evaluator(loader.Module):
             )
 
     def censor(self, ret: str) -> str:
-        ret = redact(ret)
+        ret = redact(ret, heuristics=self.config["censor_guesses"])
         ret = ret.replace(str(self._client.heroku_me.phone), "&lt;phone&gt;")
 
         if redis := os.environ.get("REDIS_URL") or main.get_config_key("redis_uri"):

@@ -779,6 +779,7 @@ translations:
   name: Translations
   _cls_doc: Управляет внутренними переводами
 eval:
+  censor_guesses_doc: "Скрывать значения, что похожи на секретные (по шаблону, например \"token = ...\"). Известные секреты (токены, сессия, ссылки на БД) скрываются всегда"
   eval: "<tg-emoji emoji-id={}>💻</tg-emoji><b> Код:</b>\n<pre><code class=\"language-{}\">{}</code></pre>\n\n<tg-emoji emoji-id=5197688912457245639>✅</tg-emoji><b> Результат:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   err: "<tg-emoji emoji-id={}>💻</tg-emoji><b> Код:</b>\n<pre><code class=\"language-{}\">{}</code></pre>\n\n<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Ошибка:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   eval_py: "<tg-emoji emoji-id={}>💻</tg-emoji><b> Код:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"

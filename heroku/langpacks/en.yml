@@ -779,6 +779,7 @@ translations:
 
   _cls_doc: Processes internal translations
 eval:
+  censor_guesses_doc: "Hide values that only look sensitive (by pattern, e.g. \"token = ...\"). Known secrets (tokens, session, DB links) are always hidden"
   name: "Evaluator"
   eval: "<tg-emoji emoji-id={}>💻</tg-emoji><b> Code:</b>\n<pre><code class=\"language-{}\">{}</code></pre>\n\n<tg-emoji emoji-id=5197688912457245639>✅</tg-emoji><b> Result:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
   eval_py: "<tg-emoji emoji-id={}>💻</tg-emoji><b> Code:</b>\n<pre><code class=\"language-{}\">{}</code></pre>"
