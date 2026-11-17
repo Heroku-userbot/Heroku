@@ -304,7 +304,7 @@ class InlineManager(
             self._bot_client.tg_id = telegram_id
             self._bot_client.hikka_me = bot_me
             self._bot_client.heroku_me = bot_me
-            self.bot_username = next((username for username in (bot_me.username, *(map(lambda x: x.username, bot_me.usernames) or [])) if username), None)
+            self.bot_username = next((username for username in (bot_me.username, *(x.username for x in bot_me.usernames or () if x.active)) if username), None)
             self.bot_id = bot_me.id
         except (
             AccessTokenExpiredError,

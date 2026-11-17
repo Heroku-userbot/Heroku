@@ -81,34 +81,35 @@ class TokenObtainment(InlineUnit):
 
             from .. import main
 
-            if self._db.get("heroku.inline", "custom_bot", False):
-                username = self._db.get("heroku.inline", "custom_bot").strip("@")
-                username = f"@{username}"
+            def random_username() -> str:
+                uid = utils.rand(6)
+                genran = "".join(random.choice(main.LATIN_MOCK))
+                return f"@{genran}_{uid}_bot"
+
+            custom = self._db.get("heroku.inline", "custom_bot", False)
+            if (
+                custom
+                and custom.strip("@").lower().endswith(main.PREMIUM_BOT_USERNAME_ENDINGS)
+                and not getattr(self._client.heroku_me, "premium", False)
+            ):
+                logger.warning(
+                    "Custom bot username %s requires Telegram Premium, using a random one",
+                    custom,
+                )
+                custom = False
+
+            if custom:
+                username = f"@{custom.strip('@')}"
                 try:
                     await self._client.get_entity(username)
                 except ValueError:
                     pass
                 else:
-                    uid = utils.rand(6)
-                    genran = "".join(random.choice(main.LATIN_MOCK))
-                    username = f"@{genran}_{uid}_bot"
+                    username = random_username()
             else:
-                uid = utils.rand(6)
-                genran = "".join(random.choice(main.LATIN_MOCK))
-                username = f"@{genran}_{uid}_bot"
+                username = random_username()
 
-            for msg in [
-                "🪐 Heroku userbot"[:64],
-                username,
-                "/setinline",
-                username,
-                "user@heroku:~$",
-                "/setinlinefeedback",
-                username,
-                "Enabled",
-                "/setuserpic",
-                username,
-            ]:
+            async def step(msg: str) -> str:
                 await fw_protect()
                 m = await conv.send_message(msg)
                 r = await conv.get_response()
@@ -125,6 +126,32 @@ class TokenObtainment(InlineUnit):
                 await fw_protect()
                 await m.delete()
                 await r.delete()
+                return r.raw_text
+
+            await step("🪐 Heroku userbot"[:64])
+            reply = await step(username)
+
+            if not self._token and custom:
+                logger.warning(
+                    "BotFather rejected the username %s, using a random one", username
+                )
+                username = random_username()
+                reply = await step(username)
+
+            if found := re.search(r"t\.me/(\w+)", reply):
+                username = await self._botfather_username(found.group(1))
+
+            for msg in [
+                "/setinline",
+                username,
+                "user@heroku:~$",
+                "/setinlinefeedback",
+                username,
+                "Enabled",
+                "/setuserpic",
+                username,
+            ]:
+                await step(msg)
 
             try:
                 await fw_protect()
@@ -208,6 +235,9 @@ class TokenObtainment(InlineUnit):
 
                     if self._db.get("heroku.inline", "custom_bot", False) and (
                         self._db.get("heroku.inline", "custom_bot", False) != btn_text
+                        and not await self._same_bot(
+                            self._db.get("heroku.inline", "custom_bot"), btn_text
+                        )
                     ):
                         continue
 
@@ -313,7 +343,7 @@ class TokenObtainment(InlineUnit):
         return await self._create_bot() if create_new_if_needed else False
 
     async def _configure_inline_bot(self: "InlineManager", username: str):
-        username = f"@{username.strip('@')}"
+        username = await self._botfather_username(username)
         async with self._client.conversation("@BotFather", exclusive=False) as conv:
             for msg in [
                 "/setinline",
@@ -354,6 +384,43 @@ class TokenObtainment(InlineUnit):
         else:
             return await self._reassert_token()
 
+    async def _botfather_username(self: "InlineManager", username: str) -> str:
+        username = username.strip("@")
+        if username.lower().endswith("bot"):
+            return f"@{username}"
+
+        try:
+            entity = await self._client.get_entity(username)
+        except Exception:
+            return f"@{username}"
+
+        for item in entity.usernames or []:
+            if item.username.lower().endswith("bot"):
+                return f"@{item.username}"
+
+        return f"@{username}"
+
+    async def _owns_bot(self: "InlineManager", username: str) -> bool:
+        try:
+            entity = await self._client.get_entity(username.strip("@"))
+        except Exception:
+            return False
+
+        return bool(getattr(entity, "bot_can_edit", False))
+
+    async def _same_bot(self: "InlineManager", username: str, other: str) -> bool:
+        from .. import main
+
+        if not username.strip("@").lower().endswith(main.PREMIUM_BOT_USERNAME_ENDINGS):
+            return False
+
+        try:
+            return (
+                await self._client.get_entity(username.strip("@"))
+            ).id == (await self._client.get_entity(other.strip("@"))).id
+        except Exception:
+            return False
+
     async def _check_bot(self: "InlineManager", username: str):
         username = username.strip("@")
         async with self._client.conversation("@BotFather", exclusive=False) as conv:
@@ -369,7 +436,7 @@ class TokenObtainment(InlineUnit):
             await r.delete()
 
             if not hasattr(r, "reply_markup") or not hasattr(r.reply_markup, "rows"):
-                return False
+                return await self._owns_bot(username)
 
             for row in r.reply_markup.rows:
                 for button in row.buttons:
@@ -383,3 +450,5 @@ class TokenObtainment(InlineUnit):
                     await r.delete()
 
                     return True
+
+        return await self._owns_bot(username)
