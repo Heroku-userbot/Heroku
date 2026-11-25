@@ -420,11 +420,7 @@ class CommandDispatcher:
         message.__dict__.update(event.message.__dict__)
         filter_event.__dict__["message"] = message
         if not watcher:
-            # Only the command name is converted from the wrong layout,
-            # arguments are kept as typed
-            new_text = prefix + txt + (
-                message.message if _switch_layout else _msg
-            )[_cmd_offset + len(command) :]
+            new_text = prefix + txt + _msg[_cmd_offset + len(command) :]
             if new_text != message.message:
                 offset = len(new_text) - len(message.message)
                 if offset and message.entities:
