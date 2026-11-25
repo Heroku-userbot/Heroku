@@ -88,6 +88,7 @@ class Evaluator(loader.Module):
             args = reply.message
 
         shown = None
+        decode_error = False
         if not args:
             for src in (message, reply):
                 if src and src.file:
@@ -95,11 +96,18 @@ class Evaluator(loader.Module):
                         args = (await src.download_media(bytes)).decode()
                     except UnicodeDecodeError:
                         logger.warning("File can't be decoded to execute code")
-                        shown = "# File can't be decoded to execute code"
+                        decode_error = True
                     else:
                         if len(args) > 500:
                             shown = "# Code from file..."
                     break
+
+        if not args.strip():
+            await utils.answer(
+                message,
+                self.strings["file_decode_error" if decode_error else "no_code"],
+            )
+            return
 
         args = args.replace("\xa0", "\x20")
         shown = shown or args
@@ -214,16 +222,22 @@ class Evaluator(loader.Module):
             return
 
         code = utils.get_args_raw(message)
+        reply = await message.get_reply_message()
+
+        if not code and reply and reply.text:
+            code = reply.message
+
         message = await utils.answer(message, self.strings["compiling"])
         error = False
+        source = "code.c" if c else "code.cpp"
         with tempfile.TemporaryDirectory() as tmpdir:
-            file = os.path.join(tmpdir, "code.cpp")
+            file = os.path.join(tmpdir, source)
             with open(file, "w") as f:
                 f.write(code)
 
             try:
                 result = subprocess.check_output(
-                    ["gcc" if c else "g++", "-o", "code", "code.cpp"],
+                    ["gcc" if c else "g++", "-o", "code", source],
                     cwd=tmpdir,
                     stderr=subprocess.STDOUT,
                     timeout=30,
@@ -232,10 +246,12 @@ class Evaluator(loader.Module):
                 result = e.output.decode()
                 error = True
             except subprocess.TimeoutExpired:
-                result = "Compilation timeout"
+                result = self.strings["compile_timeout"].format(30)
                 error = True
 
-            if not result:
+            warnings = "" if error else result.strip()
+
+            if not error:
                 try:
                     result = subprocess.check_output(
                         ["./code"],
@@ -247,7 +263,7 @@ class Evaluator(loader.Module):
                     result = e.output.decode()
                     error = True
                 except subprocess.TimeoutExpired:
-                    result = "Execution timeout"
+                    result = self.strings["exec_timeout"].format(10)
                     error = True
 
         with contextlib.suppress(MessageIdInvalidError):
@@ -259,6 +275,14 @@ class Evaluator(loader.Module):
                     utils.escape_html(code),
                     "error" if error else "output",
                     utils.escape_html(result),
+                )
+                + (
+                    self.strings["compiler_warnings"].format(
+                        "output",
+                        utils.escape_html(warnings),
+                    )
+                    if warnings and not error
+                    else ""
                 ),
             )
 
@@ -317,10 +341,12 @@ class Evaluator(loader.Module):
                 result = e.output.decode()
                 error = True
             except subprocess.TimeoutExpired:
-                result = "Compilation timeout"
+                result = self.strings["compile_timeout"].format(30)
                 error = True
 
-            if not result:
+            warnings = "" if error else result.strip()
+
+            if not error:
                 try:
                     result = subprocess.check_output(
                         ["./code"],
@@ -332,7 +358,7 @@ class Evaluator(loader.Module):
                     result = e.output.decode()
                     error = True
                 except subprocess.TimeoutExpired:
-                    result = "Execution timeout"
+                    result = self.strings["exec_timeout"].format(10)
                     error = True
 
         with contextlib.suppress(MessageIdInvalidError):
@@ -344,6 +370,14 @@ class Evaluator(loader.Module):
                     utils.escape_html(code),
                     "error" if error else "output",
                     utils.escape_html(result),
+                )
+                + (
+                    self.strings["compiler_warnings"].format(
+                        "output",
+                        utils.escape_html(warnings),
+                    )
+                    if warnings and not error
+                    else ""
                 ),
             )
 
@@ -398,7 +432,7 @@ class Evaluator(loader.Module):
                 result = e.output.decode()
                 error = True
             except subprocess.TimeoutExpired:
-                result = "Execution timeout"
+                result = self.strings["exec_timeout"].format(30)
                 error = True
 
         with contextlib.suppress(MessageIdInvalidError):
@@ -441,6 +475,12 @@ class Evaluator(loader.Module):
             return
 
         code = utils.get_args_raw(message)
+        reply = await message.get_reply_message()
+
+        if not code and reply and reply.text:
+            code = reply.message
+
+        message = await utils.answer(message, self.strings["executing"])
         error = False
         with tempfile.TemporaryDirectory() as tmpdir:
             file = os.path.join(tmpdir, "code.js")
@@ -458,7 +498,7 @@ class Evaluator(loader.Module):
                 result = e.output.decode()
                 error = True
             except subprocess.TimeoutExpired:
-                result = "Execution timeout"
+                result = self.strings["exec_timeout"].format(10)
                 error = True
 
         with contextlib.suppress(MessageIdInvalidError):

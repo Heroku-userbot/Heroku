@@ -109,7 +109,7 @@ class LoaderMod(loader.Module):
             loader.ConfigValue(
                 "command_emoji",
                 "<tg-emoji emoji-id=5197195523794157505>▫️</tg-emoji>",
-                lambda: "Emoji for command",
+                lambda: self.strings["command_emoji_doc"],
             ),
             loader.ConfigValue(
                 "rich_mode",
@@ -257,7 +257,7 @@ class LoaderMod(loader.Module):
                     loaded_modules = []
 
                     message = await utils.answer(
-                        message, f"Installing {len(args)} modules..."
+                        message, self.strings["batch_installing"].format(len(args))
                     )
 
                     for arg in args:
@@ -283,24 +283,31 @@ class LoaderMod(loader.Module):
                 [
                     self.strings["avail_header"]
                     + f"\n☁️ {repo.strip('/')}\n\n"
-                    + "\n".join(
-                        [
-                            " | ".join(chunk)
-                            for chunk in utils.chunks(
-                                [
-                                    f"<code>{i}</code>"
-                                    for i in sorted(
-                                        [
-                                            utils.escape_html(
-                                                i.split("/")[-1].split(".")[0]
-                                            )
-                                            for i in mods.values()
-                                        ]
-                                    )
-                                ],
-                                5,
-                            )
-                        ]
+                    + (
+                        "\n".join(
+                            [
+                                " | ".join(chunk)
+                                for chunk in utils.chunks(
+                                    [
+                                        f"<code>{i}</code>"
+                                        for i in sorted(
+                                            [
+                                                utils.escape_html(
+                                                    i.split("/")[-1].split(".")[0]
+                                                )
+                                                for i in mods.values()
+                                            ]
+                                        )
+                                    ],
+                                    5,
+                                )
+                            ]
+                        )
+                        if mods
+                        else self.strings["no_repo_modules"]
+                    )
+                    + self.strings["avail_footer"].format(
+                        prefix=utils.escape_html(self.get_prefix())
                     )
                     for repo, mods in (await self.get_repo_list()).items()
                 ],
@@ -322,7 +329,7 @@ class LoaderMod(loader.Module):
                 }
             ]
             for repo in repos
-        ]
+        ] + [[{"text": self.strings["cancel"], "action": "close"}]]
         await self.inline.form(
             self.strings["choose_repo"],
             message,
@@ -353,7 +360,11 @@ class LoaderMod(loader.Module):
         installed_count = len(links) - len(not_installed)
 
         if installed_count == 0:
-            await call.edit(self.strings["dlm_all_from_repo_error_nomods"])
+            await call.edit(
+                self.strings["dlm_all_from_repo_error_none"].format(
+                    len(links), prefix=utils.escape_html(self.get_prefix())
+                )
+            )
         elif not_installed:
             failed_list = "\n".join(not_installed)
             await call.edit(
@@ -463,7 +474,7 @@ class LoaderMod(loader.Module):
         """Render batch results or a single module with description and commands."""
         header = (
             '<tg-emoji emoji-id="5134452506935427991">🪐</tg-emoji> '
-            f"<b>{len(modules)} Modules loaded</b>"
+            + self.strings["batch_loaded"].format(len(modules))
         )
         parts = [] if single else [f"<p>{header}</p>" if rich else header]
         if rich and not single and self.config["show_banner"]:
@@ -514,7 +525,7 @@ class LoaderMod(loader.Module):
                     if isinstance(class_strings, dict)
                     else None
                 )
-            name = name or "Unnamed module"
+            name = name or self.strings["unnamed_module"]
 
             version = getattr(module, "__version__", None)
             if isinstance(version, (tuple, list)):
@@ -549,7 +560,7 @@ class LoaderMod(loader.Module):
                         if rich else "\n\n" + description
                     )
                 if lines:
-                    section("Commands", lines)
+                    section(self.strings["batch_commands"], lines)
             else:
                 section(
                     '<tg-emoji emoji-id="4916086774649848789">🔗</tg-emoji> '
@@ -566,7 +577,9 @@ class LoaderMod(loader.Module):
                 )
         if failed:
             section(
-                "Not loaded",
+                self.strings["batch_failed"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
                 [f"<code>{utils.escape_html(name)}</code>" for name in failed],
             )
         return "".join(parts)
@@ -601,7 +614,13 @@ class LoaderMod(loader.Module):
                         "Module %s was not found in configured repos", module_name
                     )
                     if message is not None:
-                        await utils.answer(message, self.strings["no_module"])
+                        await utils.answer(
+                            message,
+                            self.strings["no_module"].format(
+                                utils.escape_html(module_name),
+                                prefix=utils.escape_html(self.get_prefix()),
+                            ),
+                        )
 
                     return MODULE_LOADING_FAILED
 
@@ -624,7 +643,27 @@ class LoaderMod(loader.Module):
                     e,
                 )
                 if message is not None:
-                    await utils.answer(message, self.strings["no_module"])
+                    await utils.answer(
+                        message,
+                        self.strings["no_module_link"].format(
+                            utils.escape_html(url),
+                            getattr(e.response, "status_code", None) or "?",
+                        ),
+                    )
+
+                return MODULE_LOADING_FAILED
+            except Exception:
+                logger.exception(
+                    "Failed to download module %s from %s", module_name, url
+                )
+                if message is not None:
+                    await utils.answer(
+                        message,
+                        self.strings["download_failed"].format(
+                            utils.escape_html(module_name),
+                            prefix=utils.escape_html(self.get_prefix()),
+                        ),
+                    )
 
                 return MODULE_LOADING_FAILED
 
@@ -667,7 +706,16 @@ class LoaderMod(loader.Module):
         msg = message if message.file else (await self._get_reply(message))
 
         if msg is None or msg.media is None:
-            await utils.answer(message, self.strings["provide_module"])
+            await utils.answer(
+                message,
+                self.strings["provide_module"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
+            return
+
+        if not msg.document:
+            await utils.answer(message, self.strings["bad_unicode"])
             return
 
         await utils.answer(message, self.strings["loading_module_via_file"])
@@ -700,9 +748,8 @@ class LoaderMod(loader.Module):
         event.set()
 
         await call.edit(
-            (
-                "💫 <b>Joined <a"
-                f' href="https://t.me/{channel.username}">{utils.escape_html(channel.title)}</a></b>'
+            self.strings["joined_channel"].format(
+                channel.username, utils.escape_html(channel.title)
             ),
             photo="https://raw.githubusercontent.com/Heroku-userbot/assets/refs/heads/main/joined_jr.jpg",
         )
@@ -880,7 +927,9 @@ class LoaderMod(loader.Module):
                         m = message
 
                     await self.inline.form(
-                        self.strings["version_incompatible"].format(ver),
+                        self.strings["version_incompatible"].format(
+                            ver, prefix=utils.escape_html(self.get_prefix())
+                        ),
                         m,
                         reply_markup=[
                             {
@@ -922,7 +971,12 @@ class LoaderMod(loader.Module):
                         requirements,
                     )
                     if message is not None:
-                        await utils.answer(message, self.strings["requirements_failed"])
+                        await utils.answer(
+                            message,
+                            self.strings["requirements_failed"].format(
+                                utils.escape_html(", ".join(requirements))
+                            ),
+                        )
 
                     return False
 
@@ -958,7 +1012,12 @@ class LoaderMod(loader.Module):
                         packages,
                     )
                     if message is not None:
-                        await utils.answer(message, self.strings["requirements_failed"])
+                        await utils.answer(
+                            message,
+                            self.strings["requirements_failed"].format(
+                                utils.escape_html(", ".join(packages))
+                            ),
+                        )
                     return False
 
                 importlib.invalidate_caches()
@@ -1059,7 +1118,10 @@ class LoaderMod(loader.Module):
                             message=message,
                             text=self.strings["requirements_restart"].format(e.name),
                             reply_markup=[
-                                {"text": "🚀 Restart", "callback": restart_inline}
+                                {
+                                    "text": self.strings["requirements_restart_btn"],
+                                    "callback": restart_inline,
+                                }
                             ],
                         )
 
@@ -1084,7 +1146,12 @@ class LoaderMod(loader.Module):
                         requirements,
                     )
                     if message is not None:
-                        await utils.answer(message, self.strings["requirements_failed"])
+                        await utils.answer(
+                            message,
+                            self.strings["requirements_failed"].format(
+                                utils.escape_html(", ".join(requirements))
+                            ),
+                        )
 
                     return False
 
@@ -1135,7 +1202,12 @@ class LoaderMod(loader.Module):
             logger.exception("Loading external module failed due to %s", e)
 
             if message is not None:
-                await utils.answer(message, self.strings["load_failed"])
+                await utils.answer(
+                    message,
+                    self.strings["load_failed"].format(
+                        prefix=utils.escape_html(self.get_prefix())
+                    ),
+                )
 
             return False
 
@@ -1253,9 +1325,8 @@ class LoaderMod(loader.Module):
                 if message:
                     await utils.answer(
                         message,
-                        (
-                            "🥶 <b>Module suspended itself\nReason:"
-                            f" {utils.escape_html(str(e))}</b>"
+                        self.strings["self_suspended"].format(
+                            utils.escape_html(str(e))
                         ),
                     )
                 return False
@@ -1263,7 +1334,12 @@ class LoaderMod(loader.Module):
             logger.exception("Module threw because of %s", e)
 
             if message is not None:
-                await utils.answer(message, self.strings["load_failed"])
+                await utils.answer(
+                    message,
+                    self.strings["load_failed"].format(
+                        prefix=utils.escape_html(self.get_prefix())
+                    ),
+                )
 
             return False
 
@@ -1575,11 +1651,14 @@ class LoaderMod(loader.Module):
 
     @loader.command(alias="ulm")
     async def unloadmod(self, message: Message):
+        no_class = self.strings["no_class"].format(
+            prefix=utils.escape_html(self.get_prefix())
+        )
         if not (
             raw_args := utils.get_args_raw(message)
             or await self._module_name_from_file(message)
         ):
-            await utils.answer(message, self.strings["no_class"])
+            await utils.answer(message, no_class)
             return
 
         args = raw_args
@@ -1593,8 +1672,11 @@ class LoaderMod(loader.Module):
             force = True
             args = args[3:].strip()
 
+        if not args and force:
+            args = await self._module_name_from_file(message) or ""
+
         if not args:
-            await utils.answer(message, self.strings["no_class"])
+            await utils.answer(message, no_class)
             return
 
         raw_list = re.split(r"[,\n]", args)
@@ -1639,14 +1721,16 @@ class LoaderMod(loader.Module):
             errors = []
             msg = ""
             for module in modules:
-                status = await self.unload_module(module)
+                status = await self.unload_module(module, force=force)
                 if "❌" in status or "🚫" in status or "😖" in status:
                     if "💡" in status:
                         status = status.split("<code>")[0]
 
-                    errors.append(f"<code>{module}</code> — {status}")
+                    errors.append(
+                        f"<code>{utils.escape_html(module)}</code> — {status}"
+                    )
                 else:
-                    success.append(f"<code>{module}</code>")
+                    success.append(f"<code>{utils.escape_html(module)}</code>")
 
             if success:
                 msg += self.strings["modules_unloaded"].format(
@@ -1684,6 +1768,8 @@ class LoaderMod(loader.Module):
                 for name in names
                 if name
             )
+            if score < 0.6:
+                continue
             label = public_name
             scored.append((score, classname.lower(), classname, label))
 
@@ -1741,15 +1827,15 @@ class LoaderMod(loader.Module):
         instance = self.lookup(module)
 
         if instance and self._is_core_module(instance):
-            return self.strings["unload_core"].format(module)
+            return self.strings["unload_core"].format(utils.escape_html(module))
 
         if instance and issubclass(instance.__class__, loader.Library):
-            return self.strings["cannot_unload_lib"]
+            return self.strings["cannot_unload_lib"].format(utils.escape_html(module))
 
         try:
             worked = await self.allmodules.unload_module(module)
         except CoreUnloadError:
-            return self.strings["unload_core"].format(module)
+            return self.strings["unload_core"].format(utils.escape_html(module))
 
         if not worked:
             worked = self._remove_failed_module(module)
@@ -1772,13 +1858,17 @@ class LoaderMod(loader.Module):
                 ),
             )
             if worked
-            else self.strings["not_unloaded"]
+            else self.strings["not_unloaded"].format(
+                utils.escape_html(module),
+                prefix=utils.escape_html(self.get_prefix()),
+            )
         )
         for mod_name in worked:
             utils.unregister_placeholders(mod_name)
 
         if force and worked:
             try:
+                cleared = False
                 for key in list(self._db.keys()):
                     if not isinstance(key, str):
                         continue
@@ -1790,13 +1880,16 @@ class LoaderMod(loader.Module):
                             low == c
                             or low.startswith(c + ".")
                             or low.startswith(c + "_")
-                            or c in low
                             for c in candidates
                         ):
                             try:
                                 del self._db[key]
+                                cleared = True
                             except Exception:
                                 pass
+
+                if cleared:
+                    msg += "\n" + self.strings["module_data_cleared"]
 
                 try:
                     self._db.save()
@@ -1831,7 +1924,12 @@ class LoaderMod(loader.Module):
         if not (args := utils.get_args_raw(message)) or (
             not utils.check_url(args) and not utils.check_url(f"https://{args}")
         ):
-            await utils.answer(message, self.strings["no_repo"])
+            await utils.answer(
+                message,
+                self.strings["no_repo"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
         if args.endswith("/"):
@@ -1850,7 +1948,9 @@ class LoaderMod(loader.Module):
             if not content.strip():
                 raise ValueError
         except Exception:
-            await utils.answer(message, self.strings["no_repo"])
+            await utils.answer(
+                message, self.strings["repo_invalid"].format(utils.escape_html(args))
+            )
             return
 
         if args in self.config["ADDITIONAL_REPOS"]:
@@ -1863,15 +1963,31 @@ class LoaderMod(loader.Module):
 
     @loader.command()
     async def delrepo(self, message: Message):
-        if not (args := utils.get_args_raw(message)) or not utils.check_url(args):
-            await utils.answer(message, self.strings["no_repo"])
+        if not (args := utils.get_args_raw(message)) or (
+            not utils.check_url(args) and not utils.check_url(f"https://{args}")
+        ):
+            await utils.answer(
+                message,
+                self.strings["no_repo_del"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
         if args.endswith("/"):
             args = args[:-1]
 
+        if not args.startswith("https://") and not args.startswith("http://"):
+            args = f"https://{args}"
+
         if args not in self.config["ADDITIONAL_REPOS"]:
-            await utils.answer(message, self.strings["repo_not_exists"])
+            await utils.answer(
+                message,
+                self.strings["repo_not_exists"].format(
+                    utils.escape_html(args),
+                    prefix=utils.escape_html(self.get_prefix()),
+                ),
+            )
             return
 
         self.config["ADDITIONAL_REPOS"].remove(args)
@@ -2007,7 +2123,11 @@ class LoaderMod(loader.Module):
             *self.config["ignored_update_modules"],
             url,
         ]
-        await call.edit(self.strings["module_update_ignored"])
+        await call.edit(
+            self.strings["module_update_ignored"].format(
+                prefix=utils.escape_html(self.get_prefix())
+            )
+        )
 
     async def _offer_module_update(
         self,
@@ -2328,7 +2448,12 @@ class LoaderMod(loader.Module):
     async def mlcmd(self, message: Message):
         """| send module via file"""
         if not (args := utils.get_args_raw(message)):
-            await utils.answer(message, self.strings["args"])
+            await utils.answer(
+                message,
+                self.strings["args"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
         await utils.answer(message, self.strings["ml_load_module"])
@@ -2382,6 +2507,9 @@ class LoaderMod(loader.Module):
             await utils.answer(message, self.strings["404"])
             return
 
+        if not exact and module is not None:
+            class_name = module.strings("name")
+
         module_data = sys_module.__loader__.data
         if isinstance(module_data, str):
             module_data = module_data.encode("utf-8")
@@ -2421,7 +2549,9 @@ class LoaderMod(loader.Module):
                 prefix=utils.escape_html(self.get_prefix()),
             )
             if utils.check_url(link)
-            else self.strings["file"].format(
+            else self.strings[
+                "file_core" if self._is_core_module(module) else "file"
+            ].format(
                 class_name=utils.escape_html(class_name),
                 not_exact=self.strings["not_exact"] if not exact else "",
                 prefix=utils.escape_html(self.get_prefix()),
@@ -2439,40 +2569,3 @@ class LoaderMod(loader.Module):
             reply_to=getattr(message, "reply_to_msg_id", None),
         )
 
-    def _format_result(
-        self,
-        result: dict,
-        query: str,
-        no_translate: bool = False,
-    ) -> str:
-        commands = "\n".join(
-            [
-                f"▫️ <code>{utils.escape_html(self.get_prefix())}{utils.escape_html(cmd)}</code>:"
-                f" <b>{utils.escape_html(cmd_doc)}</b>"
-                for cmd, cmd_doc in result["module"]["commands"].items()
-            ]
-        )
-
-        kwargs = {
-            "name": utils.escape_html(result["module"]["name"]),
-            "dev": utils.escape_html(result["module"]["dev"]),
-            "commands": commands,
-            "cls_doc": utils.escape_html(result["module"]["cls_doc"]),
-            "mhash": result["module"]["hash"],
-            "query": utils.escape_html(query),
-            "prefix": utils.escape_html(self.get_prefix()),
-        }
-
-        strings = (
-            self.strings.get("result", "en")
-            if self.config["translate"] and not no_translate
-            else self.strings["result"]
-        )
-
-        text = strings.format(**kwargs)
-
-        if len(text) > 1980:
-            kwargs["commands"] = "..."
-            text = strings.format(**kwargs)
-
-        return text

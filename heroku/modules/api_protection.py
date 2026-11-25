@@ -255,6 +255,15 @@ class APIRatelimiterMod(loader.Module):
             await utils.answer(message, self.strings["args_invalid"])
             return
 
+        if self.get("disable_protection", True):
+            await utils.answer(
+                message,
+                self.strings["already_off"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
+            return
+
         self._suspend_until = time.perf_counter() + int(args)
         await utils.answer(message, self.strings["suspended_for"].format(args))
 
@@ -262,7 +271,11 @@ class APIRatelimiterMod(loader.Module):
     async def api_fw_protection(self, message: Message):
         await self.inline.form(
             message=message,
-            text=self.strings["u_sure"],
+            text=self.strings["u_sure"].format(
+                self.strings[
+                    "state_off" if self.get("disable_protection", True) else "state_on"
+                ]
+            ),
             reply_markup=[
                 {"text": self.strings["btn_no"], "action": "close"},
                 {"text": self.strings["btn_yes"], "callback": self._finish},

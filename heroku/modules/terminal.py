@@ -110,6 +110,8 @@ class MessageEditor:
         stderr = utils.escape_html(self.stderr[max(len(self.stderr) - 1024, 0) :])
         text += (self.strings["stderr"] + stderr) if stderr else ""
         text += self.strings["end"]
+        if len(self.stdout) > 2048 or len(self.stderr) > 1024:
+            text += self.strings["output_truncated"]
 
         if self.rc is not None:
             exec_time = time.time() - self.start_time
@@ -368,6 +370,8 @@ class InlineMessageEditor:
         stderr = utils.escape_html(self.stderr[max(len(self.stderr) - 1024, 0) :])
         text += (self.strings["stderr"] + stderr) if stderr else ""
         text += self.strings["end"]
+        if len(self.stdout) > 2048 or len(self.stderr) > 1024:
+            text += self.strings["output_truncated"]
 
         if self.rc is not None:
             exec_time = time.time() - self.start_time
@@ -570,7 +574,7 @@ class TerminalMod(loader.Module):
             [
                 {
                     "text": self.strings["btn_continue"],
-                    "input": self.strings["btn_continue"],
+                    "input": self.strings["continue_input"],
                     "handler": self.inline__continue_input,
                     "args": (session_uid,),
                 }
@@ -597,6 +601,13 @@ class TerminalMod(loader.Module):
 
         if not user_command and reply and reply.message:
             user_command = reply.message
+
+        if not user_command:
+            await utils.answer(
+                message,
+                self.strings["no_command"].format(prefix=self.get_prefix()),
+            )
+            return
 
         if self._is_dangerous(user_command):
             await utils.answer(
@@ -690,12 +701,12 @@ class TerminalMod(loader.Module):
         cmd = self._inline_pending.pop(uid, None)
 
         if not cmd:
-            await call.answer("Command not found or already executed", show_alert=True)
+            await call.answer(self.strings["exec_expired"], show_alert=True)
             return
 
         if self._is_dangerous(cmd):
             await call.answer(
-                self.strings["dangerous_command"].format(cmd),
+                self.strings["dangerous_command_alert"],
                 show_alert=True,
             )
             return
@@ -905,7 +916,7 @@ class TerminalMod(loader.Module):
         try:
             signal_type = (
                 signal.SIGKILL
-                if "-f" in utils.get_args_raw(message)
+                if "-f" in utils.get_args(message)
                 else signal.SIGTERM
             )
             os.killpg(process.pid, signal_type)

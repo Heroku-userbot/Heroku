@@ -15,11 +15,16 @@ import contextlib
 import logging
 
 from deep_translator import GoogleTranslator
+from deep_translator.constants import GOOGLE_LANGUAGES_TO_CODES
 from herokutl.tl.custom import Message
 
 from .. import loader, utils
 
 logger = logging.getLogger(__name__)
+
+LANG_CODES = {
+    code.lower() for code in GOOGLE_LANGUAGES_TO_CODES.values() if len(code) == 2
+} | {"he", "jv", "zh"}
 
 
 @loader.tds
@@ -63,13 +68,13 @@ class Translator(loader.Module):
 
     @loader.command()
     async def tr(self, message: Message):
-        """[lang] <text> - Translate text or reply to a message"""
+        """[lang code] [text] - Translate text or the replied message"""
         if not (args := utils.get_args_raw(message.raw_text)):
             text = None
             lang = self.strings["language"]
         else:
             lang = args.split(maxsplit=1)[0]
-            if len(lang) != 2:
+            if lang.lower() not in LANG_CODES:
                 text = args
                 lang = self.strings["language"]
             else:
@@ -136,7 +141,9 @@ class Translator(loader.Module):
                         message.peer_id, message, lang, raw_text=text, entities=entities
                     )
             else:
-                tr_text = await self._translate_external(text, lang)
+                tr_text = utils.escape_html(
+                    await self._translate_external(text, lang)
+                )
 
             if self.config["only_text"]:
                 await utils.answer(message, tr_text)

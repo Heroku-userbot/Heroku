@@ -53,7 +53,11 @@ class HerokuWebMod(loader.Module):
             await utils.answer(message, self.strings["host_denied"])
             return
 
-        user_id = utils.get_args(message)
+        user_id = [
+            arg
+            for arg in utils.get_args(message)
+            if arg.lower() != "force_insecure"
+        ]
         if not user_id:
             reply: Message = await message.get_reply_message()
             user_id = reply.sender_id if reply else None
@@ -150,7 +154,10 @@ class HerokuWebMod(loader.Module):
 
         await utils.answer(
             call,
-            fail + self.strings["enter_number_format"],
+            fail
+            + self.strings[
+                "enter_new_number_format" if is_switch else "enter_number_format"
+            ],
             reply_markup=reply_markup,
             always_allow=[user.id],
         )
@@ -339,23 +346,34 @@ class HerokuWebMod(loader.Module):
             raise
 
     async def schedule_restart(self, call, client, is_switch: bool = False):
-        await utils.answer(call, self.strings["login_successful"])
-        # Yeah-yeah, ikr, but it's the only way to restart
-        await asyncio.sleep(1)
+        if not is_switch:
+            await utils.answer(call, self.strings["login_successful"])
+            # Yeah-yeah, ikr, but it's the only way to restart
+            await asyncio.sleep(1)
         try:
             if is_switch:
                 await self._switch_account(client)
-                restart()
             else:
                 await main.heroku.save_client_session(client, delay_restart=False)
-                restart()
         except Exception as e:
             logger.exception("Failed to finish inline login")
             await utils.answer(
                 call,
-                self.strings["switch_failed"].format(utils.escape_html(str(e))),
+                self.strings[
+                    "switch_failed" if is_switch else "login_failed"
+                ].format(utils.escape_html(str(e))),
                 reply_markup={"text": self.strings["btn_no"], "action": "close"},
             )
+            return
+
+        if is_switch:
+            try:
+                await utils.answer(call, self.strings["login_successful"])
+                await asyncio.sleep(1)
+            except Exception:
+                logger.exception("Failed to report successful account switch")
+
+        restart()
 
     async def inline_phone_handler(self, call, data, user, is_switch: bool = False):
         register_secret(data)

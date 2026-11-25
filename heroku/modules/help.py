@@ -61,19 +61,19 @@ class Help(loader.Module):
             loader.ConfigValue(
                 "banner_url",
                 None,
-                lambda: "Banner for .help",
+                lambda: self.strings["_cfg_banner_url"],
                 validator=loader.validators.RandomLink(),
             ),
             loader.ConfigValue(
                 "media_quote",
                 "False",
-                lambda: "quote a banner in help",
+                lambda: self.strings["_cfg_media_quote"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
                 "invert_media",
                 "False",
-                lambda: "invert banner",
+                lambda: self.strings["_cfg_invert_media"],
                 validator=loader.validators.Boolean(),
             ),
             loader.ConfigValue(
@@ -102,11 +102,17 @@ class Help(loader.Module):
     async def helphide(self, message: Message):
         """[args] | hide your modules"""
         if not (modules := utils.get_args(message)):
-            await utils.answer(message, self.strings["no_mod"])
+            await utils.answer(
+                message,
+                self.strings["no_mod"].format(
+                    prefix=utils.escape_html(self.get_prefix(message.sender_id))
+                ),
+            )
             return
 
         currently_hidden = self.get("hide", [])
         hidden, shown = [], []
+        not_found = [module for module in modules if not self.lookup(module)]
         for module in filter(lambda module: self.lookup(module), modules):
             module = self.lookup(module)
             module = module.__class__.__name__
@@ -126,6 +132,15 @@ class Help(loader.Module):
                 len(shown),
                 "\n".join([f"👁‍🗨 <i>{m}</i>" for m in hidden]),
                 "\n".join([f"👁 <i>{m}</i>" for m in shown]),
+            )
+            + (
+                self.strings["mods_not_found"].format(
+                    ", ".join(
+                        f"<code>{utils.escape_html(m)}</code>" for m in not_found
+                    )
+                )
+                if not_found
+                else ""
             ),
         )
 
@@ -136,37 +151,55 @@ class Help(loader.Module):
         if not aliases and (alias := getattr(_command, "alias", None)):
             aliases = [alias]
 
-        return aliases or []
+        aliases = list(aliases or [])
+        aliases += [
+            alias
+            for alias, cmd in self.allmodules.aliases.items()
+            if cmd.split()[:1] == [command] and alias not in aliases
+        ]
+
+        return aliases
 
     async def modhelp(self, message: Message, args: str):
         exact = True
+        prefix = self.get_prefix(message.sender_id)
         if not (module := self.lookup(args)):
             if method := self.allmodules.dispatch(
-                args.lower().strip(self.get_prefix())
+                args.lower().strip(prefix)
             )[1]:
                 module = method.__self__
             else:
-                module = self.lookup(
-                    next(
+                best, ratio = max(
+                    (
                         (
-                            reversed(
-                                sorted(
-                                    [
-                                        module.strings["name"]
-                                        for module in self.allmodules.modules
-                                    ],
-                                    key=lambda x: difflib.SequenceMatcher(
-                                        None,
-                                        args.lower(),
-                                        x,
-                                    ).ratio(),
-                                )
-                            )
-                        ),
-                        None,
-                    )
+                            module.strings["name"],
+                            difflib.SequenceMatcher(
+                                None,
+                                args.lower(),
+                                module.strings["name"].lower(),
+                            ).ratio(),
+                        )
+                        for module in self.allmodules.modules
+                    ),
+                    key=lambda x: x[1],
+                    default=(None, 0),
                 )
 
+                if ratio < 0.6:
+                    await utils.answer(
+                        message,
+                        self.strings["not_found"].format(utils.escape_html(args))
+                        + (
+                            self.strings["did_you_mean"].format(
+                                utils.escape_html(best)
+                            )
+                            if best and ratio >= 0.4
+                            else ""
+                        ),
+                    )
+                    return
+
+                module = self.lookup(best)
                 exact = False
 
         try:
@@ -223,13 +256,13 @@ class Help(loader.Module):
             lines.append(
                 f'{self.config["command_emoji"]}'
                 " <code>{}{}</code>{} {}".format(
-                    utils.escape_html(self.get_prefix()),
+                    utils.escape_html(prefix),
                     name,
                     (
                         " ({})".format(
                             ", ".join(
                                 "<code>{}{}</code>".format(
-                                    utils.escape_html(self.get_prefix()),
+                                    utils.escape_html(prefix),
                                     alias,
                                 )
                                 for alias in self.find_aliases(name)
@@ -245,7 +278,10 @@ class Help(loader.Module):
                     ),
                 )
             )
+        if module.commands and not commands:
+            lines.append(self.strings["no_permitted_cmds"])
         cmds = "\n".join(lines)
+        legend = f"\n{self.strings['legend']}" if commands else ""
         developer = re.search(
             r"# ?meta developer: ?(.+)", getattr(module, "__source__", None)
         )
@@ -271,7 +307,14 @@ class Help(loader.Module):
 
         if self.config["rich_mode"]:
             rich_reply = reply.replace("\r\n", "<br>").replace("\n", "<br>")
-            rich_commands = "".join(f"<p>{line.strip()}</p>" for line in lines)
+            rich_commands = "".join(
+                "<p>{}</p>".format(
+                    line.strip().replace("\r\n", "<br>").replace("\n", "<br>")
+                )
+                for line in lines
+            )
+            if legend:
+                rich_commands += f"<p>{self.strings['legend']}</p>"
             rich_inline_commands = inline_cmd.replace("\r\n", "<br>").replace(
                 "\n", "<br>"
             )
@@ -299,7 +342,7 @@ class Help(loader.Module):
 
         await utils.answer_with_media_fallback(
             message,
-            f"{reply}<blockquote expandable>{cmds}{inline_cmd}</blockquote>"
+            f"{reply}<blockquote expandable>{cmds}{inline_cmd}{legend}</blockquote>"
             + (
                 f"<blockquote expandable>\n{placeholders}</blockquote>"
                 if placeholders
@@ -338,22 +381,14 @@ class Help(loader.Module):
         if not self.config["banner_url"]:
             banner = None
 
-        force = False
-        if "-f" in args:
-            args = args.replace(" -f", "").replace("-f", "")
+        tokens = args.split()
+        force = "-f" in tokens
+        only_core = "-c" in tokens
+        only_loaded = "-l" in tokens
+        if only_core or only_loaded:
             force = True
 
-        only_core = False
-        if "-c" in args:
-            args = args.replace(" -c", "").replace("-c", "")
-            only_core = True
-            force = True
-
-        only_loaded = False
-        if "-l" in args:
-            args = args.replace(" -l", "").replace("-l", "")
-            only_loaded = True
-            force = True
+        args = " ".join(t for t in tokens if t not in {"-f", "-c", "-l"})
 
         if args:
             await self.modhelp(message, args)
@@ -472,10 +507,7 @@ class Help(loader.Module):
                 else:
                     plain_ += [tmp]
             elif not shown_warn and (mod.commands or mod.inline_handlers):
-                reply = (
-                    "<i>You have permissions to execute only these"
-                    f" commands</i>\n{reply}"
-                )
+                reply = f"{self.strings['only_permitted']}\n{reply}"
                 shown_warn = True
 
         plain_.sort(key=str.lower)

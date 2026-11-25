@@ -368,7 +368,7 @@ class Form(InlineUnit):
             if "No query results" in str(e):
                 await answer(
                     self.translator.getkey("inline.no_query_results").format(
-                        prefix=getattr(self._client, "command_prefix", "."),
+                        prefix=utils.escape_html(self._client.loader.get_prefix()),
                     ),
                 )
 

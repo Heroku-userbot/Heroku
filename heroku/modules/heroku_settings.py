@@ -46,6 +46,22 @@ class HerokuSettingsMod(loader.Module):
             if watcher.__self__.__class__.strings is not None
         ], self._db.get(main.__name__, "disabled_watchers", {})
 
+    def _watcher_rules(self, rules: list) -> str:
+        if "*" in rules:
+            return self.strings["rule_all"]
+
+        names = {
+            "only_chats": self.strings["rule_only_chats"],
+            "only_pm": self.strings["rule_only_pm"],
+            "out": self.strings["rule_out"],
+            "in": self.strings["rule_in"],
+        }
+        parts = [names[rule] for rule in rules if rule in names]
+        if chats := [str(rule) for rule in rules if rule not in names]:
+            parts.append(self.strings["rule_chats"].format(", ".join(chats)))
+
+        return ", ".join(parts)
+
     @loader.command()
     async def watchers(self, message: Message):
         watchers, disabled_watchers = self.get_watchers()
@@ -54,7 +70,9 @@ class HerokuSettingsMod(loader.Module):
             for watcher in watchers
             if watcher not in list(disabled_watchers.keys())
         ]
-        watchers += [f"💢 {k} {v}" for k, v in disabled_watchers.items()]
+        watchers += [
+            f"💢 {k} — {self._watcher_rules(v)}" for k, v in disabled_watchers.items()
+        ]
         await utils.answer(
             message, self.strings["watchers"].format("\n".join(watchers))
         )
@@ -62,13 +80,24 @@ class HerokuSettingsMod(loader.Module):
     @loader.command()
     async def watcherbl(self, message: Message):
         if not (args := utils.get_args_raw(message)):
-            await utils.answer(message, self.strings["args"])
+            await utils.answer(
+                message,
+                self.strings["args"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
             return
 
         watchers, disabled_watchers = self.get_watchers()
 
         if args.lower() not in map(lambda x: x.lower(), watchers):
-            await utils.answer(message, self.strings["mod404"].format(args))
+            await utils.answer(
+                message,
+                self.strings["mod404"].format(
+                    utils.escape_html(args),
+                    prefix=utils.escape_html(self.get_prefix()),
+                ),
+            )
             return
 
         args = next((x for x in watchers if x.lower() == args.lower()), args)
@@ -90,7 +119,7 @@ class HerokuSettingsMod(loader.Module):
 
             await utils.answer(
                 message,
-                self.strings["disabled"].format(args) + " <b>in current chat</b>",
+                self.strings["chat_disabled"].format(args),
             )
         else:
             for k in disabled_watchers.copy():
@@ -102,7 +131,7 @@ class HerokuSettingsMod(loader.Module):
 
             await utils.answer(
                 message,
-                self.strings["enabled"].format(args) + " <b>in current chat</b>",
+                self.strings["chat_enabled"].format(args),
             )
 
         self._db.set(main.__name__, "disabled_watchers", disabled_watchers)
@@ -110,25 +139,19 @@ class HerokuSettingsMod(loader.Module):
     @loader.command()
     async def watchercmd(self, message: Message):
         if not (args := utils.get_args_raw(message)):
-            return await utils.answer(message, self.strings["args"])
+            return await utils.answer(
+                message,
+                self.strings["args"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                ),
+            )
 
-        chats, pm, out, incoming = False, False, False, False
-
-        if "-c" in args:
-            args = args.replace("-c", "").replace("  ", " ").strip()
-            chats = True
-
-        if "-p" in args:
-            args = args.replace("-p", "").replace("  ", " ").strip()
-            pm = True
-
-        if "-o" in args:
-            args = args.replace("-o", "").replace("  ", " ").strip()
-            out = True
-
-        if "-i" in args:
-            args = args.replace("-i", "").replace("  ", " ").strip()
-            incoming = True
+        tokens = args.split()
+        chats = "-c" in tokens
+        pm = "-p" in tokens
+        out = "-o" in tokens
+        incoming = "-i" in tokens
+        args = " ".join(t for t in tokens if t not in {"-c", "-p", "-o", "-i"})
 
         if chats and pm:
             pm = False
@@ -138,7 +161,13 @@ class HerokuSettingsMod(loader.Module):
         watchers, disabled_watchers = self.get_watchers()
 
         if args.lower() not in [watcher.lower() for watcher in watchers]:
-            return await utils.answer(message, self.strings["mod404"].format(args))
+            return await utils.answer(
+                message,
+                self.strings["mod404"].format(
+                    utils.escape_html(args),
+                    prefix=utils.escape_html(self.get_prefix()),
+                ),
+            )
 
         args = [watcher for watcher in watchers if watcher.lower() == args.lower()][0]
 
@@ -153,7 +182,7 @@ class HerokuSettingsMod(loader.Module):
             await utils.answer(
                 message,
                 self.strings["enabled"].format(args)
-                + f" (<code>{disabled_watchers[args]}</code>)",
+                + f" ({self._watcher_rules(disabled_watchers[args])})",
             )
             return
 
@@ -181,10 +210,10 @@ class HerokuSettingsMod(loader.Module):
         if u not in nn:
             nn += [u]
             nn = list(set(nn))  # skipcq: PTC-W0018
-            await utils.answer(message, self.strings["user_nn"].format("on"))
+            await utils.answer(message, self.strings["user_nn"].format(self.strings["nn_on"]))
         else:
             nn = list(set(nn) - {u})
-            await utils.answer(message, self.strings["user_nn"].format("off"))
+            await utils.answer(message, self.strings["user_nn"].format(self.strings["nn_off"]))
 
         self._db.set(main.__name__, "nonickusers", nn)
 
@@ -204,7 +233,7 @@ class HerokuSettingsMod(loader.Module):
                 message,
                 self.strings["cmd_nn"].format(
                     utils.escape_html((await message.get_chat()).title),
-                    "on",
+                    self.strings["nn_on"],
                 ),
             )
         else:
@@ -213,7 +242,7 @@ class HerokuSettingsMod(loader.Module):
                 message,
                 self.strings["cmd_nn"].format(
                     utils.escape_html((await message.get_chat()).title),
-                    "off",
+                    self.strings["nn_off"],
                 ),
             )
 
@@ -226,7 +255,9 @@ class HerokuSettingsMod(loader.Module):
             return
 
         if args not in self.allmodules.commands:
-            await utils.answer(message, self.strings["cmd404"])
+            await utils.answer(
+                message, self.strings["cmd404"].format(utils.escape_html(args))
+            )
             return
 
         nn = self._db.get(main.__name__, "nonickcmds", [])
@@ -237,7 +268,7 @@ class HerokuSettingsMod(loader.Module):
                 message,
                 self.strings["cmd_nn"].format(
                     utils.escape_html(self.get_prefix() + args),
-                    "on",
+                    self.strings["nn_on"],
                 ),
             )
         else:
@@ -246,7 +277,7 @@ class HerokuSettingsMod(loader.Module):
                 message,
                 self.strings["cmd_nn"].format(
                     utils.escape_html(self.get_prefix() + args),
-                    "off",
+                    self.strings["nn_off"],
                 ),
             )
 
@@ -333,7 +364,7 @@ class HerokuSettingsMod(loader.Module):
 
         await utils.answer(
             message,
-            self.strings["user_nn_list"].format("\n".join(chats)),
+            self.strings["chat_nn_list"].format("\n".join(chats)),
         )
 
     async def inline__setting(self, call: InlineCall, key: str, state: bool = False):
@@ -346,7 +377,7 @@ class HerokuSettingsMod(loader.Module):
                 show_alert=True,
             )
         else:
-            await call.answer("Configuration value saved!")
+            await call.answer(self.strings["setting_saved"])
 
         await call.edit(
             self.strings["inline_settings"],
@@ -363,12 +394,12 @@ class HerokuSettingsMod(loader.Module):
                 self.strings["confirm_update"],
                 reply_markup=[
                     {
-                        "text": "🪂 Update",
+                        "text": self.strings["btn_do_update"],
                         "callback": self.inline__update,
                         "style": "primary",
                     },
                     {
-                        "text": "🚫 Cancel",
+                        "text": self.strings["btn_cancel"],
                         "action": "close",
                         "style": "danger",
                     },
@@ -376,7 +407,7 @@ class HerokuSettingsMod(loader.Module):
             )
             return
 
-        await call.answer("You userbot is being updated...", show_alert=True)
+        await call.answer(self.strings["updating"], show_alert=True)
         await call.delete()
         await self.invoke("update", "-f", peer="me")
 
@@ -390,16 +421,20 @@ class HerokuSettingsMod(loader.Module):
                 self.strings["confirm_restart"],
                 reply_markup=[
                     {
-                        "text": "🔄 Restart",
+                        "text": self.strings["btn_do_restart"],
                         "callback": self.inline__restart,
                         "style": "primary",
                     },
-                    {"text": "🚫 Cancel", "action": "close", "style": "danger"},
+                    {
+                        "text": self.strings["btn_cancel"],
+                        "action": "close",
+                        "style": "danger",
+                    },
                 ],
             )
             return
 
-        await call.answer("You userbot is being restarted...", show_alert=True)
+        await call.answer(self.strings["restarting"], show_alert=True)
         await call.delete()
         await self.invoke("restart", "-f", peer="me")
 

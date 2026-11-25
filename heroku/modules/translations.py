@@ -149,7 +149,7 @@ class Translations(loader.Module):
         ]
 
         await call.edit(
-            self.strings["confirm_lang"].format(url),
+            self.strings["confirm_lang"].format(utils.escape_html(url)),
             reply_markup=reply_markup,
         )
 
@@ -217,16 +217,21 @@ class Translations(loader.Module):
 
     @loader.command()
     async def setlang(self, message: Message):
-        if not (args := utils.get_args_raw(message).lower()):
+        if not (args := utils.get_args_raw(message)):
             await self._choose_language(message=message)
             return
+
+        args = " ".join(
+            translations.normalize_language_token(
+                x if utils.check_url(x) else x.lower()
+            )
+            for x in args.split()
+        )
 
         known_langs = set(translations.SUPPORTED_LANGUAGES) | set(translations.MEME_LANGUAGES)
         if any(i not in known_langs and not utils.check_url(i) for i in args.split()):
             await utils.answer(message, self.strings["incorrect_language"])
             return
-
-        args = " ".join(translations.normalize_language_token(x) for x in args.split())
 
         seen = set()
         seen_add = seen.add
@@ -266,6 +271,7 @@ class Translations(loader.Module):
             await utils.answer(message, self.strings["check_url"])
             return
 
+        old_lang = self._db.get(translations.__name__, "lang", None)
         current_lang = (
             " ".join(
                 lang
@@ -282,13 +288,14 @@ class Translations(loader.Module):
             f"{current_lang} {args}" if current_lang else args,
         )
 
-        await utils.answer(
-            message,
-            self.strings[
-                (
-                    "pack_saved"
-                    if await self.allmodules.reload_translations()
-                    else "check_pack"
-                )
-            ],
-        )
+        self.allmodules.translator.raw_data.pop(args, None)
+        if (
+            not await self.allmodules.reload_translations()
+            or args not in self.allmodules.translator.raw_data
+        ):
+            self._db.set(translations.__name__, "lang", old_lang)
+            await self.allmodules.reload_translations()
+            await utils.answer(message, self.strings["check_pack"])
+            return
+
+        await utils.answer(message, self.strings["pack_saved"])

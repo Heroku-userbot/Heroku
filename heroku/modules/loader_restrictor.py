@@ -8,6 +8,7 @@
 
 import asyncio
 import logging
+import random
 
 from dataclasses import dataclass
 
@@ -52,6 +53,7 @@ class PollStatus:
     message_ids: list[int]
     answers: list[bool]
     step: int
+    correct_index: int
 
 
 QUESTIONS = [
@@ -95,16 +97,20 @@ class LoaderRestrictor(loader.Module):
         await call.delete()
         await self._start_quiz()
 
-    def _build_poll(self, poll_step: PollStep) -> InputMediaPoll:
+    def _build_poll(self, poll_step: PollStep) -> tuple[InputMediaPoll, int]:
+        order = random.sample(range(ANS_COUNT), ANS_COUNT)
+        correct_index = order.index(poll_step.answer_index)
         poll = Poll(
             id=0,
             question=TextWithEntities(*html.parse(self.strings[poll_step.key])),
             answers=[
                 PollAnswer(
-                    text=TextWithEntities(*html.parse(self.strings[ans])),
+                    text=TextWithEntities(
+                        *html.parse(self.strings[poll_step.answer_keys[ans]])
+                    ),
                     option=str(i),
                 )
-                for i, ans in enumerate(poll_step.answer_keys)
+                for i, ans in enumerate(order)
             ],
             hash=0,
             quiz=True,
@@ -115,10 +121,10 @@ class LoaderRestrictor(loader.Module):
         solution, solution_entities = html.parse(self.strings[poll_step.hint])
         return InputMediaPoll(
             poll=poll,
-            correct_answers=[poll_step.answer_index],
+            correct_answers=[correct_index],
             solution=solution,
             solution_entities=solution_entities,
-        )
+        ), correct_index
 
     @loader.need_update("poll_answer")
     async def poll_handler(self, update: UpdateMessagePollVote):
@@ -128,7 +134,7 @@ class LoaderRestrictor(loader.Module):
         if not self.poll or not update.poll_id == self.poll.poll_id:
             return
 
-        correct = update.positions[0] == QUESTIONS[self.poll.step].answer_index
+        correct = update.positions[0] == self.poll.correct_index
         self.poll.answers.append(correct)
 
         if not correct:
@@ -155,9 +161,10 @@ class LoaderRestrictor(loader.Module):
             )
 
         step = QUESTIONS[0]
+        media, correct_index = self._build_poll(step)
         poll_m: Message = await self.inline.bot.send_file(
             self.client.tg_id,
-            file=self._build_poll(step),
+            file=media,
         )
 
         self.poll = PollStatus(
@@ -165,6 +172,7 @@ class LoaderRestrictor(loader.Module):
             message_ids=[poll_m.id],
             answers=[],
             step=0,
+            correct_index=correct_index,
         )
         asyncio.create_task(self._watch_timeout(self.poll.poll_id))
 
@@ -175,12 +183,14 @@ class LoaderRestrictor(loader.Module):
         self.poll.step += 1
         question = QUESTIONS[self.poll.step]
 
+        media, correct_index = self._build_poll(question)
         poll_m: Message = await self.inline.bot.send_file(
             self.client.tg_id,
-            file=self._build_poll(question),
+            file=media,
         )
         self.poll.message_ids.append(poll_m.id)
         self.poll.poll_id = poll_m.media.poll.id
+        self.poll.correct_index = correct_index
         asyncio.create_task(self._watch_timeout(self.poll.poll_id))
 
     async def _end_quiz(self):
