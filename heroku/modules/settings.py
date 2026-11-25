@@ -452,7 +452,11 @@ class CoreMod(loader.Module):
         """Send aliases via file"""
         aliases = list(self.allmodules.aliases.items())
         if not aliases:
-            await message.edit(self.strings["no_aliases"])
+            await message.edit(
+                self.strings["no_aliases"].format(
+                    prefix=utils.escape_html(self.get_prefix())
+                )
+            )
             return
 
         file = io.BytesIO(
