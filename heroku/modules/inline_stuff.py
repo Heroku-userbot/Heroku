@@ -71,15 +71,17 @@ class InlineStuff(loader.Module):
     async def ch_heroku_bot(self, message: Message):
         args = utils.get_args_raw(message).strip("@")
 
-        if not args:
-            from .. import main
+        from .. import main
 
+        if not args:
             uid = utils.rand(7)
             genran = "".join(random.choice(main.LATIN_MOCK))
             args = f"{genran}_{uid}_bot"
 
+        premium_ending = args.lower().endswith(main.PREMIUM_BOT_USERNAME_ENDINGS)
         if (
-            not args.lower().endswith("bot")
+            not (args.lower().endswith("bot") or premium_ending)
+            or (premium_ending and not self._client.heroku_me.premium)
             or len(args) <= 4
             or len(args) > 32
             or any(

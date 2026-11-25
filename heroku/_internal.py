@@ -64,10 +64,12 @@ def register_secrets(data):
             register_secrets(value)
 
 
-def redact(text):
+def redact(text, heuristics=True):
     text = str(text)
     for secret in sorted(_secrets.copy(), key=len, reverse=True):
         text = text.replace(secret, "[REDACTED]")
+    if not heuristics:
+        return text
     text = re.sub(
         r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----",
         "[REDACTED PRIVATE KEY]", text, flags=re.S,

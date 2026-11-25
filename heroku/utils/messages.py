@@ -312,7 +312,11 @@ async def _edit_inline_rich_message(
         caller = unit.get("chat")
     if caller is None:
         caller = getattr(message, "chat_id", None)
-    if caller is not None and hasattr(message, "inline_manager"):
+    if (
+        caller is not None
+        and hasattr(message, "inline_manager")
+        and not isinstance(message, BotInlineMessage)
+    ):
         with contextlib.suppress(Exception):
             await message.delete()
         return await message.inline_manager.form(

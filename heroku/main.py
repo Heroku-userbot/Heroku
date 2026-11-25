@@ -102,6 +102,8 @@ SESSIONS_DIR = os.path.join(BASE_DIR, "sessions")
 _CONFIG_CACHE: dict | None = None
 _CONFIG_MTIME_NS: int | None = None
 
+PREMIUM_BOT_USERNAME_ENDINGS = ("agent", "ai", "app", "game", "gay")
+
 # fmt: off
 LATIN_MOCK = [
     "Amor", "Arbor", "Astra", "Aurum", "Bellum", "Caelum",
@@ -733,8 +735,14 @@ class Heroku:
                         "Invalid username: use only ASCII letters, digits and underscore (_)."
                     )
                     continue
-                if not (bot.lower().endswith("bot")):
+                premium_ending = bot.lower().endswith(PREMIUM_BOT_USERNAME_ENDINGS)
+                if not (bot.lower().endswith("bot") or premium_ending):
                     print("Invalid username: must end with 'bot'.")
+                    continue
+                if premium_ending and not getattr(await client.get_me(), "premium", False):
+                    print(
+                        "Usernames ending with agent/ai/app/game/gay require Telegram Premium."
+                    )
                     continue
                 try:
                     if await self._check_bot(client, bot):
@@ -818,9 +826,11 @@ class Heroku:
                         return True
 
         try:
-            await client.get_entity(f"{username}")
+            entity = await client.get_entity(f"{username}")
         except Exception:
             return True
+
+        return bool(getattr(entity, "bot_can_edit", False))
 
     async def _initial_setup(self) -> bool:
         """Responsible for first start"""
