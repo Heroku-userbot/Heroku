@@ -920,39 +920,28 @@ class HerokuSecurityMod(loader.Module):
         )
 
     def _convert_time(self, duration: int) -> str:
-        return (
-            self.strings["forever"]
-            if not duration or duration < 0
-            else (
-                (
-                    f"{duration // (24 * 60 * 60)} "
-                    + self.strings[
-                        f"day{'s' if duration // (24 * 60 * 60) > 1 else ''}"
-                    ]
+        if not duration or duration < 0:
+            return self.strings["forever"]
+
+        parts = []
+        for size, unit in (
+            (24 * 60 * 60, "day"),
+            (60 * 60, "hour"),
+            (60, "minute"),
+            (1, "second"),
+        ):
+            if (amount := duration // size):
+                parts.append(
+                    f"{amount} " + self.strings[f"{unit}{'s' if amount > 1 else ''}"]
                 )
-                if duration >= 24 * 60 * 60
-                else (
-                    (
-                        f"{duration // (60 * 60)} "
-                        + self.strings[
-                            f"hour{'s' if duration // (60 * 60) > 1 else ''}"
-                        ]
-                    )
-                    if duration >= 60 * 60
-                    else (
-                        (
-                            f"{duration // 60} "
-                            + self.strings[f"minute{'s' if duration // 60 > 1 else ''}"]
-                        )
-                        if duration >= 60
-                        else (
-                            f"{duration} "
-                            + self.strings[f"second{'s' if duration > 1 else ''}"]
-                        )
-                    )
-                )
-            )
-        )
+                duration = duration % size
+            elif parts:
+                break
+
+            if len(parts) == 2:
+                break
+
+        return " ".join(parts)
 
     async def _add_rule(
         self,
@@ -1204,8 +1193,9 @@ class HerokuSecurityMod(loader.Module):
                 await utils.answer(message, self.strings["no_rule"])
                 return
             case _ if len(args) >= 2:
+                is_target = args[1].isdigit() or args[1].startswith("@")
                 try:
-                    if not args[1].isdigit() and not args[1].startswith("@"):
+                    if not is_target:
                         raise ValueError
 
                     target = await self._client.get_entity(
@@ -1214,6 +1204,14 @@ class HerokuSecurityMod(loader.Module):
                     )
                     rest = args[2:]
                 except (ValueError, TypeError):
+                    if is_target:
+                        await utils.answer(
+                            message,
+                            self.strings["target_not_found"].format(
+                                utils.escape_html(args[1])
+                            ),
+                        )
+                        return
                     rest = args[1:]
                     if message.is_private:
                         target = await self._client.get_entity(message.peer_id, exp=0)
