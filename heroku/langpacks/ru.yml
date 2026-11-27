@@ -293,6 +293,10 @@ heroku_backup:
 
   name: HerokuBackup
 settings:
+  aliases_list: "<b>🔗 Импортировал алиасы:</b>\n\n<blockquote expandable>{}</blockquote>"
+  aliases_file: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Ваши алиасы</b>\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}la в ответ на это сообщение для импорта алиасов</b>"
+  no_file: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Отправьте файл с алиасами вместе с командой или ответьте на него</b>"
+  load_failed: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Не удалось прочитать алиасы: файл повреждён или выгружен не через aliasload</b>"
   choose_installation: "<tg-emoji emoji-id=5363805650327450240>🪐</tg-emoji> <b>Выберите вариант установки Heroku:</b>"
   vds_install: "<tg-emoji emoji-id=5471952986970267163>💎</tg-emoji> Процесс установки на VDS выполняется одной командой:\n<pre><code class=\"language-shell\">sudo apt update &amp;&amp; sudo apt upgrade -y &amp;&amp; sudo apt install -y git python3-pip &amp;&amp; git clone https://github.com/Heroku-userbot/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n<i>Примечание: Если у вас отсутствуют права sudo, исключите соответствующую часть команды.</i>"
   wsl_install: "<b>Установите WSL.</b> Для этого откройте PowerShell с правами администратора и выполните <code>wsl --install -d Ubuntu-22.04</code> \n⚠️ <i>Для установки WSL необходима Windows 10 build 2004 или Windows 11 любой версии и ПК с поддержкой виртуализации. Для установки на более ранние версии ОС обратитесь к</i> <a href=\"https://learn.microsoft.com/ru-ru/windows/wsl/install-manual\">этой странице</a>\n\n⬜️ <b>Перезагрузите ПК и запустите приложение Ubuntu 22.04.x</b> \n\n⬜️ <b>Вставьте в него команду (ПКМ):</b> <code>curl -Ss https://bootstrap.pypa.io/get-pip.py | python3</code> \n⚠️ <i>При появлении жёлтых предупреждений введите</i> <code>export PATH=\"/home/username/.local/bin:$PATH\"</code><i>, заменив /home/username/.local/bin на путь, указанный в сообщении</i>\n\n⬜️ <b>Вставьте команду (ПКМ):</b> \n<pre><code class=\"language-bash\">clear &amp;&amp; git clone https://github.com/Heroku-userbot/Heroku &amp;&amp; cd Heroku &amp;&amp; pip install -r requirements.txt &amp;&amp; python3 -m heroku</code></pre>\n🔗 <b>Где получить API_ID и API_HASH?</b>: <a href=\"https://youtu.be/DcqDA249Lhg?t=24\">Видео</a>"
@@ -915,4 +919,5 @@ command_conflicts:
   denied: "Выбирать может только автор команды."
   used: "Команда уже выбрана."
   unavailable: "<tg-emoji emoji-id=5870657884844462243>❌</tg-emoji> Команда больше недоступна."
-  failed: "<tg-emoji emoji-id=5870931487146119264>❗</tg-emoji> Не удалось показать выбор модуля. Проверь инлайн-бота."
+  failed: "<tg-emoji emoji-id=5870931487146119264>❗</tg-emoji> Не удалось показать выбор модуля. Проверьте инлайн-бота."
+  disabled: "<tg-emoji emoji-id=5870657884844462243>❌</tg-emoji> <b>Команда</b> <code>{prefix}{0}</code> <b>отключена. Включить:</b> <code>{prefix}togglecmd {0}</code>"

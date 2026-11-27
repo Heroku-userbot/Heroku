@@ -293,6 +293,10 @@ heroku_backup:
   name: HerokuBackup
 settings:
   name: "Settings"
+  aliases_list: "<b>🔗 Imported aliases:</b>\n\n<blockquote expandable>{}</blockquote>"
+  aliases_file: "<tg-emoji emoji-id=5256113064821926998>📁</tg-emoji> <b>Your aliases</b>\n\n<tg-emoji emoji-id=5134452506935427991>🪐</tg-emoji> <b>{prefix}la in reply to this message to import aliases</b>"
+  no_file: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Send the aliases file with the command or reply to it</b>"
+  load_failed: "<tg-emoji emoji-id=5121063440311386962>❌</tg-emoji> <b>Couldn't read aliases: the file is damaged or was not made by aliasload</b>"
   vds: "💎 VDS"
   wsl: "💻 WSL"
   userland: "🐧 UserLAnd"
@@ -919,3 +923,4 @@ command_conflicts:
   used: "This command has already been selected."
   unavailable: "<tg-emoji emoji-id=5870657884844462243>❌</tg-emoji> The command is no longer available."
   failed: "<tg-emoji emoji-id=5870931487146119264>❗</tg-emoji> Cannot show module selection. Check the inline bot."
+  disabled: "<tg-emoji emoji-id=5870657884844462243>❌</tg-emoji> <b>Command</b> <code>{prefix}{0}</code> <b>is disabled. Enable it:</b> <code>{prefix}togglecmd {0}</code>"
